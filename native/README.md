@@ -214,6 +214,7 @@ Desde la raíz:
 ```sh
 python3 native/tests/package_clone.py
 python3 native/tests/feed.py
+python3 native/tests/discover.py
 python3 native/tests/reels.py
 python3 native/tests/settings.py
 python3 native/tests/updater.py

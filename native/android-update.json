@@ -3,7 +3,7 @@
   "versionCode": 384510829,
   "required": true,
   "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.1/IG-Calma-0.4.1.apk",
-  "apkSha256": "833610bc86864698135b2b59bbd9a227a403bd696575f7bd0e71bb78717decd9",
+  "apkSha256": "6bc853e3ff41f422c8c05209a9984a7df172471092bd694d014962f1086c8b07",
   "apkSizeBytes": 146244269,
-  "releaseNotes": "Corrige el empaquetado de arranque y sincroniza los archivos que usa el cargador de Instagram."
+  "releaseNotes": "Corrige el empaquetado y el inicio del actualizador; bloquea anuncios en el feed, Explorar e historias."
 }
