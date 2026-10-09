@@ -1,0 +1,23 @@
+name: Publish verified native APK
+
+on:
+  push:
+    branches: ['native-release-v*']
+    paths: ['native/release-input/**', '.github/workflows/publish-native.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify and publish the signed APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: python3 native/scripts/publish-release.py
