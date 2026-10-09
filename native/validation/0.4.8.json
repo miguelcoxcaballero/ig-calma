@@ -1,0 +1,174 @@
+{
+  "schemaVersion": 1,
+  "version": "0.4.8",
+  "recordedAt": "2026-10-09T23:14:28+00:00",
+  "runtimeTesting": {
+    "scope": "Logged-out startup on official Android Emulator with ARM64 translation",
+    "ciUrl": "https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38002979231",
+    "apkSha256": "bb31137e1ba74518afb5cba8254d0e0af43992b5e438880c4d55a52e431f054d",
+    "apkSizeBytes": 146264749,
+    "physicalDeviceTested": false,
+    "instagramAccountTested": false,
+    "startupPassedOnApis": [
+      34,
+      35,
+      36
+    ],
+    "observations": [
+      {
+        "api": 34,
+        "sourceCommit": "f495c22a1ad60b9f2a614511bac1a02bb4e94ae8",
+        "bootCompleted": true,
+        "abiList": "x86_64,arm64-v8a",
+        "stock": {
+          "attempted": false
+        },
+        "baseline": {
+          "attempted": true,
+          "installed": true,
+          "updatingExistingInstall": false,
+          "launchAccepted": false,
+          "survived": true,
+          "appCrashLogged": false,
+          "passed": false,
+          "observedThroughSeconds": 45.0,
+          "visibleText": [
+            "English (US)",
+            "Instagram from Meta",
+            "Username, email or mobile number",
+            "Username, email or mobile number,",
+            "Password",
+            "Password,",
+            "Log in",
+            "Forgot password?",
+            "Create new account",
+            "Meta logo"
+          ]
+        },
+        "candidate": {
+          "attempted": true,
+          "installed": true,
+          "updatingExistingInstall": true,
+          "launchAccepted": true,
+          "survived": true,
+          "appCrashLogged": false,
+          "passed": true,
+          "observedThroughSeconds": 45.0,
+          "visibleText": [
+            "English (US)",
+            "Join Instagram",
+            "Share what you're into with the people who get you.",
+            "Get started",
+            "I already have a profile",
+            "Meta logo"
+          ]
+        },
+        "baselineSha256": "1a4f94b39b252ef6d46fa35f01b63c2e5602de4f058577073fdcf51e5b7bb16a",
+        "nativeModelSmoke": {
+          "passed": true,
+          "scope": "Actual native end-model allocation, inline row, light/dark rendering, accessibility, recycling and four original selector models with remaining time and credit lock; no logged-in feed; actual Media, LiveTree dictionaries, User, wrapper, response and parser-context models with synthetic cached fields: cold main-thread head, cursor, cross-page deduplication and complete cache replay; no authenticated HTTP; original HTTP parameter setter/map, client request and delivery envelope, absent/different server IDs, stale native NotFollowing enum; synthetic account data, no network call"
+        },
+        "outcome": "startup_passed"
+      },
+      {
+        "api": 35,
+        "sourceCommit": "f495c22a1ad60b9f2a614511bac1a02bb4e94ae8",
+        "bootCompleted": true,
+        "abiList": "x86_64,arm64-v8a",
+        "stock": {
+          "attempted": false
+        },
+        "baseline": {
+          "attempted": true,
+          "installed": true,
+          "updatingExistingInstall": false,
+          "launchAccepted": false,
+          "survived": true,
+          "appCrashLogged": false,
+          "passed": false,
+          "observedThroughSeconds": 45.0,
+          "visibleText": [
+            "English (US)",
+            "Instagram from Meta",
+            "Username, email or mobile number",
+            "Username, email or mobile number,",
+            "Password",
+            "Password,",
+            "Log in",
+            "Forgot password?",
+            "Create new account",
+            "Meta logo"
+          ]
+        },
+        "candidate": {
+          "attempted": true,
+          "installed": true,
+          "updatingExistingInstall": true,
+          "launchAccepted": true,
+          "survived": true,
+          "appCrashLogged": false,
+          "passed": true,
+          "observedThroughSeconds": 45.0,
+          "visibleText": [
+            "English (US)",
+            "Join Instagram",
+            "Share what you're into with the people who get you.",
+            "Get started",
+            "I already have a profile",
+            "Meta logo"
+          ]
+        },
+        "baselineSha256": "1a4f94b39b252ef6d46fa35f01b63c2e5602de4f058577073fdcf51e5b7bb16a",
+        "nativeModelSmoke": {
+          "passed": true,
+          "scope": "Actual native end-model allocation, inline row, light/dark rendering, accessibility, recycling and four original selector models with remaining time and credit lock; no logged-in feed; actual Media, LiveTree dictionaries, User, wrapper, response and parser-context models with synthetic cached fields: cold main-thread head, cursor, cross-page deduplication and complete cache replay; no authenticated HTTP; original HTTP parameter setter/map, client request and delivery envelope, absent/different server IDs, stale native NotFollowing enum; synthetic account data, no network call"
+        },
+        "outcome": "startup_passed"
+      },
+      {
+        "api": 36,
+        "sourceCommit": "f495c22a1ad60b9f2a614511bac1a02bb4e94ae8",
+        "bootCompleted": true,
+        "abiList": "x86_64,arm64-v8a",
+        "stock": {
+          "attempted": false
+        },
+        "baseline": {
+          "attempted": true,
+          "installed": true,
+          "updatingExistingInstall": false,
+          "launchAccepted": true,
+          "survived": true,
+          "appCrashLogged": false,
+          "passed": true,
+          "observedThroughSeconds": 45.0,
+          "visibleText": []
+        },
+        "candidate": {
+          "attempted": true,
+          "installed": true,
+          "updatingExistingInstall": true,
+          "launchAccepted": true,
+          "survived": true,
+          "appCrashLogged": false,
+          "passed": true,
+          "observedThroughSeconds": 45.0,
+          "visibleText": [
+            "English (US)",
+            "Join Instagram",
+            "Share what you're into with the people who get you.",
+            "Get started",
+            "I already have a profile",
+            "Meta logo"
+          ]
+        },
+        "baselineSha256": "1a4f94b39b252ef6d46fa35f01b63c2e5602de4f058577073fdcf51e5b7bb16a",
+        "nativeModelSmoke": {
+          "passed": true,
+          "scope": "Actual native end-model allocation, inline row, light/dark rendering, accessibility, recycling and four original selector models with remaining time and credit lock; no logged-in feed; actual Media, LiveTree dictionaries, User, wrapper, response and parser-context models with synthetic cached fields: cold main-thread head, cursor, cross-page deduplication and complete cache replay; no authenticated HTTP; original HTTP parameter setter/map, client request and delivery envelope, absent/different server IDs, stale native NotFollowing enum; synthetic account data, no network call"
+        },
+        "outcome": "startup_passed"
+      }
+    ]
+  }
+}

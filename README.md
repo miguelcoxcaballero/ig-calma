@@ -28,7 +28,7 @@ El [manifiesto anterior](android-update.json) y el [nativo](native/android-updat
 
 ## Estado de la prueba
 
-La APK 0.4.8 se comprueba como actualización sobre la 0.4.7 y el arranque sin sesión en emuladores oficiales de **Android 14, 15 y 16**, sin cierres ni ANR registrados. La instrumentación usa las clases originales del mapa HTTP, petición, entrega, Media, User y respuesta para comprobar IDs de respuesta ausentes o diferentes, estados de seguimiento antiguos, primera página, cursor, deduplicación y caché. No prueba las respuestas de una cuenta autenticada. [Resultados vinculados al SHA-256](native/validation/0.4.8.json) · [Ejecución de las pruebas](PENDING_RUNTIME_URL).
+La APK 0.4.8 se comprueba como actualización sobre la 0.4.7 y el arranque sin sesión en emuladores oficiales de **Android 14, 15 y 16**, sin cierres ni ANR registrados. La instrumentación usa las clases originales del mapa HTTP, petición, entrega, Media, User y respuesta para comprobar IDs de respuesta ausentes o diferentes, estados de seguimiento antiguos, primera página, cursor, deduplicación y caché. No prueba las respuestas de una cuenta autenticada. [Resultados vinculados al SHA-256](native/validation/0.4.8.json) · [Ejecución de las pruebas](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38002979231).
 
 La instrumentación crea los cuatro modelos del selector y las filas IGDS originales, verifica el saldo y el estado bloqueado, y comprueba el final del timeline en ambos temas. Las pruebas locales cubren caducidad, persistencia, cambios de hora y separación entre Friends y Following.
 
