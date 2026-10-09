@@ -44,7 +44,7 @@ public final class NativeModelSmoke extends Instrumentation {
         return media;
     }
     private Object wrapper(ClassLoader loader,Object media)throws Exception {
-        Object row=allocate(loader,"X.05qw");set(row,"A0p",media);set(row,"A0s",media);return row;
+        Object row=allocate(loader,"X.05qw");set(row,"A0p",media);set(row,"A0s",media);set(row,"A15",media.getClass().getMethod("getId").invoke(media));set(row,"A0q",media.getClass().getMethod("C3g").invoke(media));return row;
     }
     private Object page(ClassLoader loader,String request,String cursor,Object... rows)throws Exception {
         Object response=allocate(loader,"X.07do");
