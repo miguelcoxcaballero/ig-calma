@@ -1,8 +1,8 @@
-# Instagram Calma 0.3.4 — experimental
+# Instagram Calma 0.3.5 — experimental
 
 Cliente Android independiente basado en **Instagram web**, con detección automática de seguidos, amigos por seguimiento mutuo, feed finito y bloqueo de Reels. No es una modificación del APK oficial ni está afiliado a Meta. Requiere Android 8 o posterior y Android System WebView actualizado.
 
-**[Descargar APK 0.3.4](https://github.com/miguelcoxcaballero/ig-calma/raw/refs/heads/main/downloads/IG-Calma-0.3.4.apk)** · [Archivos y SHA-256](downloads/)
+**[Descargar APK 0.3.5](https://github.com/miguelcoxcaballero/ig-calma/raw/refs/heads/main/downloads/IG-Calma-0.3.5.apk)** · [Archivos y SHA-256](downloads/)
 
 ## Instalación y uso
 
@@ -11,6 +11,14 @@ Cliente Android independiente basado en **Instagram web**, con detección autom�
 3. En los ajustes de Instagram web, entra en **Editar perfil → Tu feed** para elegir «Solo cuentas que sigo», «Solo amigos (seguimiento mutuo)» o «Todas las cuentas», desactivar Reels y fijar entre 1 y 100 publicaciones por sesión.
 4. Se conserva la interfaz de Instagram web, sin la barra verde ni el panel de estado anterior. Los controles adicionales se insertan en el contenido de la página de ajustes, sin botones flotantes, barras ni superposiciones. La apariencia y funciones siguen siendo las de la web, no las de la app nativa.
 5. «Empezar otra sesión» inicia otra tanda. Cambiar entre Inicio y DM conserva la tanda actual. Guardar ajustes, recargar o abrir un nuevo documento también reinician el límite; no es un límite diario ni un historial permanente de publicaciones vistas.
+
+## Buscar y Discover en 0.3.5
+
+Las páginas `/explore/` y sus subrutas muestran únicamente publicaciones de cuentas seguidas, independientemente del filtro elegido para Inicio. Los resultados de perfiles también se limitan a cuentas seguidas. La búsqueda sigue disponible; los perfiles abiertos desde otras pantallas no se filtran. Los paneles de búsqueda identificados por sus campos Buscar/Search y roles dialog/search reciben el mismo filtro.
+
+Las miniaturas sin autor visible se mantienen ocultas hasta comprobarlo desde la sesión mediante `/api/v1/media/{id}/info/`. Las comprobaciones se hacen solo cerca del área visible, de una en una, con una pausa de 450 ms, un máximo de 80 por documento y sin reintentos si Instagram rechaza la consulta. Se reutilizan los resultados verificados en memoria y se limpian al cambiar de cuenta. No se muestra contenido cuyo autor no pueda verificarse. Se conservan los elementos de paginación de Instagram y el bloqueo de Reels.
+
+Este filtro limita el contenido que Instagram entrega a Discover; no crea un catálogo de todas las publicaciones de las cuentas seguidas. Puede haber pocos resultados o huecos mientras se verifican las miniaturas. Los cambios de estructura web y las restricciones de las interfaces internas necesitan validación con una cuenta real.
 
 ## Fluidez y ajustes en 0.3.4
 
@@ -88,7 +96,7 @@ La autorización es de un solo uso y caduca en 30 segundos. El visor queda limit
 
 ## Otros límites
 
-- El filtro de cuentas se aplica al **inicio**, donde también se ocultan historias y paneles de descubrimiento. Perfiles, mensajes y búsqueda siguen accesibles; no se filtran todas las pantallas.
+- El filtro de cuentas se aplica al **inicio**, donde también se ocultan historias y paneles de descubrimiento. Perfiles, mensajes y búsqueda siguen accesibles; Buscar/Discover tiene además el filtro obligatorio de cuentas seguidas descrito arriba; no se filtran todas las pantallas.
 - Reels: se bloquean rutas `/reel/` y `/reels/` y publicaciones reconocidas por enlaces o etiquetas. Cambios del marcado pueden impedir la detección. Para evitar fotogramas de clips no identificados, se ocultan las publicaciones compuestas solo por vídeo en el inicio cuando este bloqueo está activo. Los carruseles que contienen fotos conservan esas fotos, con los vídeos ocultos y pausados; los DM verificados tienen la excepción descrita arriba.
 - Los filtros dependen de los elementos y enlaces de la web. Durante cargas o cambios de pantalla podría aparecer contenido brevemente. Instagram podría seguir solicitando contenido en segundo plano aunque el feed esté cortado.
 - Instagram puede bloquear el acceso desde WebView. Se bloquean enlaces externos, incluido el acceso mediante Facebook. No se implementan carga de archivos, cámara ni micrófono.
@@ -97,7 +105,7 @@ La autorización es de un solo uso y caduca en 30 segundos. El visor queda limit
 
 ## Verificación realizada
 
-APK para API 35, mínimo 26, versión de paquete 8. Firma v2/v3 verificada; mismo certificado que 0.1.0. Permisos: Internet, mostrar notificaciones e instalar paquetes con autorización del usuario. El servicio está protegido por `BIND_NOTIFICATION_LISTENER_SERVICE` y requiere activación del usuario.
+APK para API 35, mínimo 26, versión de paquete 9. Firma v2/v3 verificada; mismo certificado que 0.1.0. Permisos: Internet, mostrar notificaciones e instalar paquetes con autorización del usuario. El servicio está protegido por `BIND_NOTIFICATION_LISTENER_SERVICE` y requiere activación del usuario.
 
 Pruebas del actualizador original: detección de versión, aviso, URL y SHA-256 enviados al instalador, permiso de instalación, progreso, estados de listo/error, validación de origen y detección automática; CSS idéntico al original y bloque nativo idéntico salvo las sustituciones documentadas. Manifiesto comprobado frente al APK firmado. Pruebas de tema y movimiento: cambio claro/oscuro en el mismo documento, colores heredados por los controles, conservación de campos y fotos, respuesta táctil, transiciones y movimiento reducido, ausencia de superposiciones y de bucles de cambios del tema. Pruebas de Reels: enlaces de DM accesibles, amigos mutuos verificados, rechazo de cuentas no mutuas, un único vídeo, bloqueo de desplazamiento, ocultación inmediata de fotogramas al volver a Inicio y de vídeos añadidos tarde a una publicación ya aprobada. Prueba de carga: las primeras cuentas seguidas están disponibles antes de terminar la paginación. Pruebas de integración en la página de ajustes: se conserva el formulario original, controles en el flujo del documento sin superposición, guardado mediante navegación validada, sustitución dinámica del panel y ausencia de controles sobre inicio, DM y acceso. Pruebas en Chromium con respuestas simuladas: paginación, intersección por identificadores, integración con filtros, separación por cuenta, reinicio de sesión al cambiar de cuenta, cierre de sesión, caché, detención ante limitación de consultas y rechazo de listas mutuas incompletas. Pruebas de filtros: autores desconocidos, Reels, límite, carga dinámica, navegación y acceso. Pruebas de clasificación de avisos: DM, exclusión de actividad general, otras apps y avisos de la propia app.
 
@@ -112,11 +120,12 @@ python3 setup-tools.py
 bash build.sh
 ```
 
-Salida: `dist/IG-Calma-0.3.4.apk`. Conserva `build/local-signing.p12` para firmar actualizaciones con la misma clave. Su contraseña `localbuild` es solo para compilación local, no una credencial de Instagram. La clave no se incluye en el repositorio.
+Salida: `dist/IG-Calma-0.3.5.apk`. Conserva `build/local-signing.p12` para firmar actualizaciones con la misma clave. Su contraseña `localbuild` es solo para compilación local, no una credencial de Instagram. La clave no se incluye en el repositorio.
 
 Con Playwright para Python y Chromium en `/usr/bin/chromium`:
 
 ```sh
+python3 tests/discover.py
 python3 tests/filters.py
 python3 tests/feed_regressions.py
 python3 tests/relations.py

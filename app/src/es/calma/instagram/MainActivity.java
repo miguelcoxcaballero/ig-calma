@@ -25,7 +25,7 @@ public class MainActivity extends Activity {
     private boolean updateOffered=false;
     private FrameLayout root;
     private SharedPreferences prefs;
-    private String filters, relations, settingsPage, appearance, reelGate, navigation;
+    private String filters, relations, settingsPage, appearance, reelGate, navigation, discover;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable identityWatcher = new Runnable() {
         @Override public void run() {
@@ -42,7 +42,7 @@ public class MainActivity extends Activity {
         setTheme(getResources().getIdentifier("AppTheme","style",getPackageName()));
         super.onCreate(saved);
         prefs = getSharedPreferences("calma", MODE_PRIVATE);
-        try { filters = read("filter.js"); relations = read("relations.js"); settingsPage = read("settings.js"); appearance = read("appearance.js"); reelGate = read("reel-gate.js"); navigation = read("navigation.js"); }
+        try { filters = read("filter.js"); relations = read("relations.js"); settingsPage = read("settings.js"); appearance = read("appearance.js"); reelGate = read("reel-gate.js"); navigation = read("navigation.js"); discover = read("discover.js"); }
         catch (IOException e) { throw new IllegalStateException(e); }
         root = new FrameLayout(this);
         root.setOnApplyWindowInsetsListener((v, insets) -> {
@@ -280,7 +280,7 @@ public class MainActivity extends Activity {
         try {
             JSONObject config=new JSONObject(); config.put("mode",prefs.getInt("mode",1)); config.put("limit",prefs.getInt("limit",20)); config.put("reels",prefs.getBoolean("reels",true)); config.put("owner",owner()); config.put("dmMirror",prefs.getBoolean("dm_mirror",false)); config.put("allowedReelPath",reelPermissions.containsKey(tab)?reelPermissions.get(tab):"");
             config.put("notificationsEnabled",((NotificationManager)getSystemService(NOTIFICATION_SERVICE)).areNotificationsEnabled()); config.put("listenerEnabled",listenerEnabled());
-            tab.evaluateJavascript("window.CALMA_ACTIVE="+(tab==web && !paused)+";window.CALMA_TAB="+JSONObject.quote(tab==directWeb?"direct":"home")+";window.CALMA_APPEARANCE={dark:"+systemDark()+",reduceMotion:"+reduceMotion()+"};\n"+appearance+"\nwindow.CALMA_CONFIG="+config+";\n"+relations+"\n"+reelGate+"\n"+filters+"\n"+settingsPage+"\n"+navigation,value -> {
+            tab.evaluateJavascript("window.CALMA_ACTIVE="+(tab==web && !paused)+";window.CALMA_TAB="+JSONObject.quote(tab==directWeb?"direct":"home")+";window.CALMA_APPEARANCE={dark:"+systemDark()+",reduceMotion:"+reduceMotion()+"};\n"+appearance+"\nwindow.CALMA_CONFIG="+config+";\n"+relations+"\n"+reelGate+"\n"+filters+"\n"+discover+"\n"+settingsPage+"\n"+navigation,value -> {
                 if(!isLive(tab) || epoch!=generation(tab))return;
                 tab.setAlpha(1f);
                 if(tab!=web || paused){visibility(tab,false);tab.onPause();}
@@ -295,7 +295,7 @@ public class MainActivity extends Activity {
         updateChecker.getSettings().setJavaScriptEnabled(true);updateChecker.getSettings().setDomStorageEnabled(true);
         updateChecker.getSettings().setAllowFileAccess(false);updateChecker.getSettings().setAllowContentAccess(false);
         updateChecker.getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-        updateChecker.getSettings().setUserAgentString(updateChecker.getSettings().getUserAgentString()+" InhouseReadApp/0.3.4");
+        updateChecker.getSettings().setUserAgentString(updateChecker.getSettings().getUserAgentString()+" InhouseReadApp/0.3.5");
         updateChecker.addJavascriptInterface(new UpdateCheckBridge(),"InhouseNative");
         updateChecker.addJavascriptInterface(new UpdateOfferBridge(),"InhouseUpdateHost");
         updateChecker.setWebViewClient(new UpdateAssetClient(this){
@@ -307,7 +307,7 @@ public class MainActivity extends Activity {
         });
         updateChecker.loadUrl("https://appassets.androidplatform.net/updates/index.html?inhouse_app=1&quiet=1");
     }
-    public class UpdateCheckBridge {@JavascriptInterface public String getAppVersion(){return "0.3.4";}}
+    public class UpdateCheckBridge {@JavascriptInterface public String getAppVersion(){return "0.3.5";}}
     public class UpdateOfferBridge {@JavascriptInterface public void offer(){runOnUiThread(() -> {if(!updateOffered && !isFinishing() && hasWindowFocus()){updateOffered=true;startActivity(new Intent(MainActivity.this,UpdateActivity.class));}});}}
     private String read(String name)throws IOException {
         try(InputStream in=getAssets().open(name);ByteArrayOutputStream out=new ByteArrayOutputStream()) {

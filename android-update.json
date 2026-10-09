@@ -1,9 +1,9 @@
 {
-  "version": "0.3.4",
-  "versionCode": 8,
+  "version": "0.3.5",
+  "versionCode": 9,
   "required": true,
-  "apkUrl": "https://raw.githubusercontent.com/miguelcoxcaballero/ig-calma/main/downloads/IG-Calma-0.3.4.apk",
-  "apkSha256": "99a81a535c9c44933e82da60edf540ec51d1a5eb82ac5ffeb7b60053e081ac4e",
-  "apkSizeBytes": 484551,
-  "releaseNotes": "Inicio y DM conservan su pantalla, precarga de mensajes, ajustes renovados y menos trabajo en segundo plano. Correcciones de navegación, sincronización y Reels compartidos."
+  "apkUrl": "https://raw.githubusercontent.com/miguelcoxcaballero/ig-calma/main/downloads/IG-Calma-0.3.5.apk",
+  "apkSha256": "4cbd31c6056f628c896b4c14c625d9cdd0d01e893f1eef55041af97b220118bb",
+  "apkSizeBytes": 488711,
+  "releaseNotes": "Buscar y Discover muestran solo contenido y resultados de cuentas seguidas. Verificación de autores de miniaturas y bloqueo de contenido sin verificar."
 }
