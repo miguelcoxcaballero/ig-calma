@@ -18,6 +18,7 @@ import subprocess
 import time
 import traceback
 import urllib.request
+import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = 'es.calma.instagram'
@@ -147,6 +148,12 @@ def main() -> int:
                 result['samples'].append({'seconds': round(time.monotonic() - started, 1),
                                           'pids': pid.stdout.strip(), 'alive': pid.returncode == 0 and bool(pid.stdout.strip())})
             snapshot(directory, 'after-launch')
+            ui = directory / 'after-launch.xml'
+            if ui.is_file():
+                result['visibleText'] = list(dict.fromkeys(
+                    node.get('text', '') or node.get('content-desc', '')
+                    for node in ET.parse(ui).iter('node')
+                    if node.get('text') or node.get('content-desc')))
             final_pid = device('shell', 'pidof', PACKAGE, timeout=10)
             result['finalPid'] = final_pid.stdout.strip()
             result['survived'] = bool(result['finalPid']) and all(sample['alive'] for sample in result['samples'])
@@ -166,6 +173,12 @@ def main() -> int:
                 fatal_lines = [line for line in logs.stdout.splitlines()
                                if re.search(r'FATAL EXCEPTION|Fatal signal|Abort message|am_crash|ANR in', line)]
                 (directory / 'fatal-lines.txt').write_text('\n'.join(fatal_lines))
+                lines = logs.stdout.splitlines()
+                excerpts = []
+                for index, line in enumerate(lines):
+                    if 'FATAL EXCEPTION' in line or 'Abort message:' in line:
+                        excerpts.extend(lines[max(0, index - 2):index + 45])
+                result['crashExcerpt'] = '\n'.join(excerpts)[-18000:]
             except Exception as error:
                 result['logcatError'] = str(error)
             result['passed'] = bool(result.get('installed') and result.get('launchAccepted')
@@ -206,8 +219,15 @@ def main() -> int:
                 raise RuntimeError('Unexpected APK signing certificate: ' + label)
             save_result(evidence / f'{label}-badging.txt', run([build_tools / 'aapt', 'dump', 'badging', apk]))
         name = f'calma-api-{args.api}'
+        # New command-line tools and emulator releases can otherwise choose
+        # different XDG/default directories for the same generated AVD.
+        android_user = work / 'android-user'
+        avd_home = android_user / 'avd'
+        avd_home.mkdir(parents=True, exist_ok=True)
+        os.environ['ANDROID_USER_HOME'] = str(android_user)
+        os.environ['ANDROID_AVD_HOME'] = str(avd_home)
         avd = run([avdmanager, 'create', 'avd', '--force', '--name', name, '--package', image,
-                   '--device', 'pixel_2'], input='no\n', timeout=60)
+                   '--device', 'pixel_2', '--path', avd_home / (name + '.avd')], input='no\n', timeout=60)
         save_result(evidence / 'avd-create.txt', avd)
         require(avd, 'AVD creation')
         adb = sdk / 'platform-tools/adb'
