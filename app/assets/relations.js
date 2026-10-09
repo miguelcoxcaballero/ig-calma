@@ -49,7 +49,7 @@
     throw new Error('too_many_pages');
   }
   async function sync(force = false) {
-    if (!owner || active) return;
+    if (!owner || active || window.CALMA_ACTIVE === false) return;
     const state = window.__calmaRelations;
     if (!force && state.friendsReady && Date.now() - state.updated < freshness) return;
     const token = {owner, generation, controller: new AbortController()};
@@ -81,25 +81,43 @@
       if (generation === token.generation) notify();
     }
   }
+  function restoreCache() {
+    if (active || !owner) return;
+      try {
+        const cache = JSON.parse(localStorage.getItem('calma-relations-v2-' + owner));
+        if (cache && cache.owner === owner && cache.followingReady === true && cache.friendsReady === true
+            && Array.isArray(cache.following) && Array.isArray(cache.friends)
+            && cache.following.concat(cache.friends).every(name => typeof name === 'string' && /^[a-z0-9._]{1,30}$/.test(name))
+            && Number.isFinite(cache.updated) && cache.updated <= Date.now()
+            && (!window.__calmaRelations.friendsReady || cache.updated > window.__calmaRelations.updated)) {
+          window.__calmaRelations = {...cache, phase: 'ready', error: ''};
+        }
+      } catch (_) {}
+  }
+  function resume() {
+    if (window.CALMA_ACTIVE === false || !owner || active) return;
+    restoreCache();
+    if (window.__calmaRelations.phase !== 'error') sync();
+    notify();
+  }
+  document.addEventListener('calma-visibility', resume);
+  // A warmed inbox adopts the complete snapshot from Home without duplicate requests.
+  window.addEventListener('storage', event => {
+    if (event.key !== 'calma-relations-v2-' + owner || active) return;
+    restoreCache(); notify();
+  });
   function refreshIdentity(id) {
     id = /^\d+$/.test(String(id)) ? String(id) : '';
     if (id === owner) {
       const state = window.__calmaRelations;
-      if (owner && state.phase === 'ready' && Date.now() - state.updated >= freshness) sync();
+      if (owner && state.phase === 'waiting') resume();
+      else if (owner && state.phase === 'ready' && Date.now() - state.updated >= freshness) sync();
       return;
     }
     generation++; if (active) active.controller.abort(); active = null; owner = id;
     window.__calmaRelations = empty();
     if (id) {
-      try {
-        const cache = JSON.parse(localStorage.getItem('calma-relations-v2-' + id));
-        if (cache && cache.owner === id && cache.followingReady === true && cache.friendsReady === true
-            && Array.isArray(cache.following) && Array.isArray(cache.friends)
-            && cache.following.concat(cache.friends).every(name => typeof name === 'string' && /^[a-z0-9._]{1,30}$/.test(name))
-            && Number.isFinite(cache.updated) && cache.updated <= Date.now()) {
-          window.__calmaRelations = {...cache, phase: 'ready', error: ''};
-        }
-      } catch (_) {}
+      restoreCache();
       sync();
     }
     notify();

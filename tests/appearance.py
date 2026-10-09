@@ -22,7 +22,8 @@ with sync_playwright() as p:
     page.wait_for_timeout(200)
     assert color('body')=='rgb(0, 0, 0)' and color('main')=='rgb(0, 0, 0)'
     assert color('main','color')=='rgb(245, 245, 245)'
-    assert color('#calma-limit')=='rgb(18, 18, 18)'
+    assert color('#calma-limit','color')=='rgb(245, 245, 245)'
+    assert color('.calma-stepper','borderColor')=='rgb(54, 54, 54)'
     assert page.locator('html').evaluate('e=>getComputedStyle(e).colorScheme')=='dark'
     assert page.locator('#name').input_value()=='Do not recreate this document'
     assert page.locator('#photo').get_attribute('src')==src
@@ -31,10 +32,13 @@ with sync_playwright() as p:
     assert page.locator('#native').evaluate('e=>e.classList.contains("calma-pressed")')
     page.locator('#native').dispatch_event('pointerup',{'isPrimary':True,'button':0})
     assert not page.locator('#native').evaluate('e=>e.classList.contains("calma-pressed")')
-    page.evaluate('document.activeElement.blur();history.pushState({},"","/direct/inbox/");window.__calmaAppearance.refresh()')
+    page.evaluate('document.activeElement.blur();history.pushState({},"","/direct/inbox/");document.dispatchEvent(new Event("calma-route",{bubbles:true}))')
+    page.wait_for_function('document.querySelector("main").getAnimations().length===1')
     assert page.evaluate('document.querySelector("main").getAnimations().length')==1
+    assert color('main','transform')=='none', 'Changing tabs must not shift the entire conversation'
     page.evaluate('window.CALMA_APPEARANCE.reduceMotion=true;window.__calmaAppearance.refresh()')
     assert page.evaluate('document.querySelector("main").getAnimations().length')==0
+    assert page.locator('#calma-reels').evaluate('e=>getComputedStyle(e,"::before").transitionDuration')=='0s', 'Custom switch thumbs must also respect reduced motion'
     page.evaluate('history.pushState({},"","/");window.__calmaAppearance.refresh()')
     assert page.evaluate('document.querySelector("main").getAnimations().length')==0
     page.evaluate('window.CALMA_APPEARANCE.reduceMotion=false;window.__calmaAppearance.refresh()')
@@ -50,5 +54,14 @@ with sync_playwright() as p:
     page.evaluate('window.attributeWrites=0;window.testObserver=new MutationObserver(rs=>window.attributeWrites+=rs.length);window.testObserver.observe(document.documentElement,{attributes:true})')
     page.wait_for_timeout(350)
     assert page.evaluate('window.attributeWrites')<10, 'No theme mutation loop'
-    print('PASS: live light/dark changes, inherited Instagram palette, settings controls, input preservation, media unchanged, tactile feedback, route motion, Android/browser reduced motion, no duplicate styles or overlays, and no mutation loop.')
+    page.emulate_media(reduced_motion='no-preference')
+    page.evaluate('window.CALMA_APPEARANCE.reduceMotion=false;window.__calmaAppearance.refresh();window.animationCalls=0;const main=document.querySelector("main");main.animate=new Proxy(main.animate,{apply(fn,target,args){window.animationCalls++;return Reflect.apply(fn,target,args)}});for(let i=0;i<100;i++){const item=document.createElement("span");main.appendChild(item);item.remove()}')
+    page.wait_for_timeout(600)
+    assert page.evaluate('window.animationCalls')==0, 'Incoming messages must not restart whole-page motion'
+    page.evaluate('window.CALMA_ACTIVE=false;document.dispatchEvent(new Event("calma-visibility"));history.pushState({},"","/direct/t/123/");document.dispatchEvent(new Event("calma-route"))')
+    page.wait_for_timeout(150)
+    assert page.evaluate('window.animationCalls')==0, 'Retained background tabs must not animate'
+    page.evaluate('window.CALMA_ACTIVE=true;document.dispatchEvent(new Event("calma-visibility"));window.__calmaAppearance.destroy();history.pushState({},"","/direct/inbox/");document.dispatchEvent(new Event("calma-route"))')
+    assert page.locator('#calma-appearance-style').count()==0
+    print('PASS: live light/dark and reduced-motion changes, media/input preservation, route-event motion without layout shifts, no animation on incoming content or background tabs, cleanup, and no mutation loop.')
     browser.close()

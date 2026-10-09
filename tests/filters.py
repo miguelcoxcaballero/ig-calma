@@ -39,6 +39,20 @@ with sync_playwright() as p:
     assert visible(page,'#b1') and not page.locator('#calma-end').count(), 'Profiles must remain accessible'
     page.evaluate('history.pushState({},"","/");window.__calma.scan()')
     assert not visible(page,'#b1')
+    page.evaluate('''document.querySelector('nav').insertAdjacentHTML('beforeend','<a id="dynamic-reel" href="/reel/dynamic/">Clip</a>')''')
+    page.wait_for_function('document.querySelector("#dynamic-reel").classList.contains("calma-hidden")')
+    page.evaluate('document.querySelector("#dynamic-reel").href="/alice/"')
+    page.wait_for_function('!document.querySelector("#dynamic-reel").classList.contains("calma-hidden")')
+    assert visible(page,'#dynamic-reel'), 'A recycled Reel link must reappear when it becomes a profile link'
+    page.evaluate('history.pushState({},"","/direct/inbox/")')
+    page.evaluate('''window.dmScans=0;window.documentQueries=document.querySelectorAll;
+      document.querySelectorAll=function(selector){window.dmScans++;return window.documentQueries.call(this,selector)};
+      document.querySelector('main').insertAdjacentHTML('beforeend','<div id="typing">Typing</div>');''')
+    page.wait_for_timeout(1800)
+    assert page.evaluate('window.dmScans')==0, 'DM mutations must not scan feed links or poll the document'
+    page.evaluate('document.querySelectorAll=window.documentQueries;history.back()')
+    page.wait_for_function('location.pathname==="/" && document.documentElement.dataset.calmaHome==="true"')
+    assert not visible(page,'#b1'), 'Browser Back must synchronously reapply the Home filter'
     page.evaluate('window.__calma.destroy()')
     assert visible(page,'#b1') and visible(page,'nav a[href="/reels/"]')
     config['mode']=2

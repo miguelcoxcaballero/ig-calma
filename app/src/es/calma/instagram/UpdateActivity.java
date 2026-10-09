@@ -20,21 +20,31 @@ public class UpdateActivity extends Activity {
     private WebView web;
     @Override public void onCreate(Bundle saved) {
         super.onCreate(saved);
-        web=new WebView(this);
+        web=new WebView(this) {
+            private boolean closed=false;
+            @Override public void evaluateJavascript(String script,ValueCallback<String> callback) {
+                if(!closed && !UpdateActivity.this.isFinishing() && !UpdateActivity.this.isDestroyed())super.evaluateJavascript(script,callback);
+            }
+            @Override public void destroy(){if(!closed){closed=true;super.destroy();}}
+        };
         boolean dark=(getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)==Configuration.UI_MODE_NIGHT_YES;
         web.setBackgroundColor(dark?Color.BLACK:Color.WHITE);
         web.getSettings().setJavaScriptEnabled(true); web.getSettings().setDomStorageEnabled(true);
         web.getSettings().setAllowFileAccess(false); web.getSettings().setAllowContentAccess(false);
         web.getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-        web.getSettings().setUserAgentString(web.getSettings().getUserAgentString()+" InhouseReadApp/0.3.3");
+        web.getSettings().setUserAgentString(web.getSettings().getUserAgentString()+" InhouseReadApp/0.3.4");
         web.addJavascriptInterface(new InhouseNativeBridge(),"InhouseNative");
-        web.setWebViewClient(new UpdateAssetClient(this));
+        web.setWebViewClient(new UpdateAssetClient(this) {
+            @Override public boolean onRenderProcessGone(WebView view,RenderProcessGoneDetail detail) {
+                view.destroy();finish();return true;
+            }
+        });
         setContentView(web);
         web.loadUrl("https://appassets.androidplatform.net/updates/index.html?inhouse_app=1");
     }
     public class InhouseNativeBridge {
         private volatile boolean updateDownloadRunning=false;
-        @JavascriptInterface public String getAppVersion(){return "0.3.3";}
+        @JavascriptInterface public String getAppVersion(){return "0.3.4";}
         // Descarga el APK indicado (validado por src/js/android-update.js
         // contra una lista blanca de hosts antes de llegar aqui) y lanza el
         // instalador del sistema. Puerto de installAppUpdate() de

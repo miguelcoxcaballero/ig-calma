@@ -1,16 +1,26 @@
-# Instagram Calma 0.3.3 — experimental
+# Instagram Calma 0.3.4 — experimental
 
 Cliente Android independiente basado en **Instagram web**, con detección automática de seguidos, amigos por seguimiento mutuo, feed finito y bloqueo de Reels. No es una modificación del APK oficial ni está afiliado a Meta. Requiere Android 8 o posterior y Android System WebView actualizado.
 
-**[Descargar APK 0.3.3](https://github.com/miguelcoxcaballero/ig-calma/raw/refs/heads/main/downloads/IG-Calma-0.3.3.apk)** · [Archivos y SHA-256](downloads/)
+**[Descargar APK 0.3.4](https://github.com/miguelcoxcaballero/ig-calma/raw/refs/heads/main/downloads/IG-Calma-0.3.4.apk)** · [Archivos y SHA-256](downloads/)
 
 ## Instalación y uso
 
 1. Descarga y abre el APK. Si Android lo pide, permite instalar aplicaciones desde el navegador o gestor de archivos utilizado. La actualización conserva el mismo paquete y certificado de firma que la versión anterior.
 2. Inicia sesión directamente en Instagram web. Ya no se introducen usuarios ni se importan listas. La app detecta tu propia sesión e intenta consultar tus relaciones.
-3. En los ajustes de Instagram web, entra en **Editar perfil → Ajustes adicionales** para elegir «Solo cuentas que sigo», «Solo amigos (seguimiento mutuo)» o «Todas las cuentas», desactivar Reels y fijar entre 1 y 100 publicaciones por sesión.
+3. En los ajustes de Instagram web, entra en **Editar perfil → Tu feed** para elegir «Solo cuentas que sigo», «Solo amigos (seguimiento mutuo)» o «Todas las cuentas», desactivar Reels y fijar entre 1 y 100 publicaciones por sesión.
 4. Se conserva la interfaz de Instagram web, sin la barra verde ni el panel de estado anterior. Los controles adicionales se insertan en el contenido de la página de ajustes, sin botones flotantes, barras ni superposiciones. La apariencia y funciones siguen siendo las de la web, no las de la app nativa.
-5. «Inicio / Nueva sesión» empieza otra tanda. Guardar ajustes, recargar o abrir un nuevo documento también reinician el límite; no es un límite diario ni un historial permanente de publicaciones vistas.
+5. «Empezar otra sesión» inicia otra tanda. Cambiar entre Inicio y DM conserva la tanda actual. Guardar ajustes, recargar o abrir un nuevo documento también reinician el límite; no es un límite diario ni un historial permanente de publicaciones vistas.
+
+## Fluidez y ajustes en 0.3.4
+
+Inicio y Mensajes mantienen dos WebViews en memoria. Cambiar de pestaña conserva la posición, la conversación abierta y los campos de texto; la notificación de un DM abre la bandeja. La bandeja se precarga después de preparar Inicio cuando hay una sesión iniciada y memoria disponible. No se precarga en dispositivos que Android identifica como de poca RAM. Al cambiar de cuenta se descarta la pantalla inactiva; Android también puede liberarla por presión de memoria. La primera carga, un proceso cerrado o una pantalla liberada siguen necesitando conexión a Instagram.
+
+Los filtros, el bloqueo de Reels y las animaciones responden a cambios de página y contenido; ya no recorren periódicamente el documento. Su trabajo se suspende en la pestaña inactiva. El estado del feed no se reescribe si no cambia, y los mensajes entrantes no animan de nuevo toda la conversación. La precarga reutiliza la lista de amigos completa de Inicio, sin repetir sus consultas desde la pestaña oculta.
+
+«Tu feed» usa opciones inline, switches y un contador con −/+, adaptados al tema del dispositivo. Se han reducido las explicaciones, eliminado el selector nativo y conservado los cambios pendientes si Instagram reemplaza el panel. Los permisos de notificaciones y la confirmación de instalación siguen siendo pantallas del sistema Android.
+
+También se corrigen las respuestas tardías de una página anterior que podían revelar contenido durante otra carga, la pérdida de pestañas al pasar normalmente al segundo plano, la restauración de un Reel al pulsar Inicio y el cambio accidental al siguiente vídeo si desaparecía el clip compartido. Se maneja la pérdida del proceso de WebView para reconstruir la pantalla afectada. Estas rutas nativas se han compilado y revisado; aún requieren validación en un dispositivo Android real.
 
 ## Correcciones del feed en 0.3.3
 
@@ -22,7 +32,7 @@ Estas correcciones permiten continuar cargando los posts que Instagram entrega a
 
 ## Actualización dentro de la app
 
-En **Ajustes → Editar perfil → Ajustes adicionales → Actualizar aplicación**, puedes buscar y descargar una versión nueva sin abrir el navegador. El actualizador consulta `android-update.json`, compara la versión instalada y muestra el aviso, botón Instalar y barra de progreso originales de **Inhouse Read**. La descarga y la verificación SHA-256 también son su código reutilizado, no una implementación nueva. [Procedencia y adaptaciones mínimas](vendor/UPSTREAM.md). Se revisó el adaptador de Inhouse Photos; esta app usa el de Read por ser Java/WebView.
+En **Ajustes → Editar perfil → Tu feed → Actualizar aplicación**, puedes buscar y descargar una versión nueva sin abrir el navegador. El actualizador consulta `android-update.json`, compara la versión instalada y muestra el aviso, botón Instalar y barra de progreso originales de **Inhouse Read**. La descarga y la verificación SHA-256 también son su código reutilizado, no una implementación nueva. [Procedencia y adaptaciones mínimas](vendor/UPSTREAM.md). Se revisó el adaptador de Inhouse Photos; esta app usa el de Read por ser Java/WebView.
 
 La comprobación automática comienza 12 segundos después de preparar el documento principal, sin añadir una vista al feed; el código original vuelve a consultar cada 15 minutos mientras su WebView siga ejecutándose. Cuando detecta una versión nueva con `required: true`, abre la pantalla interna de actualización. No se ofrece como un servicio de actualización mientras Android haya cerrado la app.
 
@@ -36,7 +46,7 @@ Cada compilación genera el manifiesto con la versión, tamaño y SHA-256 del AP
 
 El modo claro/oscuro sigue la configuración del dispositivo. Cambia el fondo de la ventana, las barras del sistema y la paleta de Instagram web y de los controles adicionales. Se actualiza sin recargar la página al cambiar `uiMode`; volver a la app también actualiza el tema. No se invierten fotos ni vídeos.
 
-Se añaden transiciones de navegación de 170 ms y respuesta táctil a botones y enlaces, sin superposiciones. Se respetan las animaciones desactivadas en Android y `prefers-reduced-motion`. Se ocultan las barras de desplazamiento de WebView. La apariencia y el motor siguen siendo web; no se reproduce la app nativa.
+Se añaden transiciones de opacidad de 110 ms y respuesta táctil a botones y enlaces, sin superposiciones. Se respetan las animaciones desactivadas en Android y `prefers-reduced-motion`. Se ocultan las barras de desplazamiento de WebView. La apariencia y el motor siguen siendo web; no se reproduce la app nativa.
 
 Los filtros se instalan al estar disponible el primer documento visible, antes del evento de carga completa. WebView se mantiene con el fondo del tema hasta terminar esa instalación. Las cuentas seguidas verificadas pueden mostrarse desde la primera página de resultados; la sincronización completa continúa y solo se guardan cachés completas. Esto reduce la espera del filtrado, pero no acelera los servidores o la conexión de Instagram.
 
@@ -44,7 +54,7 @@ El inicio mantiene oculto el contenido no aprobado mediante CSS antes de clasifi
 
 ## Ubicación de los controles
 
-Abre los ajustes de Instagram desde su menú habitual y entra en **Editar perfil** (`/accounts/edit/`). Al final de esa página aparece **Ajustes adicionales**, con filtros, límite de publicaciones, sincronización y permisos de DM. Se mantienen los formularios y controles existentes de Instagram. Si cambia la estructura de la página, la integración puede necesitar ajustes. No se modifica el APK oficial ni se añaden controles al feed o a los mensajes.
+Abre los ajustes de Instagram desde su menú habitual y entra en **Editar perfil** (`/accounts/edit/`). Al final de esa página aparece **Tu feed**, con filtros, límite de publicaciones, sincronización y permisos de DM. Se mantienen los formularios y controles existentes de Instagram. Si cambia la estructura de la página, la integración puede necesitar ajustes. No se modifica el APK oficial ni se añaden controles al feed o a los mensajes.
 
 ## Seguidos y amigos automáticos
 
@@ -63,7 +73,7 @@ Si una consulta se rechaza, se informa en los ajustes y no se reintenta automát
 **No hay un canal push propio de Instagram.** Se incluye una integración local opcional que copia avisos de DM publicados por la app oficial, mediante [NotificationListenerService de Android](https://developer.android.com/reference/android/service/notification/NotificationListenerService).
 
 1. Mantén **Instagram oficial instalado**, con la cuenta correcta y sus notificaciones de mensajes habilitadas. Esta app no verifica qué cuenta utiliza la app oficial: los avisos proceden de su sesión.
-2. En **Editar perfil → Ajustes adicionales**, pulsa **Activar permisos de notificaciones**. En Android 13 o posterior, concede permiso para mostrar avisos; después, activa el acceso a notificaciones de Instagram Calma en los ajustes del sistema.
+2. En **Editar perfil → Tu feed**, pulsa **Activar permisos de notificaciones**. En Android 13 o posterior, concede permiso para mostrar avisos; después, activa el acceso a notificaciones de Instagram Calma en los ajustes del sistema.
 3. Se reconocen avisos marcados como mensajes, con estilo de conversación o canales que indican mensajes/direct. No se copian avisos de otras apps ni actividad general. Si Instagram etiqueta un DM de otra forma, podría no reconocerse.
 4. Pulsar un aviso copiado abre la bandeja de DM aquí; no garantiza abrir el hilo exacto ni incluye respuestas rápidas. Puede haber tanto un aviso original como una copia. Desactivar los originales impide copiarlos.
 5. Puedes desactivar la integración y revocar su acceso desde Android. Android concede un permiso amplio de acceso a notificaciones; el código descarta desde el inicio todos los paquetes salvo `com.instagram.android`. Los avisos no se envían a un servidor propio.
@@ -87,7 +97,7 @@ La autorización es de un solo uso y caduca en 30 segundos. El visor queda limit
 
 ## Verificación realizada
 
-APK para API 35, mínimo 26, versión de paquete 7. Firma v2/v3 verificada; mismo certificado que 0.1.0. Permisos: Internet, mostrar notificaciones e instalar paquetes con autorización del usuario. El servicio está protegido por `BIND_NOTIFICATION_LISTENER_SERVICE` y requiere activación del usuario.
+APK para API 35, mínimo 26, versión de paquete 8. Firma v2/v3 verificada; mismo certificado que 0.1.0. Permisos: Internet, mostrar notificaciones e instalar paquetes con autorización del usuario. El servicio está protegido por `BIND_NOTIFICATION_LISTENER_SERVICE` y requiere activación del usuario.
 
 Pruebas del actualizador original: detección de versión, aviso, URL y SHA-256 enviados al instalador, permiso de instalación, progreso, estados de listo/error, validación de origen y detección automática; CSS idéntico al original y bloque nativo idéntico salvo las sustituciones documentadas. Manifiesto comprobado frente al APK firmado. Pruebas de tema y movimiento: cambio claro/oscuro en el mismo documento, colores heredados por los controles, conservación de campos y fotos, respuesta táctil, transiciones y movimiento reducido, ausencia de superposiciones y de bucles de cambios del tema. Pruebas de Reels: enlaces de DM accesibles, amigos mutuos verificados, rechazo de cuentas no mutuas, un único vídeo, bloqueo de desplazamiento, ocultación inmediata de fotogramas al volver a Inicio y de vídeos añadidos tarde a una publicación ya aprobada. Prueba de carga: las primeras cuentas seguidas están disponibles antes de terminar la paginación. Pruebas de integración en la página de ajustes: se conserva el formulario original, controles en el flujo del documento sin superposición, guardado mediante navegación validada, sustitución dinámica del panel y ausencia de controles sobre inicio, DM y acceso. Pruebas en Chromium con respuestas simuladas: paginación, intersección por identificadores, integración con filtros, separación por cuenta, reinicio de sesión al cambiar de cuenta, cierre de sesión, caché, detención ante limitación de consultas y rechazo de listas mutuas incompletas. Pruebas de filtros: autores desconocidos, Reels, límite, carga dinámica, navegación y acceso. Pruebas de clasificación de avisos: DM, exclusión de actividad general, otras apps y avisos de la propia app.
 
@@ -102,7 +112,7 @@ python3 setup-tools.py
 bash build.sh
 ```
 
-Salida: `dist/IG-Calma-0.3.3.apk`. Conserva `build/local-signing.p12` para firmar actualizaciones con la misma clave. Su contraseña `localbuild` es solo para compilación local, no una credencial de Instagram. La clave no se incluye en el repositorio.
+Salida: `dist/IG-Calma-0.3.4.apk`. Conserva `build/local-signing.p12` para firmar actualizaciones con la misma clave. Su contraseña `localbuild` es solo para compilación local, no una credencial de Instagram. La clave no se incluye en el repositorio.
 
 Con Playwright para Python y Chromium en `/usr/bin/chromium`:
 
@@ -110,6 +120,8 @@ Con Playwright para Python y Chromium en `/usr/bin/chromium`:
 python3 tests/filters.py
 python3 tests/feed_regressions.py
 python3 tests/relations.py
+python3 tests/retained_relations.py
+python3 tests/navigation.py
 python3 tests/settings.py
 python3 tests/appearance.py
 python3 tests/reels.py

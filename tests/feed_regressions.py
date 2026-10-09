@@ -47,5 +47,31 @@ with sync_playwright() as p:
     page.evaluate('document.querySelector("#next-page header a").href="/alice/"')
     page.wait_for_function('document.querySelector("#next-page").classList.contains("calma-approved")')
     assert page.evaluate('window.__calma.count()')==5, 'A recycled/restored post must not consume the cap twice'
-    print('PASS: scroll-driven second page, virtual spacers/sentinel intact, collaborative and prefixed authors, carousel photos, commenter exclusion, duplicate suppression and recycled author changes.')
+    # An idle feed must not rebuild its status or rewrite attributes on a timer.
+    page.evaluate('''window.statusTitle=document.querySelector('#calma-end strong');window.idleWrites=0;
+      window.idleObserver=new MutationObserver(records=>window.idleWrites+=records.length);
+      window.idleObserver.observe(document.documentElement,{subtree:true,childList:true,attributes:true});''')
+    page.wait_for_timeout(1800)
+    assert page.evaluate('window.idleWrites')==0, 'Idle filters must not wake up the page observers'
+    page.evaluate('window.idleObserver.disconnect()')
+    # Only a changed post needs author/media parsing; an append leaves older posts cached.
+    page.evaluate('''window.oldPostReads=0;
+      const oldPost=document.querySelector('#collab'), query=oldPost.querySelectorAll;
+      oldPost.querySelectorAll=function(selector){window.oldPostReads++;return query.call(this,selector)};
+      document.querySelector('#feed').insertAdjacentHTML('beforeend','<article id="appended"><header><a href="/alice/">Alice</a></header><a href="/p/appended/">Post</a></article>');''')
+    page.wait_for_function('document.querySelector("#appended").classList.contains("calma-approved")')
+    assert page.evaluate('window.oldPostReads')==0, 'Appending posts must not reparse every earlier article'
+    assert page.evaluate('window.statusTitle===document.querySelector("#calma-end strong")'), 'Status nodes must remain stable when the count changes'
+    # Inactive tab observers are suspended, then invalidated when the tab returns.
+    page.evaluate('''window.CALMA_ACTIVE=false;document.dispatchEvent(new CustomEvent('calma-visibility',{detail:{active:false}}));
+      document.querySelector('#appended header a').href='/outsider/';''')
+    page.wait_for_timeout(100)
+    assert page.locator('#appended').evaluate('e=>e.classList.contains("calma-approved")'), 'Background tab must not schedule filtering'
+    page.evaluate('window.CALMA_ACTIVE=true;document.dispatchEvent(new CustomEvent("calma-visibility",{detail:{active:true}}))')
+    assert not page.locator('#appended').is_visible(), 'Returning to a cached tab must revalidate its updated posts'
+    # Author DOM replaced in place is another common React recycling path.
+    page.evaluate('document.querySelector("#appended header").innerHTML="<a href=/alice/>Alice</a>"')
+    page.wait_for_function('document.querySelector("#appended").classList.contains("calma-approved")')
+    assert page.evaluate('window.__calma.count()')==6
+    print('PASS: pagination, authors, carousels, duplicates, recycling, idle stability, incremental parsing and suspended tab refresh.')
     browser.close()

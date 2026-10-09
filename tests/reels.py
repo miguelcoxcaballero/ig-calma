@@ -51,5 +51,29 @@ with sync_playwright() as p:
     assert page.locator('#photo').is_visible()
     page.evaluate('document.querySelector("#photo").insertAdjacentHTML("beforeend","<video id=lateclip></video>")')
     assert not page.locator('#lateclip').is_visible(), 'Late video cannot flash inside an approved photo post'
-    print('PASS: DM links preserved, mutual friend authorization, nonfriend rejection, single-clip playback, extra videos hidden, wheel/touch/key pagination blocked and synchronous Home frame guard.')
+    # The reel gate must be dormant on chats, and react to route changes without polling.
+    page.evaluate('window.__calma.destroy();window.__calmaReelGate.destroy();history.replaceState({},"","/direct/t/123/");window.CALMA_CONFIG.allowedReelPath="/reel/clip1/";document.body.innerHTML="<main><article id=one><video id=first></video><textarea id=reply></textarea></article><article id=two><video id=next></video></article></main>"')
+    page.evaluate(gate)
+    page.evaluate('window.lockWrites=0;window.lockObserver=new MutationObserver(rs=>window.lockWrites+=rs.filter(r=>r.attributeName==="data-calma-reel-locked").length);window.lockObserver.observe(document.documentElement,{attributes:true});for(let i=0;i<100;i++){const message=document.createElement("span");document.querySelector("main").appendChild(message);message.remove()}')
+    page.wait_for_timeout(500)
+    assert page.evaluate('window.lockWrites')==0, 'Chat mutations must not repeatedly invoke the reel lock'
+    assert page.evaluate('const event=new Event("wheel",{bubbles:true,cancelable:true});document.querySelector("main").dispatchEvent(event);!event.defaultPrevented')
+    page.evaluate('history.pushState({},"","/reel/clip1/");document.dispatchEvent(new Event("calma-route",{bubbles:true}))')
+    assert page.locator('#first').is_visible() and not page.locator('#next').is_visible()
+    assert page.evaluate('const event=new KeyboardEvent("keydown",{key:"ArrowDown",bubbles:true,cancelable:true});document.querySelector("#reply").dispatchEvent(event);!event.defaultPrevented'), 'The lock must preserve cursor movement in comments'
+    # React can replace the current player, but removing its post cannot expose the next reel.
+    page.evaluate('document.querySelector("#first").outerHTML="<video id=first></video>"')
+    page.wait_for_timeout(40)
+    assert page.locator('#first').is_visible()
+    page.evaluate('document.querySelector("#one").remove()')
+    page.wait_for_timeout(40)
+    assert not page.locator('#next').is_visible(), 'Removing the current post must not promote a recommended reel'
+    page.evaluate('window.CALMA_ACTIVE=false;document.dispatchEvent(new Event("calma-visibility"));document.querySelector("main").insertAdjacentHTML("beforeend","<article id=three><video id=later></video></article>")')
+    page.wait_for_timeout(40)
+    assert not page.locator('#later').is_visible()
+    page.evaluate('window.CALMA_ACTIVE=true;document.dispatchEvent(new Event("calma-visibility"));history.pushState({},"","/direct/inbox/");document.dispatchEvent(new Event("calma-route"))')
+    assert page.locator('html').get_attribute('data-calma-reel-locked')=='false'
+    assert page.evaluate('const event=new Event("touchmove",{bubbles:true,cancelable:true});document.querySelector("main").dispatchEvent(event);!event.defaultPrevented'), 'Leaving the reel must release gesture blockers immediately'
+    assert page.locator('.calma-other-reel').count()==0
+    print('PASS: friend-only DM authorization, single-clip playback and replacement, no promotion of recommendations, synchronous Home guard, editable controls, dormant chat/background behavior and immediate route cleanup.')
     browser.close()
