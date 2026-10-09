@@ -1,9 +1,9 @@
 {
-  "version": "0.4.1",
-  "versionCode": 384510829,
+  "version": "0.4.2",
+  "versionCode": 384510830,
   "required": true,
-  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.1/IG-Calma-0.4.1.apk",
-  "apkSha256": "6bc853e3ff41f422c8c05209a9984a7df172471092bd694d014962f1086c8b07",
+  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.2/IG-Calma-0.4.2.apk",
+  "apkSha256": "e204620481f53c88c2f6f1413db1475d6853de12c451e13ed2bfde7a68ff8221",
   "apkSizeBytes": 146244269,
-  "releaseNotes": "Corrige el empaquetado y el inicio del actualizador; bloquea anuncios en el feed, Explorar e historias."
+  "releaseNotes": "Feed solo de amigos, Explorar de cuentas seguidas y búsqueda libre al escribir, sin sugerencias en vacío."
 }
