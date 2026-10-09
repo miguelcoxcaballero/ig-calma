@@ -1,8 +1,10 @@
-# Instagram Calma 0.4.5 — prueba nativa
+# Instagram Calma 0.4.4 — prueba nativa
+
+La 0.4.5 se ha retirado del canal de actualizaciones por problemas de carga del feed. La versión recomendada provisionalmente es la 0.4.4; se está preparando una actualización de recuperación que podrá instalarse sobre la 0.4.5.
 
 Esta versión parte del APK original de Instagram **439.0.0.37.89** y aplica parches propios de Calma. Inicio, historias, mensajes y reproducción usan la aplicación nativa. No incluye paquetes de parches de terceros.
 
-**[Descargar APK nativo](https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.5/IG-Calma-0.4.5.apk)** · [Publicación y comprobaciones](https://github.com/miguelcoxcaballero/ig-calma/releases/tag/v0.4.5) · [Código de los parches](native/patches/)
+**[Descargar APK nativo](https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.4/IG-Calma-0.4.4.apk)** · [Publicación y comprobaciones](https://github.com/miguelcoxcaballero/ig-calma/releases/tag/v0.4.4) · [Código de los parches](native/patches/)
 
 Requiere **Android 9 o posterior y ARM64**. No necesita root. Usa el paquete y la firma de Calma; puede coexistir con Instagram oficial. La sesión nativa requiere iniciar sesión de nuevo al venir del cliente web.
 
