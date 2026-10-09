@@ -1,9 +1,9 @@
 {
-  "version": "0.4.8",
-  "versionCode": 384510836,
+  "version": "0.4.9",
+  "versionCode": 384510837,
   "required": true,
-  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.8/IG-Calma-0.4.8.apk",
-  "apkSha256": "bb31137e1ba74518afb5cba8254d0e0af43992b5e438880c4d55a52e431f054d",
+  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.9/IG-Calma-0.4.9.apk",
+  "apkSha256": "f04f1ae5975e553ecb4d34180db95c4e754e94203909af86987c66f45ea482e0",
   "apkSizeBytes": 146264749,
-  "releaseNotes": "Corrige la entrega de Friends y Following. Los amigos confirmados aparecen sin otra descarga del feed y las peticiones de paginación rechazadas pueden reintentarse."
+  "releaseNotes": "Los Reels aparecen en Friends y Following. Puedes abrir el Reel del feed o de un mensaje, sin deslizar a otros. En For you, con minutos disponibles, los Reels mantienen el scroll normal."
 }

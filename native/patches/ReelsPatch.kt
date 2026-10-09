@@ -21,14 +21,13 @@ private fun MutableMethod.hasText(text: String): Boolean = implementation!!.inst
 /** Independently mapped from stock DEX, never imported from a third-party patch bundle. */
 val calmaNativeReels = bytecodePatch(
     name = "Calma native Reels",
-    description = "Native mutual-friend DM clips with one-clip playback and Reels navigation disabled"
+    description = "Single-clip playback outside earned For you time, without hiding feed Reels"
 ) {
     compatibleWith("com.instagram.android"("439.0.0.37.89"))
     dependsOn(calmaExtensionPatch)
     extendWith(java.util.function.Supplier { blockedReelsDex() })
     execute {
         val config = mutableClassDefBy(CONFIG)
-        val constructor = config.methods.single { it.name == "<init>" }
         for (fieldName in listOf("A2u", "A27", "A28", "A2o", "A2N", "A2O", "A20", "A3b", "A2t", "A24", "A25", "A2n", "A2r", "A3H")) {
             check(config.fields.any { it.name == fieldName && it.type == "Z" }) { "Stock Reels configuration changed: $fieldName" }
         }
@@ -40,10 +39,7 @@ val calmaNativeReels = bytecodePatch(
         val directData = classDefBy("Lcom/instagram/clips/intf/ClipsViewerDirectData;")
         check(directData.fields.any { it.name == "A02" && it.type == "Ljava/lang/String;" })
         check(config.methods.single { it.name == "toString" }.hasText(", shouldForceDisableTailLoads="))
-        constructor.implementation!!.instructions.withIndex().filter { it.value.opcode == Opcode.RETURN_VOID }.map { it.index }.reversed().forEach {
-            constructor.replaceInstruction(it, "invoke-static/range {p0 .. p0}, $REELS->configure(Ljava/lang/Object;)V")
-            constructor.addInstructions(it + 1, "return-void")
-        }
+        // Do not alter constructor/prefetch configs: they may later open during paid For you time.
         val launchers = mutableClassDefBy("LX/03zs;")
         val targets = mapOf(
             "A06" to "android_purge_26_q2_ClipsPluginImpl_maybePrefetchClipsViewer",
@@ -59,7 +55,7 @@ val calmaNativeReels = bytecodePatch(
             check(configIndex >= 0 && method.parameterTypes[configIndex + 1] == SESSION)
             check(method.implementation!!.registerCount > method.parameterTypes.size) { "Launcher needs a local register" }
             val guard = if (name == "A06") {
-                "invoke-static/range {p$configIndex .. p${configIndex + 1}}, $REELS->allowLaunch(Ljava/lang/Object;Ljava/lang/Object;)Z"
+                "invoke-static/range {p$configIndex .. p${configIndex + 1}}, $REELS->allowPrefetch(Ljava/lang/Object;Ljava/lang/Object;)Z"
             } else {
                 check(method.implementation!!.registerCount - method.parameterTypes.size >= 3)
                 buildString {
@@ -150,7 +146,7 @@ val calmaNativeReels = bytecodePatch(
             check(method.hasText("android_purge_26_q3_ClipsViewPagerImpl_$operation"))
             check(method.implementation!!.registerCount > method.parameterTypes.size + 1)
             method.addInstructionsWithLabels(0, """
-                invoke-static {}, $REELS->locked()Z
+                invoke-static/range {p0 .. p0}, $REELS->pagerLocked(Ljava/lang/Object;)Z
                 move-result v0
                 if-eqz v0, :calma_original
                 invoke-static/range {p0 .. p0}, $REELS->lockPager(Ljava/lang/Object;)V
@@ -161,7 +157,7 @@ val calmaNativeReels = bytecodePatch(
         check(select.accessFlags and 8 != 0 && select.parameterTypes.map { it.toString() } == listOf("LX/019Z;", "I", "Z"))
         check(select.hasText("android_purge_26_q3_ClipsViewPagerImpl_setCurrentItemInternal"))
         select.addInstructionsWithLabels(0, """
-            invoke-static/range {p1 .. p1}, $REELS->maySelect(I)Z
+            invoke-static/range {p0 .. p1}, $REELS->maySelect(Ljava/lang/Object;I)Z
             move-result v0
             if-nez v0, :calma_original
             return-void

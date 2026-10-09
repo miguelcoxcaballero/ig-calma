@@ -84,10 +84,10 @@ public final class CalmaSettingsActivity extends Activity {
         content.addView(text("Caducan a las 24 horas", 13, muted));
         separator(content);
         LinearLayout reelRow = row();
-        reelRow.addView(text("Ocultar Reels", 16, foreground), new LinearLayout.LayoutParams(0, dp(54), 1));
+        reelRow.addView(text("Bloquear scroll de Reels", 16, foreground), new LinearLayout.LayoutParams(0, dp(54), 1));
         reels = new Mark(true);
         reelRow.addView(reels, new LinearLayout.LayoutParams(dp(46), dp(30)));
-        reelRow.setContentDescription("Ocultar Reels");
+        reelRow.setContentDescription("Bloquear scroll de Reels");
         reelRow.setAccessibilityDelegate(checkable("android.widget.Switch"));
         press(reelRow, () -> { CalmaConfig.setReels(!CalmaConfig.reels()); refresh(); });
         content.addView(reelRow);

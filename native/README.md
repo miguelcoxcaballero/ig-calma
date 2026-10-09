@@ -20,12 +20,12 @@ La entrada aceptada está fijada en [`stock.lock.json`](stock.lock.json):
 | Android mínimo | Android 9, API 28 |
 | Formato de entrada | APKM con `base.apk` y `split_config.xxhdpi.apk` |
 | Procedencia | [Variante de APKMirror](https://www.apkmirror.com/apk/instagram/instagram-instagram/instagram-439-0-0-37-89-release/instagram-439-0-0-37-89-4-android-apk-download/) |
-| Versión propia de Calma | `0.4.8`, definida en [`CalmaBuild.java`](src/es/calma/instagram/nativeapp/CalmaBuild.java) |
+| Versión propia de Calma | `0.4.9`, definida en [`CalmaBuild.java`](src/es/calma/instagram/nativeapp/CalmaBuild.java) |
 | Paquete resultante | `es.calma.instagram` |
-| versionCode resultante | `384510836` |
+| versionCode resultante | `384510837` |
 
 El manifiesto del APK conserva `versionName=439.0.0.37.89` para Instagram. La
-comparación de actualizaciones utiliza `CalmaBuild.VERSION`, actualmente `0.4.8`.
+comparación de actualizaciones utiliza `CalmaBuild.VERSION`, actualmente `0.4.9`.
 Son versiones distintas con funciones distintas.
 
 El build verifica el SHA-256 del APKM y de cada split, además de la cadena de firma
@@ -146,13 +146,13 @@ regenera los metadatos del cargador, alinea a **16 KB**, firma y verifica el res
 
 Los resultados quedan en:
 
-- `native/build/dist/IG-Calma-0.4.8.apk`.
+- `native/build/dist/IG-Calma-0.4.9.apk`.
 - `native/build/dist/SHA256SUMS.txt`, `build-info.json` y `verification.json`.
 - `native/build/patch-result.json` y `native/build/extension/build-report.json`.
 - `android-update.json` y `native/android-update.json`, idénticos y generados a partir del APK firmado.
 
 El build genera los archivos locales; no publica una release. El manifiesto de
-actualización apunta al APK de la release `v0.4.8` del repositorio configurado en el
+actualización apunta al APK de la release `v0.4.9` del repositorio configurado en el
 script. La publicación debe adjuntar exactamente ese APK y mantener su versión,
 tamaño y SHA-256 sincronizados con el manifiesto. Los dos manifiestos usan
 `required: true`; con `false`, Inhouse Read no ofrece la actualización. Publicar
@@ -218,7 +218,7 @@ anterior no se entrega después de cambiar de modo.
 
 Explorar (`X.094e`) usa relaciones de seguimiento del usuario de esa petición;
 no exige que la otra cuenta le siga de vuelta. La cuadrícula de una búsqueda
-escrita (`X.0XEv`) permite otros autores y mantiene los filtros de anuncios/Reels.
+escrita (`X.0XEv`) permite otros autores y mantiene el filtro de anuncios; los Reels orgánicos pueden abrirse como clips individuales.
 Los parsers de cuentas de búsqueda ya no eliminan usuarios no seguidos.
 
 El proveedor nativo de la búsqueda principal `X.0I4B` distingue resultados con
@@ -259,10 +259,10 @@ Para verificar otra vez el APK firmado:
 
 ```sh
 python3 native/scripts/verify-apk.py \
-  --apk native/build/dist/IG-Calma-0.4.8.apk \
+  --apk native/build/dist/IG-Calma-0.4.9.apk \
   --stock /ruta/al/base.apk \
   --build-tools "$CALMA_SDK/build-tools/36.0.0"
-python3 native/tests/updater.py --apk native/build/dist/IG-Calma-0.4.8.apk
+python3 native/tests/updater.py --apk native/build/dist/IG-Calma-0.4.9.apk
 ```
 
 La verificación del artefacto comprueba firma, alineación de 16 KB, versiones,
@@ -328,3 +328,12 @@ La selección se fija en el mapa HTTP final de la petición principal, después 
 Las comprobaciones de amistad se agrupan por cuenta e ID, sin peticiones solapadas para el mismo autor. Al terminar se actualiza el controlador mediante su entrega `LOCAL` (`A0E`): no hay que llegar al final del timeline ni descargar otra cabecera para ver los amigos ya confirmados. Los intentos de paginación rechazados por estar ocupado el controlador se pueden reintentar. Una nueva cabecera reinicia ese control. Se invalida la caché de timeline de versiones anteriores.
 
 Validación: 108 aserciones JVM del feed/timeline/entrega, comprobación del flujo de los hooks en el DEX y pruebas del APK en Android API 34/35/36 (https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38002979231). La instrumentación usa los modelos originales de HTTP, peticiones, envoltorios de entrega, User, Media y respuesta con datos sintéticos. Comprueba respuestas con ID ausente o diferente y un User con `FollowStatusNotFollowing` antiguo. Estas pruebas no reproducen la cuenta autenticada ni la latencia de red del móvil del usuario.
+
+
+## Reels individuales y minutos de For you (0.4.9)
+
+**Bloquear scroll de Reels** conserva los vídeos de los autores permitidos en Friends, Following y Explorar. Al abrir un Reel, `CalmaReels` fija la fuente al clip seleccionado y desactiva la paginación, el avance automático y los gestos de su visor nativo. Los mensajes abren el clip compartido sin consultas de amistad. El controlador `019Z` aplica el bloqueo según su propio `ClipsViewerConfig`, por lo que un DM sigue siendo individual aunque For you tenga saldo.
+
+Con minutos disponibles, los Reels de For you conservan sus opciones originales de paginación. La construcción y precarga no modifican la configuración; al abrir se guardan sus valores originales con referencias débiles y se restauran si vuelve a utilizarse en For you. Se invalida la caché antigua que omitía Reels. El actualizador Inhouse no cambia.
+
+Además de las pruebas JVM y del DEX final, la instrumentación comprueba `ClipsViewerConfig`, `ViewPager2`, el guard de `019Z.A03` y la política real de créditos en Android 14–16. [Ejecución](PENDING_RUNTIME_URL). Usa datos sintéticos; no prueba reproducción autenticada ni gestos físicos en el teléfono.

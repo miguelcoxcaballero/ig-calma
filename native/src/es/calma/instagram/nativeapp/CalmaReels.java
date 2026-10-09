@@ -4,101 +4,95 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import android.os.SystemClock;
 import android.view.Gravity;
 import android.widget.TextView;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.Map;
 import java.util.WeakHashMap;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Iterator;
 
 /** Original native port of reel-gate.js, pinned to Instagram 439.0.0.37.89. */
 public final class CalmaReels {
     private static final Map<Activity, Boolean> decorated = new WeakHashMap<Activity, Boolean>();
-    private static final AtomicLong launchSequence = new AtomicLong();
+    private static final List<Original> originals = new ArrayList<>();
+    private static final String[] PIN_FIELDS = {"A1k","A2u","A27","A28","A2o","A2N","A2O","A20","A3b","A2t","A24","A25","A2n","A2r","A3H","A07","A1N","A0G"};
+    private static final class Original {
+        final WeakReference<Object> config;
+        final Object[] values = new Object[PIN_FIELDS.length];
+        Original(Object config) throws ReflectiveOperationException {
+            this.config = new WeakReference<>(config);
+            for (int i=0;i<values.length;i++) values[i]=read(config,PIN_FIELDS[i]);
+        }
+        void restore(Object target) throws ReflectiveOperationException {
+            for (int i=0;i<values.length;i++) set(target,PIN_FIELDS[i],values[i]);
+        }
+    }
+    private static Original original(Object config, boolean create) throws ReflectiveOperationException {
+        synchronized (originals) {
+            for (Iterator<Original> it=originals.iterator();it.hasNext();) {
+                Original saved=it.next();Object target=saved.config.get();
+                if(target==null)it.remove();else if(target==config)return saved;
+            }
+            if(!create)return null;
+            Original saved=new Original(config);originals.add(saved);return saved;
+        }
+    }
+    private static boolean restore(Object config) {
+        try {
+            Original saved=original(config,false);
+            if(saved!=null){saved.restore(config);synchronized(originals){originals.remove(saved);}}
+            return true;
+        } catch(ReflectiveOperationException | RuntimeException unavailable){return false;}
+    }
     private static final int CLIPS_TAB = 0x7f0b0c41;
     private CalmaReels() {}
 
-    /** Native DM sender, not the author of the shared video, determines permission. */
-    public static boolean allowLaunch(Object config, Object session) {
+    private static boolean single(Object config) throws ReflectiveOperationException {
+        return CalmaConfig.reels() && (read(config,"A0N")!=null || !NativeFeedBudget.reelsAllowed());
+    }
+    /** Prefetch must not pin a config before the user selects a feed or spends credits. */
+    public static boolean allowPrefetch(Object config,Object session) {
         if (!CalmaConfig.reels()) return true;
-        if (config == null || session == null) return false;
-        try {
-            Object direct = read(config, "A0N");
-            if (direct == null) return !locked();
-            String sender = (String) read(direct, "A02");
-            if (sender == null || sender.isEmpty() || !NativeRelations.isMutual(session, sender)) return false;
-            return configureClip(config);
-        } catch (ReflectiveOperationException | RuntimeException error) {
-            return false;
+        if (config==null || session==null) return false;
+        try { return !single(config) || selectedId(config)!=null; }
+        catch(ReflectiveOperationException | RuntimeException unavailable){return false;}
+    }
+    /** Any explicitly opened clip can play; only the next/previous clip is restricted. */
+    public static boolean allowLaunch(Object config, Object session) {
+        if (!CalmaConfig.reels()) return config==null || restore(config);
+        if (config==null || session==null) return false;
+        try { return single(config) ? configureClip(config) : restore(config); }
+        catch(ReflectiveOperationException | RuntimeException unavailable){return false;}
+    }
+    public static boolean launchOrDefer(String methodName,Object[] arguments) {
+        int configIndex="A09".equals(methodName)?2:1;
+        if(arguments==null || arguments.length<=configIndex+1)return false;
+        Object config=arguments[configIndex],session=arguments[configIndex+1];
+        if(!allowLaunch(config,session))return false;
+        noteLaunch(config);return true;
+    }
+    private static String selectedId(Object config) throws ReflectiveOperationException {
+        Object explicit=read(config,"A1k");
+        if(explicit instanceof String && !((String)explicit).isEmpty())return (String)explicit;
+        Object source=read(config,"A0G");int index=(Integer)read(config,"A07");
+        if(source instanceof List && index>=0 && index<((List<?>)source).size()) {
+            Object id=((List<?>)source).get(index);
+            if(id instanceof String && !((String)id).isEmpty())return (String)id;
         }
-    }
-
-    /** Resolve a cold native relationship cache without blocking the UI or losing the tap. */
-    public static boolean launchOrDefer(final String methodName, final Object[] arguments) {
-        final long ticket = launchSequence.incrementAndGet();
-        final int configIndex = "A09".equals(methodName) ? 2 : 1;
-        if (arguments == null || arguments.length <= configIndex + 1) return false;
-        final Object config = arguments[configIndex], session = arguments[configIndex + 1];
-        if (allowLaunch(config, session)) { noteLaunch(config); return true; }
-        final String sender;
-        try {
-            Object direct = read(config, "A0N");
-            sender = direct == null ? null : (String) read(direct, "A02");
-        } catch (ReflectiveOperationException | RuntimeException unavailable) { return false; }
-        if (session == null || sender == null || sender.isEmpty()) return false;
-        final Object host = arguments["A09".equals(methodName) ? 1 : 0];
-        final Activity activity;
-        try {
-            activity = host instanceof Activity ? (Activity) host : (Activity) host.getClass().getMethod("getActivity").invoke(host);
-        } catch (ReflectiveOperationException | RuntimeException unavailable) { return false; }
-        if (activity == null) return false;
-        final long settings = CalmaConfig.sessionId();
-        final long started = SystemClock.uptimeMillis();
-        NativeRelations.resolveMutual(session, sender, new Runnable() {
-            @Override public void run() {
-                if (!NativeRelations.isMutual(session, sender)) return;
-                new Handler(Looper.getMainLooper()).post(new Runnable() {
-                    @Override public void run() {
-                        if (ticket != launchSequence.get() || settings != CalmaConfig.sessionId()
-                            || SystemClock.uptimeMillis() - started > 15000 || activity.isFinishing()
-                            || activity.isDestroyed() || !activity.hasWindowFocus() || !allowLaunch(config, session)) return;
-                        try {
-                            try {
-                                Object current = activity.getClass().getMethod("getSession").invoke(activity);
-                                if (current != null && !NativeRelations.owner(current).equals(NativeRelations.owner(session))) return;
-                            } catch (NoSuchMethodException unavailable) { }
-                            if (!(host instanceof Activity) && !Boolean.TRUE.equals(host.getClass().getMethod("isAdded").invoke(host))) return;
-                            Class<?> plugin = Class.forName("X.03zs", false, session.getClass().getClassLoader());
-                            for (Method original : plugin.getDeclaredMethods()) {
-                                if (original.getName().equals(methodName) && original.getParameterTypes().length == arguments.length) {
-                                    original.invoke(null, arguments);
-                                    return;
-                                }
-                            }
-                        } catch (ReflectiveOperationException | RuntimeException unavailable) { }
-                    }
-                });
-            }
-        });
-        return false;
-    }
-
-    /** Keep the supplied clip as the sole source and disable Instagram's chaining. */
-    public static void configure(Object config) {
-        if (locked() && config != null) configureClip(config);
+        return null;
     }
 
     private static boolean configureClip(Object config) {
         try {
-            String mediaId = (String) read(config, "A1k");
-            if (mediaId == null || mediaId.isEmpty()) return false;
+            String mediaId = selectedId(config);
+            if (mediaId == null) return false;
+            original(config,true);
+            set(config,"A1k",mediaId);
             set(config, "A2u", true); // shouldForceDisableTailLoads
             set(config, "A27", false); // enableClipsBackwardsPagination
             set(config, "A28", false); // enableClipsDualPagination
@@ -122,7 +116,7 @@ public final class CalmaReels {
             sourceIds.set(config, one);
             return true;
         } catch (ReflectiveOperationException | RuntimeException error) {
-            return false;
+            restore(config); return false;
         }
     }
 
@@ -147,7 +141,7 @@ public final class CalmaReels {
     public static View blockedView(Context context) {
         TextView message = new TextView(context);
         boolean dark = (context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
-        message.setText("Reels desactivados");
+        message.setText("Abre un Reel desde el feed o un mensaje");
         message.setTextColor(dark ? 0xfff5f5f5 : 0xff262626);
         message.setBackgroundColor(dark ? 0xff000000 : 0xffffffff);
         message.setGravity(Gravity.CENTER);
@@ -170,14 +164,19 @@ public final class CalmaReels {
 
     /** Called only from Instagram's ClipsViewPagerImpl, never the DM or photo pager. */
     public static void lockPager(Object controller) {
-        if (!locked() || controller == null) return;
+        if (!pagerLocked(controller) || controller == null) return;
         try {
             Object pager = read(controller, "A0A");
             if (pager != null) pager.getClass().getMethod("setUserInputEnabled", boolean.class).invoke(pager, false);
         } catch (ReflectiveOperationException | RuntimeException ignored) { }
     }
 
-    public static boolean maySelect(int position) { return !locked() || position == 0; }
+    public static boolean pagerLocked(Object controller) {
+        if(!CalmaConfig.reels())return false;
+        try { Object config=read(controller,"A0P");return config==null?locked():single(config); }
+        catch(ReflectiveOperationException | RuntimeException unavailable){return locked();}
+    }
+    public static boolean maySelect(Object controller,int position) { return !pagerLocked(controller) || position == 0; }
 
     /** Hide the stock Reels tab by its verified resource ID; no overlay is added. */
     public static void decorate(Activity activity) {

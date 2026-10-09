@@ -32,8 +32,7 @@ def method(prefix):
     assert len(found) == 1, (prefix, len(found))
     return found[0]
 
-for prefix, callback in [('LX/019Z;->A0W(', 'lockPager'),
-                         ('Lcom/instagram/clips/intf/ClipsViewerConfig;-><init>(', 'configure')]:
+for prefix, callback in [('LX/019Z;->A0W(', 'lockPager')]:
     body = method(prefix)
     instructions = [line for line in body.splitlines() if '@' in line]
     branch_targets = {int(address, 16) for address in re.findall(r' -> @([0-9a-f]+)', body)}
@@ -53,10 +52,10 @@ for name in ['A09', 'A0A', 'A0B']:
     assert body.index('CalmaReels;->launchOrDefer') < body.index('if-nez') < body.index('return-void')
 for name in ['A0O', 'A0N', 'A0R', 'A0S']:
     body = method('LX/019Z;->' + name + '(')
-    assert 'CalmaReels;->locked()Z' in body and 'CalmaReels;->lockPager' in body
-    assert body.index('CalmaReels;->locked') < body.index('if-eqz') < body.index('return-void')
-assert 'CalmaReels;->maySelect(I)Z' in method('LX/019Z;->A03(')
-assert 'CalmaReels;->allowLaunch' in method('LX/03zs;->A06(')
+    assert 'CalmaReels;->pagerLocked(Ljava/lang/Object;)Z' in body and 'CalmaReels;->lockPager' in body
+    assert body.index('CalmaReels;->pagerLocked') < body.index('if-eqz') < body.index('return-void')
+assert 'CalmaReels;->maySelect(Ljava/lang/Object;I)Z' in method('LX/019Z;->A03(')
+assert 'CalmaReels;->allowPrefetch' in method('LX/03zs;->A06(')
 factory = method('LX/05Bx;->A0A(')
 assert factory.index('CalmaReels;->allowBundle') < factory.index('BlockedReelsFragment;-><init>') < factory.index('return-object')
 assert 'LX/00Nv;->A03(Landroid/os/Bundle;LX/02rJ;)V' in factory
@@ -68,3 +67,5 @@ assert 'LX/03z9;-><init>()V' in method('Les/calma/instagram/nativeapp/BlockedRee
 assert 'LX/00Nv;->A02' in method('Les/calma/instagram/nativeapp/BlockedReelsFragment;->getSession(')
 assert 'CalmaReels;->blockedView' in method('Les/calma/instagram/nativeapp/BlockedReelsFragment;->onCreateView(')
 print('Native Reels DEX guards, valid fallback fragment and branch-preserving return hooks verified')
+
+assert 'CalmaReels;->configure' not in method('Lcom/instagram/clips/intf/ClipsViewerConfig;-><init>('), 'Constructors must not preemptively pin paid viewers'

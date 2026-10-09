@@ -154,7 +154,12 @@ public final class NativeFeedTest {
         check(friends.A0a, "unknown friendship does not turn a pending page into the end");
         CalmaConfig.testMode = 1;
         Response clips = response(new Media("clip", now - 3, "clips", new User(true, true)), mutual); apply(clips);
-        check(clips.A0U.equals(Arrays.asList(mutual)), "feed reels excluded without touching media elsewhere");
+        check(clips.A0U.size()==2 && clips.A0U.get(1)==mutual, "followed Reels remain visible alongside photos even with scroll blocking enabled");
+        CalmaConfig.testMode = 2;
+        Media friendClip = new Media("friend-clip",now-4,"clips",new User(true,true));
+        Response friendsClips = response(friendClip,new Media("one-way-clip",now-3,"clips",new User(true,false)));apply(friendsClips);
+        check(friendsClips.A0U.equals(Arrays.asList(friendClip)),"Friends retains mutual Reels while excluding one-way authors");
+        CalmaConfig.testMode = 1;
         Response storyShell = new Response();
         Wrapper control = new Wrapper(null), suggested = new Wrapper(null);
         suggested.A0U = new Object();

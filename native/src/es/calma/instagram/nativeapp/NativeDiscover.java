@@ -97,7 +97,6 @@ public final class NativeDiscover {
     private static boolean permittedMedia(Object media, Object session, boolean followingOnly) throws ReflectiveOperationException {
         if (NativeAds.media(media)) return false;
         Object dictionary = StockAccess.get(media, "A04");
-        if (CalmaConfig.reels() && "clips".equals(StockAccess.call(dictionary, "A7W"))) return false;
         if (!followingOnly) return true;
         if (permittedUser(StockAccess.call(dictionary, "A33"), session)) return true;
         for (Object collaborator : list(StockAccess.call(dictionary, "A8F")))

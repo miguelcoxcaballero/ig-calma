@@ -14,10 +14,10 @@ public class NativeTimelineTest {
         public String getId(){return id;}
     }
     public static final class Dictionary {
-        final String id; final long timestamp; final Object user;
+        final String id; final long timestamp; final Object user; public String kind="feed";
         Dictionary(String id,long timestamp,Object user){this.id=id;this.timestamp=timestamp;this.user=user;}
         public String getId(){return id;} public Long A6X(){return timestamp;}
-        public String A7W(){return "feed";} public Object A33(){return user;}
+        public String A7W(){return kind;} public Object A33(){return user;}
         public List<Object> A8F(){return Collections.emptyList();}
     }
     public static final class Item {

@@ -67,7 +67,7 @@ public final class NativeFeedRecoveryTest {
         }
         CalmaConfig.testMode=2;Session account=new Session("9500");
         NativeTimelineTest.IdentifiedUser unresolved=new NativeTimelineTest.IdentifiedUser("888");
-        NativeTimelineTest.Item pending=new NativeTimelineTest.Item("pending",now-15,unresolved);
+        NativeTimelineTest.Item pending=new NativeTimelineTest.Item("pending",now-15,unresolved);pending.A04.kind="clips";
         java.lang.reflect.Field activeField=NativeRelationLookup.class.getDeclaredField("ACTIVE");activeField.setAccessible(true);
         @SuppressWarnings("unchecked") Map<String,CompletableFuture<Void>> active=(Map<String,CompletableFuture<Void>>)activeField.get(null);
         Session overlapAccount=new Session("9510");

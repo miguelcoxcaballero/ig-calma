@@ -110,6 +110,43 @@ public final class NativeModelSmoke extends Instrumentation {
         check(((List<?>)fresh.getClass().getField("A0S").get(fresh)).contains(staleRow),"Following survives actual stale NotFollowing enum in original User model");
         select.invoke(null,"RECENTS");
     }
+    private Object getStatic(Class<?> type,String name)throws Exception {Field f=type.getDeclaredField(name);f.setAccessible(true);return f.get(null);}
+    private void setStatic(Class<?> type,String name,Object value)throws Exception {Field f=type.getDeclaredField(name);f.setAccessible(true);f.set(null,value);}
+    private void reelModels(ClassLoader loader,Context context)throws Exception {
+        Class<?> policy=Class.forName("es.calma.instagram.nativeapp.CalmaReels",true,loader);
+        Class<?> configType=Class.forName("es.calma.instagram.nativeapp.CalmaConfig",true,loader);
+        Method select=configType.getDeclaredMethod("select",String.class);select.setAccessible(true);select.invoke(null,"RECENTS");
+        Class<?> budget=Class.forName("es.calma.instagram.nativeapp.NativeFeedBudget",true,loader);
+        Object oldCredits=getStatic(budget,"credits"),oldChain=getStatic(budget,"reelChain"),oldLaunch=getStatic(budget,"launchTime");
+        Object session=allocate(loader,"com.instagram.common.session.UserSession");set(session,"userId","994490");
+        Object config=allocate(loader,"com.instagram.clips.intf.ClipsViewerConfig");set(config,"A1k","99449001");set(config,"A27",true);set(config,"A28",true);set(config,"A2o",true);
+        Class<?> listType=config.getClass().getField("A0G").getType();Object originalIds=listType.getMethod("of",Object.class).invoke(null,"99449001");set(config,"A0G",originalIds);
+        Method allow=policy.getMethod("allowLaunch",Object.class,Object.class),pin=policy.getMethod("lockPager",Object.class),move=policy.getMethod("maySelect",Object.class,int.class);
+        check(Boolean.TRUE.equals(policy.getMethod("allowPrefetch",Object.class,Object.class).invoke(null,config,session)) && !(Boolean)config.getClass().getField("A2u").get(config),"Original viewer config is not changed by prefetch");
+        check(Boolean.TRUE.equals(allow.invoke(null,config,session)),"Original feed Reel config opens without a DM or friendship lookup");
+        check((Boolean)config.getClass().getField("A2u").get(config) && ((List<?>)config.getClass().getField("A0G").get(config)).size()==1,"Original config disables tail and pins one source");
+        Object controller=allocate(loader,"X.019Z");set(controller,"A0P",config);
+        Object pager=Class.forName("androidx.viewpager2.widget.ViewPager2",true,loader).getConstructor(Context.class).newInstance(context);set(controller,"A0A",pager);
+        pager.getClass().getMethod("setUserInputEnabled",boolean.class).invoke(pager,true);pin.invoke(null,controller);
+        check(Boolean.FALSE.equals(pager.getClass().getField("A0A").get(pager)),"Actual ViewPager2 user gestures are disabled for an opened feed Reel");
+        check(Boolean.FALSE.equals(move.invoke(null,controller,1)),"Feed Reel cannot advance programmatically");
+        controller.getClass().getMethod("A03",controller.getClass(),int.class,boolean.class).invoke(null,controller,1,false);
+        check((Integer)pager.getClass().getMethod("getCurrentItem").invoke(pager)==0,"Patched native setCurrentItem rejects the next item before entering the stock body");
+        try {
+            long now=System.currentTimeMillis();Class<?> creditsType=Class.forName("es.calma.instagram.nativeapp.HourlyCredits",true,loader);
+            Constructor<?> ctor=creditsType.getDeclaredConstructor(long.class,int.class);ctor.setAccessible(true);setStatic(budget,"credits",ctor.newInstance(now-3600000L,1));
+            select.invoke(null,"BLENDED_FOR_YOU");setStatic(budget,"reelChain",true);setStatic(budget,"launchTime",android.os.SystemClock.elapsedRealtime());
+            check(Boolean.TRUE.equals(budget.getMethod("reelsAllowed").invoke(null)),"Real earned-time policy opens the paid Reel chain");
+            check(Boolean.TRUE.equals(allow.invoke(null,config,session)) && !(Boolean)config.getClass().getField("A2u").get(config) && (Boolean)config.getClass().getField("A27").get(config),"Earned time restores actual original config flags");
+            check(Boolean.TRUE.equals(move.invoke(null,controller,1)),"Paid For you permits the next item with blocking enabled");
+            Object direct=allocate(loader,"com.instagram.clips.intf.ClipsViewerDirectData");set(config,"A0N",direct);
+            check(Boolean.TRUE.equals(allow.invoke(null,config,session)) && Boolean.FALSE.equals(move.invoke(null,controller,1)),"Original DM config remains single-clip independently of For you balance");
+            set(config,"A0N",null);setStatic(budget,"credits",ctor.newInstance(now,0));
+            check(Boolean.FALSE.equals(move.invoke(null,controller,1)),"Real exhausted credits lock the viewer again");
+        } finally {
+            setStatic(budget,"credits",oldCredits);setStatic(budget,"reelChain",oldChain);setStatic(budget,"launchTime",oldLaunch);select.invoke(null,"RECENTS");
+        }
+    }
     @Override public void onCreate(Bundle arguments) { super.onCreate(arguments); start(); }
     private void check(boolean ok, String message) { if (!ok) throw new AssertionError(message); }
     @Override public void onStart() {
@@ -120,6 +157,7 @@ public final class NativeModelSmoke extends Instrumentation {
                 Context context = getTargetContext();
                 ClassLoader loader = context.getClassLoader();
                 feedModels(loader);
+                reelModels(loader,context);
                 Class<?> end = Class.forName("es.calma.instagram.nativeapp.NativeFeedEnd", true, loader);
                 Object nativeModel = end.getMethod("newModel", Object.class, Object.class).invoke(null, null, null);
                 check(nativeModel != null && nativeModel.getClass().getName().equals("X.0AMQ"), "Mapped native model allocation");
@@ -179,7 +217,7 @@ public final class NativeModelSmoke extends Instrumentation {
             } catch (Throwable failure) { error[0] = failure; }
         });
         if (error[0] == null) {
-            result.putString("stream", "CALMA_NATIVE_MODELS_PASSED: allocation, native row, light/dark drawing, accessibility, recycling, four stock selector models, remaining time, zero-credit lock, real Media/dictionary/user/wrapper/response/parser models; actual HTTP parameter map and delivery envelope with absent/different response IDs, cold head, native continuation, duplicate removal, completed cache\n");
+            result.putString("stream", "CALMA_NATIVE_MODELS_PASSED: allocation, native row, light/dark drawing, accessibility, recycling, four stock selector models, remaining time, zero-credit lock, real Media/dictionary/user/wrapper/response/parser models; actual HTTP parameter map and delivery envelope with absent/different response IDs, cold head, native continuation, duplicate removal, completed cache; actual ClipsViewerConfig/ViewPager2 single-clip lock and earned-time restore\n");
             finish(-1,result);
         } else {
             result.putString("stream", "CALMA_NATIVE_MODELS_FAILED: " + android.util.Log.getStackTraceString(error[0]));

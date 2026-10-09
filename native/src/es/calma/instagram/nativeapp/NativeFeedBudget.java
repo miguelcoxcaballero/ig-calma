@@ -99,7 +99,7 @@ public final class NativeFeedBudget {
         try { return clips(StockAccess.call(current, "getSupportFragmentManager"), 0); }
         catch (ReflectiveOperationException | RuntimeException ignored) { return false; }
     }
-    /** A DM opened while For you remains selected still follows the single-clip friends rule. */
+    /** A DM opened while For you remains selected still follows the single-clip rule. */
     public static boolean reelsAllowed() {
         Activity current = activity.get();
         return "BLENDED_FOR_YOU".equals(CalmaConfig.feed()) && balance() > 0 && (homeVisible()

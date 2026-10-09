@@ -297,8 +297,6 @@ public final class NativeFeed {
             newest = Math.max(newest, time); oldest = Math.min(oldest, time);
             if (time >= now - RecentFeedPolicy.WINDOW_SECONDS) allOlder = false;
             if (!RecentFeedPolicy.withinWindow(time, now)) continue;
-            String kind = (String) StockAccess.call(dictionary, "A7W");
-            if (CalmaConfig.reels() && "clips".equals(kind)) continue;
             Object author = StockAccess.call(dictionary, "A33");
             boolean permitted = NativeRelations.permitted(session, author, CalmaConfig.mode(), following);
             if (!permitted) {
@@ -340,7 +338,6 @@ public final class NativeFeed {
                 if (media == null || NativeAds.media(media)) continue;
                 Object dictionary = StockAccess.get(media, "A04");
                 if (!RecentFeedPolicy.withinWindow((Long) StockAccess.call(dictionary, "A6X"), now)) continue;
-                if (CalmaConfig.reels() && "clips".equals(StockAccess.call(dictionary, "A7W"))) continue;
                 Object author = StockAccess.call(dictionary, "A33");
                 if (author != null) {
                     String id = (String) StockAccess.call(author, "getId");

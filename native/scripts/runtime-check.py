@@ -26,11 +26,11 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = 'es.calma.instagram'
 BASELINE_URL = ('https://github.com/miguelcoxcaballero/ig-calma/releases/download/'
-                'v0.4.7/IG-Calma-0.4.7.apk')
-BASELINE_SHA = '1a4f94b39b252ef6d46fa35f01b63c2e5602de4f058577073fdcf51e5b7bb16a'
+                'v0.4.8/IG-Calma-0.4.8.apk')
+BASELINE_SHA = 'bb31137e1ba74518afb5cba8254d0e0af43992b5e438880c4d55a52e431f054d'
 BASELINE_SIZE = 146264749
 SIGNER_SHA = '7133a4b3e4b9f9c4d2fbbd38b7dd2d44c7b8d0d7d16568bfe3da74a09e7887b6'
-CANDIDATE_VERSION = '0.4.8'
+CANDIDATE_VERSION = '0.4.9'
 
 
 def sha(path: Path) -> str:
@@ -338,16 +338,16 @@ def main() -> int:
             report['stock'] = launch(stock[0], 'stock-original', updating=False,
                                      package=stock[1]['package'])
             device('shell', 'am', 'force-stop', stock[1]['package'])
-        report['baseline'] = launch(baseline, 'baseline-0.4.7', updating=False)
+        report['baseline'] = launch(baseline, 'baseline-0.4.8', updating=False)
         # Always try the candidate, including when baseline startup or installation fails.
         device('shell', 'am', 'force-stop', PACKAGE)
-        report['candidate'] = launch(candidate, 'candidate-0.4.8',
+        report['candidate'] = launch(candidate, 'candidate-0.4.9',
                                      updating=bool(report['baseline'].get('installed')))
         if not report['candidate'].get('passed'):
             # This is an empty test device. Distinguish a failed upgrade from a
             # failure that also happens on a fresh install, without changing users' data.
             require(device('uninstall', PACKAGE), 'Remove failed test installation')
-            report['candidateClean'] = launch(candidate, 'candidate-clean-0.4.8', updating=False)
+            report['candidateClean'] = launch(candidate, 'candidate-clean-0.4.9', updating=False)
         smoke = ROOT / 'native/runtime-input/Calma-Native-Smoke.apk'
         smoke_metadata = json.loads((ROOT / 'native/runtime-input/transport.json').read_text())
         if smoke_metadata.get('modelSmokeSha256') and not smoke.is_file():

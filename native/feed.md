@@ -53,3 +53,10 @@ The original `06yP` enums BLENDED_FOR_YOU, FAVORITES, RECENTS and FOLLOWING back
 `NativeFeedBudget` settles consumption using elapsed real time while the native Home/Clips surface for For you is visible in a focused, resumed activity. Hidden/offscreen Home or Clips pages and paused activities do not spend credits. Native Reels-tab launches start the same credit chain as viewer launches; direct-message launches reset that chain and retain one-clip playback. The selector shows remaining minutes/seconds and disables For you at zero; exhaustion closes its visible Reels viewer and switches the native feed back to Friends. The ordinary For you response retains its order, age range, suggested modules, pagination and Reels; only ads are removed. The dedicated `0Es9.Bd0` ClipsFeedOfAds source returns an empty list.
 
 Pure tests cover expiry, offline earnings, fractional usage, persistence, clock boundaries/rollback, changed rates, oversized absence, zero allowance and corrupted storage. Signed-APK instrumentation verifies the four real option/IGDS row models and the remaining-time/disabled flags. These checks do not validate native navigation with a logged-in account.
+
+
+## Reels in relationship feeds (0.4.9)
+
+Friends and Following retain organic Reels under the same relationship, age and chronological rules as photos. Pending Reel authors participate in the same coalesced relationship lookup and immediate local delivery. The disk cache format changes so that earlier snapshots which omitted Reels are not reused.
+
+The Reels setting blocks navigation between clips, not Reel posts. An explicitly opened feed, grid or DM clip remains playable on its own. Paid For you keeps normal Reel pagination. The native pager checks its own viewer configuration so a DM cannot inherit the global For you exception. See `reels-map.json` for the mapped hooks and validation limits.

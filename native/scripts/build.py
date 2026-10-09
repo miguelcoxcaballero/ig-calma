@@ -52,7 +52,7 @@ def finalize(apk: Path, build_tools: Path, morphe: Path) -> None:
         'version': version, 'versionCode': version_code, 'required': True,
         'apkUrl': f'https://github.com/miguelcoxcaballero/ig-calma/releases/download/v{version}/{apk.name}',
         'apkSha256': digest(apk), 'apkSizeBytes': apk.stat().st_size,
-        'releaseNotes': "Corrige la entrega de Friends y Following. Los amigos confirmados aparecen sin otra descarga del feed y las peticiones de paginación rechazadas pueden reintentarse.",
+        'releaseNotes': "Los Reels aparecen en Friends y Following. Puedes abrir el Reel del feed o de un mensaje, sin deslizar a otros. En For you, con minutos disponibles, los Reels mantienen el scroll normal.",
     }
     payload = json.dumps(manifest, indent=2, ensure_ascii=False) + '\n'
     for destination in (ROOT / 'android-update.json', NATIVE / 'android-update.json'):

@@ -102,6 +102,8 @@ def summarize_report(report: dict, manifest: dict, apk_sha: str, apk_size: int) 
             result['nativeModelSmoke']['scope'] += '; actual Media, LiveTree dictionaries, User, wrapper, response and parser-context models with synthetic cached fields: cold main-thread head, cursor, cross-page deduplication and complete cache replay; no authenticated HTTP'
         if 'actual HTTP parameter map and delivery envelope with absent/different response IDs' in smoke.get('output', ''):
             result['nativeModelSmoke']['scope'] += '; original HTTP parameter setter/map, client request and delivery envelope, absent/different server IDs, stale native NotFollowing enum; synthetic account data, no network call'
+        if 'actual ClipsViewerConfig/ViewPager2 single-clip lock and earned-time restore' in smoke.get('output', ''):
+            result['nativeModelSmoke']['scope'] += '; actual ClipsViewerConfig and ViewPager2 single-clip lock, patched native next-item guard and real earned-time policy restore; synthetic clip/session, no playback'
         if smoke['passed'] and 'CALMA_NATIVE_MODELS_PASSED' not in smoke.get('output', ''):
             raise ValueError('Native model success has no instrumentation marker')
     if report.get('environmentError'):
