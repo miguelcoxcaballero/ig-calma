@@ -10,9 +10,16 @@ body{margin:0;background:var(--bg-secondary);color:var(--text-primary);font:16px
 <script src="updater.js"></script><script>
 const quiet=new URLSearchParams(location.search).get('quiet')==='1';
 const button=document.getElementById('check'),message=document.getElementById('check-status');
-async function check(){button.disabled=true;message.textContent='Buscando actualizaciones…';const found=await InhouseUpdater.offerAvailableAndroidUpdate();button.disabled=false;message.textContent=found?'Actualización disponible.':'Estás en la última versión disponible.';}
-if(quiet)InhouseUpdater.initAndroidUpdateChecks();
-else requestAnimationFrame(()=>{document.querySelector('[data-inhouse-update-screen]').dataset.renderCount='1';InhouseUpdater.initAndroidUpdateChecks();check();});
+let pending='';try{pending=window.InhouseNative?.getPendingUpdateManifest?.() || '';}catch(_){}
+if(quiet || pending){document.querySelector('main').hidden=true;document.body.style.background='transparent';}
+async function check(){button.disabled=true;message.textContent='Buscando actualizaciones…';const found=await InhouseUpdater.offerAvailableAndroidUpdate();button.disabled=false;message.textContent=found?'Actualización disponible.':window.__inhouseUpdateCheckVerified?'Estás en la última versión disponible.':'No se pudo comprobar. Reintenta.';}
+if(quiet){new MutationObserver(()=>{if(document.getElementById('android-update-gate') && window.InhouseUpdateHost && window.__inhouseAvailableUpdate)window.InhouseUpdateHost.offer(JSON.stringify(window.__inhouseAvailableUpdate));}).observe(document.body,{childList:true,subtree:true});}
+if(pending){
+  window.handleInhouseUpdateResult=InhouseUpdater.handleInhouseUpdateResult;
+  try{const manifest=InhouseUpdater.validateManifest(JSON.parse(pending)),installed=InhouseUpdater.getInstalledAndroidAppVersion();if(InhouseUpdater.shouldOfferUpdate(manifest,installed))InhouseUpdater.showUpdateGate(manifest,installed);}catch(_){document.querySelector('main').hidden=false;check();}
+}else{
+  InhouseUpdater.initAndroidUpdateChecks();
+  if(!quiet)check();
+}
 button.onclick=check;
-if(quiet){new MutationObserver(()=>{if(document.getElementById('android-update-gate') && window.InhouseUpdateHost)window.InhouseUpdateHost.offer();}).observe(document.body,{childList:true,subtree:true});}
 </script></body></html>

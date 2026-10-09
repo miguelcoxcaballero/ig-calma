@@ -1,8 +1,8 @@
-# Instagram Calma 0.3.5 — experimental
+# Instagram Calma 0.3.6 — experimental
 
 Cliente Android independiente basado en **Instagram web**, con detección automática de seguidos, amigos por seguimiento mutuo, feed finito y bloqueo de Reels. No es una modificación del APK oficial ni está afiliado a Meta. Requiere Android 8 o posterior y Android System WebView actualizado.
 
-**[Descargar APK 0.3.5](https://github.com/miguelcoxcaballero/ig-calma/raw/refs/heads/main/downloads/IG-Calma-0.3.5.apk)** · [Archivos y SHA-256](downloads/)
+**[Descargar APK 0.3.6](https://github.com/miguelcoxcaballero/ig-calma/raw/refs/heads/main/downloads/IG-Calma-0.3.6.apk)** · [Archivos y SHA-256](downloads/)
 
 ## Instalación y uso
 
@@ -40,11 +40,13 @@ Estas correcciones permiten continuar cargando los posts que Instagram entrega a
 
 ## Actualización dentro de la app
 
-En **Ajustes → Editar perfil → Tu feed → Actualizar aplicación**, puedes buscar y descargar una versión nueva sin abrir el navegador. El actualizador consulta `android-update.json`, compara la versión instalada y muestra el aviso, botón Instalar y barra de progreso originales de **Inhouse Read**. La descarga y la verificación SHA-256 también son su código reutilizado, no una implementación nueva. [Procedencia y adaptaciones mínimas](vendor/UPSTREAM.md). Se revisó el adaptador de Inhouse Photos; esta app usa el de Read por ser Java/WebView.
+Al abrir la app se consulta GitHub inmediatamente, sin esperar a iniciar sesión ni cargar Instagram. Si hay una versión nueva, aparece el popup original de **Inhouse Read** sobre la app. Al volver al primer plano se comprueba de nuevo; se mantiene también el intervalo original de 15 minutos. Si se detecta una versión mientras la app no tiene el foco, el aviso se conserva hasta recuperarlo. El popup recibe el manifiesto ya verificado, sin una segunda consulta de red.
 
-La comprobación automática comienza 12 segundos después de preparar el documento principal, sin añadir una vista al feed; el código original vuelve a consultar cada 15 minutos mientras su WebView siga ejecutándose. Cuando detecta una versión nueva con `required: true`, abre la pantalla interna de actualización. No se ofrece como un servicio de actualización mientras Android haya cerrado la app.
+El código de **Read** comprueba versiones, el manifiesto y GitHub Releases, y muestra el popup y la barra de progreso. El instalador Kotlin original de **Inhouse Photos** se compila y se usa para descargar, reanudar, verificar SHA-256, paquete, versión y firma e iniciar el instalador Android. Sus algoritmos no se han reimplementado: se ha adaptado la conexión Flutter a callbacks Java. [Fuentes y adaptaciones](vendor/UPSTREAM.md).
 
-Android exige habilitar «Permitir desde esta fuente» para Instagram Calma y confirmar la instalación. No instala paquetes silenciosamente. Usa un APK con el mismo paquete y certificado para conservar datos y sesión. La versión 0.3.1 no contenía el actualizador: instala 0.3.2 o una versión posterior manualmente una vez para disponer de esta función en futuras versiones.
+Desde **Ajustes → Editar perfil → Tu feed → Actualizar aplicación** puedes comprobar manualmente. Una conexión fallida muestra «No se pudo comprobar», en lugar de afirmar que tienes la última versión. Las publicaciones deben subir el APK y `android-update.json` juntos con una versión mayor. La comprobación no trata cualquier cambio de código de GitHub como un APK nuevo. Las Releases con el nombre, etiqueta y digest esperados sirven como recuperación si el manifiesto no está actualizado.
+
+Android exige habilitar «Permitir desde esta fuente» para Instagram Calma y confirmar la instalación. No instala paquetes silenciosamente. Usa un APK con el mismo paquete y certificado para conservar datos y sesión. Si el aviso automático de 0.3.2–0.3.5 falla, instala 0.3.6 manualmente una vez para reemplazar esa integración. No es necesario borrar datos ni cerrar sesión.
 
 El instalador tiene su puente nativo únicamente en una pantalla local aislada; no se añade a Instagram. AndroidX FileProvider comparte únicamente la carpeta privada de descargas de actualización. El aviso bloqueante de Inhouse Read aparece en esa pantalla interna, sin botón flotante sobre el feed.
 
@@ -105,9 +107,9 @@ La autorización es de un solo uso y caduca en 30 segundos. El visor queda limit
 
 ## Verificación realizada
 
-APK para API 35, mínimo 26, versión de paquete 9. Firma v2/v3 verificada; mismo certificado que 0.1.0. Permisos: Internet, mostrar notificaciones e instalar paquetes con autorización del usuario. El servicio está protegido por `BIND_NOTIFICATION_LISTENER_SERVICE` y requiere activación del usuario.
+APK para API 35, mínimo 26, versión de paquete 10. Firma v2/v3 verificada; mismo certificado que 0.1.0. Permisos: Internet, mostrar notificaciones e instalar paquetes con autorización del usuario. El servicio está protegido por `BIND_NOTIFICATION_LISTENER_SERVICE` y requiere activación del usuario.
 
-Pruebas del actualizador original: detección de versión, aviso, URL y SHA-256 enviados al instalador, permiso de instalación, progreso, estados de listo/error, validación de origen y detección automática; CSS idéntico al original y bloque nativo idéntico salvo las sustituciones documentadas. Manifiesto comprobado frente al APK firmado. Pruebas de tema y movimiento: cambio claro/oscuro en el mismo documento, colores heredados por los controles, conservación de campos y fotos, respuesta táctil, transiciones y movimiento reducido, ausencia de superposiciones y de bucles de cambios del tema. Pruebas de Reels: enlaces de DM accesibles, amigos mutuos verificados, rechazo de cuentas no mutuas, un único vídeo, bloqueo de desplazamiento, ocultación inmediata de fotogramas al volver a Inicio y de vídeos añadidos tarde a una publicación ya aprobada. Prueba de carga: las primeras cuentas seguidas están disponibles antes de terminar la paginación. Pruebas de integración en la página de ajustes: se conserva el formulario original, controles en el flujo del documento sin superposición, guardado mediante navegación validada, sustitución dinámica del panel y ausencia de controles sobre inicio, DM y acceso. Pruebas en Chromium con respuestas simuladas: paginación, intersección por identificadores, integración con filtros, separación por cuenta, reinicio de sesión al cambiar de cuenta, cierre de sesión, caché, detención ante limitación de consultas y rechazo de listas mutuas incompletas. Pruebas de filtros: autores desconocidos, Reels, límite, carga dinámica, navegación y acceso. Pruebas de clasificación de avisos: DM, exclusión de actividad general, otras apps y avisos de la propia app.
+Pruebas del actualizador original: detección de versión, aviso, URL y SHA-256 enviados al instalador, permiso de instalación, progreso, estados de listo/error, validación de origen y detección automática; CSS idéntico al original de Read, callbacks de progreso copiados de Read y descarga/verificación Kotlin originales de Photos, con adaptaciones del canal documentadas. Manifiesto comprobado frente al APK firmado. Pruebas de tema y movimiento: cambio claro/oscuro en el mismo documento, colores heredados por los controles, conservación de campos y fotos, respuesta táctil, transiciones y movimiento reducido, ausencia de superposiciones y de bucles de cambios del tema. Pruebas de Reels: enlaces de DM accesibles, amigos mutuos verificados, rechazo de cuentas no mutuas, un único vídeo, bloqueo de desplazamiento, ocultación inmediata de fotogramas al volver a Inicio y de vídeos añadidos tarde a una publicación ya aprobada. Prueba de carga: las primeras cuentas seguidas están disponibles antes de terminar la paginación. Pruebas de integración en la página de ajustes: se conserva el formulario original, controles en el flujo del documento sin superposición, guardado mediante navegación validada, sustitución dinámica del panel y ausencia de controles sobre inicio, DM y acceso. Pruebas en Chromium con respuestas simuladas: paginación, intersección por identificadores, integración con filtros, separación por cuenta, reinicio de sesión al cambiar de cuenta, cierre de sesión, caché, detención ante limitación de consultas y rechazo de listas mutuas incompletas. Pruebas de filtros: autores desconocidos, Reels, límite, carga dinámica, navegación y acceso. Pruebas de clasificación de avisos: DM, exclusión de actividad general, otras apps y avisos de la propia app.
 
 **No se ha instalado el APK en Android ni probado con una cuenta real. La sincronización y la entrega real de avisos necesitan esa validación; las pruebas simuladas no garantizan que los endpoints internos sigan disponibles.**
 
@@ -120,7 +122,7 @@ python3 setup-tools.py
 bash build.sh
 ```
 
-Salida: `dist/IG-Calma-0.3.5.apk`. Conserva `build/local-signing.p12` para firmar actualizaciones con la misma clave. Su contraseña `localbuild` es solo para compilación local, no una credencial de Instagram. La clave no se incluye en el repositorio.
+Salida: `dist/IG-Calma-0.3.6.apk`. Conserva `build/local-signing.p12` para firmar actualizaciones con la misma clave. Su contraseña `localbuild` es solo para compilación local, no una credencial de Instagram. La clave no se incluye en el repositorio.
 
 Con Playwright para Python y Chromium en `/usr/bin/chromium`:
 

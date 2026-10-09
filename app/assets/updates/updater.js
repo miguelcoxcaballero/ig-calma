@@ -257,6 +257,7 @@ function handleInhouseUpdateResult(payload) {
 }
 
 function showUpdateGate(manifest, installedVersion) {
+  window.__inhouseAvailableUpdate = manifest
   const gate = getGate() ?? buildGate()
   gate.dataset.updateTotalBytes = String(Math.max(0, Number(manifest.apkSizeBytes) || 0))
   gate.querySelector('[data-update-message]').textContent =
@@ -296,11 +297,13 @@ async function fetchFreshJson(url) {
 async function checkForUpdate() {
   if (checkPromise) return checkPromise
   checkPromise = (async () => {
+    window.__inhouseUpdateCheckVerified = false
     const installedVersion = getInstalledAndroidAppVersion()
     try {
       const url = new URL(UPDATE_MANIFEST_PATH, window.location.href)
       url.searchParams.set('check', String(Date.now()))
       const manifest = validateManifest(await fetchFreshJson(url))
+      window.__inhouseUpdateCheckVerified = true
       if (shouldOfferUpdate(manifest, installedVersion)) {
         showUpdateGate(manifest, installedVersion)
         return true
@@ -310,6 +313,7 @@ async function checkForUpdate() {
     }
     try {
       const manifest = manifestFromLatestRelease(await fetchFreshJson(LATEST_RELEASE_URL))
+      window.__inhouseUpdateCheckVerified = true
       if (shouldOfferUpdate(manifest, installedVersion)) {
         showUpdateGate(manifest, installedVersion)
         return true
@@ -331,9 +335,9 @@ function initAndroidUpdateChecks() {
   document.documentElement.dataset.inhouseApp = 'true'
   globalThis.handleInhouseUpdateResult = handleInhouseUpdateResult
   // The two manifest requests wait for the first live shelf frame.
-  runAfterFirstFrame([checkForUpdate])
+  checkForUpdate()
   window.addEventListener('focus', checkForUpdate)
   setInterval(checkForUpdate, CHECK_INTERVAL_MS)
 }
 
-window.InhouseUpdater={initAndroidUpdateChecks,offerAvailableAndroidUpdate,compareSemanticVersions,validateManifest,shouldOfferUpdate,handleInhouseUpdateResult};
+window.InhouseUpdater={initAndroidUpdateChecks,offerAvailableAndroidUpdate,compareSemanticVersions,validateManifest,shouldOfferUpdate,handleInhouseUpdateResult,showUpdateGate,getInstalledAndroidAppVersion};

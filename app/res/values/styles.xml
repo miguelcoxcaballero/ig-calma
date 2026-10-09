@@ -7,4 +7,11 @@
         <item name="android:statusBarColor">#FFFFFF</item>
         <item name="android:navigationBarColor">#FFFFFF</item>
     </style>
+    <style name="UpdatePopupTheme" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:colorAccent">#0095F6</item>
+    </style>
 </resources>

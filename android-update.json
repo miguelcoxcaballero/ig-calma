@@ -1,9 +1,9 @@
 {
-  "version": "0.3.5",
-  "versionCode": 9,
+  "version": "0.3.6",
+  "versionCode": 10,
   "required": true,
-  "apkUrl": "https://raw.githubusercontent.com/miguelcoxcaballero/ig-calma/main/downloads/IG-Calma-0.3.5.apk",
-  "apkSha256": "4cbd31c6056f628c896b4c14c625d9cdd0d01e893f1eef55041af97b220118bb",
-  "apkSizeBytes": 488711,
-  "releaseNotes": "Buscar y Discover muestran solo contenido y resultados de cuentas seguidas. Verificación de autores de miniaturas y bloqueo de contenido sin verificar."
+  "apkUrl": "https://raw.githubusercontent.com/miguelcoxcaballero/ig-calma/main/downloads/IG-Calma-0.3.6.apk",
+  "apkSha256": "762aebdb40e6d67ec95b0bb03e4d5f100885828e0ef8644f0bdd8a2d266a1b34",
+  "apkSizeBytes": 1180935,
+  "releaseNotes": "Actualizador corregido: comprobación inmediata al abrir, popup original de Inhouse Read e instalador Kotlin reutilizado de Inhouse Photos."
 }

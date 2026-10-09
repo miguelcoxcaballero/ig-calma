@@ -1,10 +1,10 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="es.calma.instagram" android:versionCode="9" android:versionName="0.3.5">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="es.calma.instagram" android:versionCode="10" android:versionName="0.3.6">
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="35" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <application android:label="Instagram Calma" android:icon="@drawable/icon" android:theme="@style/AppTheme" android:allowBackup="false" android:usesCleartextTraffic="false" android:supportsRtl="true">
-        <activity android:name=".UpdateActivity" android:exported="false" />
+        <activity android:name=".UpdateActivity" android:exported="false" android:theme="@style/UpdatePopupTheme" />
         <provider android:name="androidx.core.content.FileProvider" android:authorities="es.calma.instagram.fileprovider" android:exported="false" android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/update_file_paths" />
         </provider>

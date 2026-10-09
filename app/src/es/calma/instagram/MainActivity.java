@@ -20,9 +20,10 @@ public class MainActivity extends Activity {
     private final java.util.Map<WebView,String> reelPermissions = new java.util.IdentityHashMap<>();
     private final java.util.Map<WebView,Integer> generations = new java.util.IdentityHashMap<>();
     private String retainedOwner = "";
-    private boolean paused = true, updateScheduled = false, prewarmScheduled = false;
+    private boolean paused = true, prewarmScheduled = false;
     private WebView updateChecker;
     private boolean updateOffered=false;
+    private String pendingUpdate="";
     private FrameLayout root;
     private SharedPreferences prefs;
     private String filters, relations, settingsPage, appearance, reelGate, navigation, discover;
@@ -53,6 +54,7 @@ public class MainActivity extends Activity {
             return insets;
         });
         setContentView(root); applySystemTheme(false);
+        startUpdateChecks();
         retainedOwner = owner();
         selectTab(getIntent().getBooleanExtra("open_dm", false));
     }
@@ -284,7 +286,6 @@ public class MainActivity extends Activity {
                 if(!isLive(tab) || epoch!=generation(tab))return;
                 tab.setAlpha(1f);
                 if(tab!=web || paused){visibility(tab,false);tab.onPause();}
-                if(!updateScheduled){updateScheduled=true;handler.postDelayed(() -> startUpdateChecks(),12000);}
                 if(tab==web)schedulePrewarm();
             });
         }catch(JSONException e){toast("No se pudo aplicar la configuración");}
@@ -292,23 +293,29 @@ public class MainActivity extends Activity {
     private void startUpdateChecks(){
         if(isFinishing() || isDestroyed() || updateChecker!=null)return;
         updateChecker=new WebView(this);
+        updateChecker.setVisibility(View.INVISIBLE);root.addView(updateChecker,new FrameLayout.LayoutParams(1,1));
         updateChecker.getSettings().setJavaScriptEnabled(true);updateChecker.getSettings().setDomStorageEnabled(true);
         updateChecker.getSettings().setAllowFileAccess(false);updateChecker.getSettings().setAllowContentAccess(false);
         updateChecker.getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-        updateChecker.getSettings().setUserAgentString(updateChecker.getSettings().getUserAgentString()+" InhouseReadApp/0.3.5");
+        updateChecker.getSettings().setUserAgentString(updateChecker.getSettings().getUserAgentString()+" InhouseReadApp/0.3.6");
         updateChecker.addJavascriptInterface(new UpdateCheckBridge(),"InhouseNative");
         updateChecker.addJavascriptInterface(new UpdateOfferBridge(),"InhouseUpdateHost");
         updateChecker.setWebViewClient(new UpdateAssetClient(this){
             @Override public boolean onRenderProcessGone(WebView view,RenderProcessGoneDetail detail){
-                if(view==updateChecker){updateChecker=null;updateScheduled=false;}
-                view.removeJavascriptInterface("InhouseNative");view.removeJavascriptInterface("InhouseUpdateHost");view.destroy();
+                if(view==updateChecker){updateChecker=null;}
+                view.removeJavascriptInterface("InhouseNative");view.removeJavascriptInterface("InhouseUpdateHost");root.removeView(view);view.destroy();
                 return true;
             }
         });
         updateChecker.loadUrl("https://appassets.androidplatform.net/updates/index.html?inhouse_app=1&quiet=1");
     }
-    public class UpdateCheckBridge {@JavascriptInterface public String getAppVersion(){return "0.3.5";}}
-    public class UpdateOfferBridge {@JavascriptInterface public void offer(){runOnUiThread(() -> {if(!updateOffered && !isFinishing() && hasWindowFocus()){updateOffered=true;startActivity(new Intent(MainActivity.this,UpdateActivity.class));}});}}
+    public class UpdateCheckBridge {@JavascriptInterface public String getAppVersion(){try{return getPackageManager().getPackageInfo(getPackageName(),0).versionName;}catch(Exception e){return "0.3.6";}}}
+    public class UpdateOfferBridge {@JavascriptInterface public void offer(String manifest){runOnUiThread(() -> {pendingUpdate=manifest;showPendingUpdate();});}}
+    private void showPendingUpdate(){
+        if(pendingUpdate.isEmpty() || updateOffered || paused || !hasWindowFocus() || isFinishing() || isDestroyed())return;
+        updateOffered=true;startActivity(new Intent(this,UpdateActivity.class).putExtra("manifest",pendingUpdate));
+    }
+    @Override public void onWindowFocusChanged(boolean focus){super.onWindowFocusChanged(focus);if(focus)showPendingUpdate();}
     private String read(String name)throws IOException {
         try(InputStream in=getAssets().open(name);ByteArrayOutputStream out=new ByteArrayOutputStream()) {
             byte[] buffer=new byte[8192]; int n;while((n=in.read(buffer))!=-1)out.write(buffer,0,n);return out.toString("UTF-8");
@@ -328,7 +335,9 @@ public class MainActivity extends Activity {
     }
     @Override protected void onResume() {
         super.onResume();paused=false;reconcileOwner();
-        if(updateChecker!=null)updateChecker.onResume();
+        startUpdateChecks();
+        if(updateChecker!=null){updateChecker.onResume();updateChecker.evaluateJavascript("window.dispatchEvent(new Event('focus'));",null);}
+        showPendingUpdate();
         if(web!=null) {
             web.onResume();visibility(web,true);applySystemTheme(true);
             if(web.getUrl()!=null && trusted(Uri.parse(web.getUrl())) && settingsPath(Uri.parse(web.getUrl()).getPath())) {
@@ -338,5 +347,5 @@ public class MainActivity extends Activity {
             handler.removeCallbacks(identityWatcher);handler.post(identityWatcher);
         }
     }
-    @Override protected void onDestroy() { handler.removeCallbacksAndMessages(null);if(updateChecker!=null){updateChecker.removeJavascriptInterface("InhouseNative");updateChecker.removeJavascriptInterface("InhouseUpdateHost");updateChecker.destroy();}disposeTab(homeWeb);disposeTab(directWeb);super.onDestroy(); }
+    @Override protected void onDestroy() { handler.removeCallbacksAndMessages(null);if(updateChecker!=null){updateChecker.removeJavascriptInterface("InhouseNative");updateChecker.removeJavascriptInterface("InhouseUpdateHost");root.removeView(updateChecker);updateChecker.destroy();}disposeTab(homeWeb);disposeTab(directWeb);super.onDestroy(); }
 }
