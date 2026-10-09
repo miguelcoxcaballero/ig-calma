@@ -102,15 +102,23 @@ public final class NativeFeed {
             boolean following = "following".equals(source) || (source == null && request != null && request.following);
             if (following && request != null && request.head && request.context != null && CalmaConfig.mode() != 0) {
                 try {
-                    NativeTimeline.Snapshot snapshot = NativeTimeline.load(response, request.context, now);
+                    NativeTimeline.Snapshot snapshot = NativeTimeline.begin(response, request.context, now);
                     if (request.epoch != CalmaConfig.sessionId()) { discard(response); return; }
-                    snapshot.apply(response);
-                    NativeFeedEnd.append(response, session);
-                    return;
+                    if (snapshot != null) {
+                        snapshot.applyHead(response, session);
+                        NativeFeedEnd.append(response, session);
+                        return;
+                    }
                 } catch (Exception failure) {
                     if (request.epoch != CalmaConfig.sessionId()) { discard(response); return; }
                     throw new LoadFailure(failure);
                 }
+            }
+            if (following && request != null && !request.head && request.context != null
+                    && NativeTimeline.remaining(response, request.context)) {
+                if (request.epoch != CalmaConfig.sessionId()) { discard(response); return; }
+                NativeFeedEnd.append(response, session);
+                return;
             }
             Object wrappers = StockAccess.get(response, "A0S");
             Object media = StockAccess.get(response, "A0U");
@@ -151,6 +159,10 @@ public final class NativeFeed {
                 StockAccess.set(response, "A0a", false);
                 StockAccess.set(response, "A0W", false);
                 StockAccess.set(response, "A0N", null);
+            }
+            if (following && request != null && request.context != null) {
+                NativeTimeline.delivered(response, request.context, request.head);
+                if (!Boolean.TRUE.equals(StockAccess.get(response, "A0a"))) NativeFeedEnd.append(response, session);
             }
         } catch (ReflectiveOperationException | RuntimeException unexpectedStockShape) {
             // Never let extension errors crash cache parsing on the UI thread, or return
@@ -277,13 +289,17 @@ public final class NativeFeed {
                 Object author = StockAccess.call(dictionary, "A33");
                 if (author != null) {
                     String id = (String) StockAccess.call(author, "getId");
-                    if (id != null && !NativeRelations.verified(session, id)) ids.add(id);
+                    if (id != null && !NativeRelations.verified(session, id)
+                            && !(NativeRelations.known(session, author, 2)
+                            && NativeRelations.permitted(session, author, 2, true))) ids.add(id);
                 }
                 Object collaborators = StockAccess.call(dictionary, "A8F");
                 if (collaborators instanceof List) for (Object collaborator : (List<?>) collaborators)
                     if (collaborator != null) {
                         String id = (String) StockAccess.call(collaborator, "getId");
-                        if (id != null && !NativeRelations.verified(session, id)) ids.add(id);
+                        if (id != null && !NativeRelations.verified(session, id)
+                                && !(NativeRelations.known(session, collaborator, 2)
+                                && NativeRelations.permitted(session, collaborator, 2, true))) ids.add(id);
                     }
             } catch (ReflectiveOperationException | RuntimeException missingOptionalAuthor) { /* Filter rejects malformed items. */ }
         }

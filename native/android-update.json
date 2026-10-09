@@ -1,9 +1,9 @@
 {
-  "version": "0.4.4",
-  "versionCode": 384510832,
+  "version": "0.4.5",
+  "versionCode": 384510833,
   "required": true,
-  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.4/IG-Calma-0.4.4.apk",
-  "apkSha256": "176cbf7713b3cd393278066914095e6fb917358b88f10946d318ececa41bbfaa",
+  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.5/IG-Calma-0.4.5.apk",
+  "apkSha256": "e1bfb705d52d3a7f5ec4c46f07ce7237f46cd48ce7888b302aee0578f5a85f5f",
   "apkSizeBytes": 146260653,
-  "releaseNotes": "Cuatro modos nativos: For you, Favourites, Friends y Following. For you con minutos por hora y caducidad de 24 horas."
+  "releaseNotes": "Carga inicial más rápida: primeras publicaciones visibles mientras el timeline se precarga en segundo plano. Caché sin duplicados e historias actuales."
 }

@@ -33,6 +33,12 @@ public class NativeTimelineTest {
     static void verify(Session session,String id,boolean mutual){Status status=new Status(true,mutual);NativeRelations.beginStatus(session,id,status);NativeRelations.endStatus(status);}
     static <T> T worker(Callable<T> action)throws Exception{ExecutorService e=Executors.newSingleThreadExecutor();try{return e.submit(action).get(8,TimeUnit.SECONDS);}finally{e.shutdownNow();}}
     static void fails(Callable<?> action,String message)throws Exception{try{action.call();throw new AssertionError(message);}catch(IllegalStateException expected){checks++;}}
+    static void warm(NativeTimeline.Context context)throws Exception {
+        java.lang.reflect.Field field=NativeTimeline.class.getDeclaredField("STREAMS");field.setAccessible(true);
+        Object stream=((Map<?,?>)field.get(null)).get(NativeRelations.owner(context.session)+':'+context.mode);
+        java.lang.reflect.Field future=stream.getClass().getDeclaredField("complete");future.setAccessible(true);
+        ((CompletableFuture<?>)future.get(stream)).get(4,TimeUnit.SECONDS);
+    }
     public static void main(String[] args)throws Exception{
         CalmaConfig.testMode=2;long now=System.currentTimeMillis()/1000;
         TimelineRequest request=new TimelineRequest();
@@ -95,6 +101,60 @@ public class NativeTimelineTest {
         NativeTimeline.Snapshot mutualOnly=worker(()->NativeTimeline.load(page(null,oneWay),friends,now,(a,b,d)->null));
         check(mutualOnly.wrappers.isEmpty(),"Friends excludes non-mutual followed accounts");
         CalmaConfig.testMode=1;check(NativeTimeline.saved(following.session)==all,"Returning to Following reuses its complete timeline");
+        NativeTimeline.Context fast=context("9020",new TimelineRequest());
+        CountDownLatch fetching=new CountDownLatch(1),allowNext=new CountDownLatch(1);
+        Response head=page("next",stories,one);
+        long coldStart=System.nanoTime();
+        check(NativeTimeline.begin(head,fast,now,(a,b,d)->{fetching.countDown();allowNext.await();return page(null,one,two);})==null,"cold head does not await complete timeline");
+        check(System.nanoTime()-coldStart<TimeUnit.MILLISECONDS.toNanos(200),"first page returns while network preloading is blocked");
+        check(fetching.await(2,TimeUnit.SECONDS),"remaining pages are prefetched without scrolling");
+        NativeTimeline.delivered(head,fast,true);
+        check(head.A0S.size()==2 && head.A0S.get(0)==stories,"stories stay visible in immediate head");
+        Response beforeReady=page("native-next",two);
+        check(!NativeTimeline.remaining(beforeReady,fast) && beforeReady.A0a,"unfinished preload never blocks or ends native pagination");
+        head.A0S.clear();allowNext.countDown();warm(fast);
+        NativeTimeline.Snapshot complete=NativeTimeline.saved(fast.session);
+        check(complete.wrappers.size()==3,"adapter mutations cannot truncate background seed");
+        Response tail=page("ignored",one,two);
+        check(NativeTimeline.remaining(tail,fast),"ready preload is consumed by next native response");
+        check(tail.A0S.size()==1 && ((Wrapper)tail.A0S.get(0)).A0A()==two,"cached tail excludes posts and stories already delivered");
+        check(!tail.A0a && tail.A0N==null,"complete cached tail ends pagination");
+        Response duplicate=page("duplicate",two);
+        NativeTimeline.delivered(duplicate,fast,false);
+        check(duplicate.A0S.isEmpty(),"overlapping native pages do not repeat posts");
+        check(NativeTimeline.begin(page(null),fast,now,(a,b,d)->{throw new AssertionError("cached feed fetched");})==complete,"warm reopen immediately returns complete snapshot");
+        Wrapper currentStories=new Wrapper(null);Response reopened=page(null,currentStories);
+        complete.applyHead(reopened,fast.session);
+        check(reopened.A0S.get(0)==currentStories && !reopened.A0S.contains(stories),"cached posts preserve current stories rather than stale head controls");
+        NativeTimeline.Context continued=context("9021",new TimelineRequest());
+        CountDownLatch later=new CountDownLatch(1);
+        Response early=page("next",one);
+        NativeTimeline.begin(early,continued,now,(a,b,d)->{later.await();return page(null,one,two,post("three",now-30));});
+        NativeTimeline.delivered(early,continued,true);
+        Response middle=page("next2",one,two);
+        NativeTimeline.delivered(middle,continued,false);
+        check(middle.A0S.size()==1,"normal pagination remains usable during preloading without duplicate rows");
+        later.countDown();warm(continued);
+        Response finalTail=page(null);
+        NativeTimeline.remaining(finalTail,continued);
+        check(finalTail.A0S.size()==1 && ((Media)((Wrapper)finalTail.A0S.get(0)).A0A()).A04.getId().equals("three"),"completion excludes all pages delivered during preloading");
+        TimelineRequest explicit=new TimelineRequest();explicit.A09="pull_to_refresh";
+        NativeTimeline.Context reloading=context("9021",explicit);
+        check(NativeTimeline.begin(page(null,two),reloading,now+1,(a,b,d)->null)==null,"explicit refresh starts a new progressive generation");
+        warm(reloading);check(NativeTimeline.saved(reloading.session).wrappers.size()==1,"refresh replaces previous full snapshot");
+        NativeTimeline.Context failed=context("9022",new TimelineRequest());
+        NativeTimeline.begin(page("offline",one),failed,now,(a,b,d)->{throw new IllegalStateException("offline");});
+        try {warm(failed);} catch (ExecutionException expected) {}
+        Response retry=page("real-cursor",two);
+        check(!NativeTimeline.remaining(retry,failed) && retry.A0a,"failed optional preload leaves original pagination enabled");
+        CalmaConfig.testMode=2;
+        IdentifiedUser confirmed=new IdentifiedUser("70001");confirmed.A00=new UserDictionary(true,true);
+        check(NativeFeed.missing(Collections.emptyList(),Arrays.asList(new Item("confirmed",now,confirmed)),new Session("9030"),now).isEmpty(),"positive native mutual friendship avoids redundant network verification");
+        check(NativeFeed.missing(Collections.emptyList(),Arrays.asList(new Item("uncertain",now,new IdentifiedUser("70002"))),new Session("9030"),now).contains("70002"),"unverified negative friendship is still checked before hiding posts");
+        NativeTimeline.Context switched=context("9031",new TimelineRequest());
+        NativeTimeline.begin(page("old-mode",one),switched,now,(a,b,d)->{CalmaConfig.epoch++;return page(null,two);});
+        try {warm(switched);throw new AssertionError("obsolete preload succeeded");} catch(ExecutionException expected){checks++;}
+        check(NativeTimeline.saved(switched.session)==null && !NativeTimeline.remaining(page(null),switched),"obsolete generation neither replaces cache nor leaks into current feed");
         System.out.println("Native timeline: "+checks+" assertions passed");
     }
 }

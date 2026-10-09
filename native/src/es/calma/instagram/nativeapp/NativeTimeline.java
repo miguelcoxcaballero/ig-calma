@@ -25,6 +25,27 @@ final class NativeTimeline {
     private static final ThreadLocal<Capture> EXECUTING = new ThreadLocal<>();
     private static final Map<String, Snapshot> SAVED = new ConcurrentHashMap<>();
     private static final Map<String, Object> LOCKS = new ConcurrentHashMap<>();
+    private static final ExecutorService PRELOAD = Executors.newFixedThreadPool(2, r -> {
+        Thread t = new Thread(r, "CalmaPreload"); t.setDaemon(true); return t;
+    });
+    private static final Map<String, Stream> STREAMS = new ConcurrentHashMap<>();
+    private static final class Stream {
+        final long epoch = CalmaConfig.sessionId();
+        final CompletableFuture<Snapshot> complete = new CompletableFuture<>();
+        final Set<String> wrappers = new HashSet<>(), media = new HashSet<>();
+    }
+    // Retain the raw head before the native response is filtered or its adapter mutates it.
+    public static final class Seed {
+        public Object A0S, A0U, A0N;
+        public boolean A0a;
+        Seed(Object response) throws ReflectiveOperationException {
+            Object w = StockAccess.get(response, "A0S"), m = StockAccess.get(response, "A0U");
+            A0S = w instanceof List ? new ArrayList<>((List<?>) w) : null;
+            A0U = m instanceof List ? new ArrayList<>((List<?>) m) : null;
+            A0N = StockAccess.get(response, "A0N");
+            A0a = Boolean.TRUE.equals(StockAccess.get(response, "A0a"));
+        }
+    }
     private static final String[] COPY_FIELDS = {"A06", "A07", "A09", "A08", "A0A", "A0B", "A0C", "A0I", "A0G", "A0K", "A0J", "A0H", "A0D", "A0E", "A0F", "A01", "A00", "A0M", "A0L", "A0N", "A02", "A05", "A03", "A0O", "A04"};
     static final class Context {
         final Object androidContext, session, request, parameters;
@@ -50,6 +71,16 @@ final class NativeTimeline {
             StockAccess.set(response, "A0U", media == null ? null : new ArrayList<>(media));
             finish(response);
         }
+        void applyHead(Object response, Object session) throws ReflectiveOperationException {
+            Object raw = StockAccess.get(response, "A0S");
+            List<Object> controls = new ArrayList<>();
+            if (raw instanceof List) for (Object row : NativeFeed.filter((List<?>) raw, true, anchor, true, session).items)
+                if (StockAccess.call(row, "A0A") == null) controls.add(row);
+            apply(response);
+            if (wrappers != null) for (Object row : wrappers)
+                if (StockAccess.call(row, "A0A") != null) controls.add(row);
+            StockAccess.set(response, "A0S", raw instanceof List || wrappers != null ? controls : null);
+        }
     }
     private NativeTimeline() {}
 
@@ -73,6 +104,72 @@ final class NativeTimeline {
     }
 
     interface PageSource { Object next(Context context, String cursor, long deadline) throws Exception; }
+    private static String key(Context context) { return NativeRelations.owner(context.session) + ':' + context.mode; }
+    private static boolean refresh(Context context) throws ReflectiveOperationException {
+        String reason = String.valueOf(StockAccess.get(context.request, "A09"));
+        return reason.equals("pull_to_refresh") || reason.equals("pill_refresh")
+                || reason.equals("new_follow") || reason.equals("content_refresh");
+    }
+    /** Cold heads are delivered immediately; pagination and verification warm independently. */
+    static Snapshot begin(Object first, Context context, long anchor) throws Exception {
+        return begin(first, context, anchor, NativeTimeline::fetch);
+    }
+    static Snapshot begin(Object first, Context context, long anchor, PageSource source) throws Exception {
+        String key = key(context);
+        if (!refresh(context)) {
+            Snapshot cached = SAVED.get(key);
+            if (cached != null && cached.epoch == CalmaConfig.contentId()) return cached;
+            Snapshot disk = NativeRelationLookup.mainThread() ? null : NativeTimelineStore.read(context, first, anchor);
+            if (disk != null) { SAVED.put(key, disk); return disk; }
+        }
+        Seed seed = new Seed(first);
+        Stream stream = new Stream();
+        STREAMS.put(key, stream);
+        PRELOAD.execute(() -> {
+            CalmaConfig.scope(context.mode);
+            try {
+                if (stream.epoch != CalmaConfig.sessionId()) throw new IllegalStateException("Feed changed");
+                stream.complete.complete(load(seed, context, anchor, source));
+            } catch (Exception failure) { stream.complete.completeExceptionally(failure); }
+            finally { CalmaConfig.scope(null); }
+        });
+        return null;
+    }
+    /** Never await preloading on a native response. Deliver only rows not already on screen. */
+    static boolean remaining(Object response, Context context) throws ReflectiveOperationException {
+        Stream stream = STREAMS.get(key(context));
+        if (stream == null || stream.epoch != CalmaConfig.sessionId()
+                || !stream.complete.isDone() || stream.complete.isCompletedExceptionally()) return false;
+        Snapshot snapshot = stream.complete.getNow(null);
+        if (snapshot == null || snapshot.epoch != CalmaConfig.contentId()) return false;
+        synchronized (stream) {
+            StockAccess.set(response, "A0S", unseen(snapshot.wrappers, true, stream.wrappers, false));
+            StockAccess.set(response, "A0U", unseen(snapshot.media, false, stream.media, false));
+        }
+        finish(response);
+        return true;
+    }
+    static void delivered(Object response, Context context, boolean head) throws ReflectiveOperationException {
+        Stream stream = STREAMS.get(key(context));
+        if (stream == null || stream.epoch != CalmaConfig.sessionId()) return;
+        synchronized (stream) {
+            Object w = StockAccess.get(response, "A0S"), m = StockAccess.get(response, "A0U");
+            if (w instanceof List) StockAccess.set(response, "A0S", unseen((List<?>) w, true, stream.wrappers, head));
+            if (m instanceof List) StockAccess.set(response, "A0U", unseen((List<?>) m, false, stream.media, head));
+        }
+    }
+    private static List<Object> unseen(List<?> input, boolean wrapped, Set<String> seen, boolean head)
+            throws ReflectiveOperationException {
+        if (input == null) return null;
+        List<Object> result = new ArrayList<>();
+        for (Object row : input) {
+            Object media = wrapped ? StockAccess.call(row, "A0A") : row;
+            if (media == null) { if (head) result.add(row); continue; }
+            String id = (String) StockAccess.call(StockAccess.get(media, "A04"), "getId");
+            if (id != null && seen.add(id)) result.add(row);
+        }
+        return result;
+    }
     static Snapshot load(Object first, Context context, long anchor) throws Exception {
         return load(first, context, anchor, NativeTimeline::fetch);
     }
@@ -85,9 +182,7 @@ final class NativeTimeline {
         }
         synchronized (LOCKS.computeIfAbsent(owner, ignored -> new Object())) {
             Snapshot previous = SAVED.get(owner);
-            String reason = String.valueOf(StockAccess.get(context.request, "A09"));
-            boolean refresh = reason.equals("pull_to_refresh") || reason.equals("pill_refresh")
-                    || reason.equals("new_follow") || reason.equals("content_refresh");
+            boolean refresh = refresh(context);
             if (!refresh && previous != null && previous.epoch == CalmaConfig.contentId()) return previous;
             if (!refresh && previous == null) {
                 Snapshot disk = NativeTimelineStore.read(context, first, anchor);
@@ -104,6 +199,7 @@ final class NativeTimeline {
             Object page = first;
             boolean head = true;
             for (;;) {
+                if (epoch != CalmaConfig.sessionId()) throw new IllegalStateException("Feed changed during preloading");
                 if (System.nanoTime() >= deadline) throw new java.util.concurrent.TimeoutException("Timeline synchronization timed out");
                 Object w = StockAccess.get(page, "A0S"), m = StockAccess.get(page, "A0U");
                 List<?> wl = w instanceof List ? (List<?>) w : Collections.emptyList();
