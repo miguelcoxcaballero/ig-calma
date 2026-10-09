@@ -60,7 +60,7 @@ public final class NativeFeedSelector {
     private static boolean supported(String name) { for (String t : TYPES) if (t.equals(name)) return true; return false; }
     public static String savedType(Object preference) {
         // The constructor below supplies the account-scoped selection. Cold startup always starts safely in Friends.
-        return CalmaConfig.feed();
+        return "RECENTS".equals(CalmaConfig.feed()) ? "FOLLOWING" : CalmaConfig.feed();
     }
     public static boolean openPicker(Object click, View anchor) {
         try {
@@ -139,7 +139,7 @@ public final class NativeFeedSelector {
             listener = new WeakReference<>(target); state = new WeakReference<>(current);
             PopupWindow popup = open.get(); if (popup != null) popup.dismiss();
             clear.invoke(feed);
-            Map<String, String> params = new HashMap<>(); params.put("feed_type", name);
+            Map<String, String> params = new HashMap<>(); params.put("feed_type", "RECENTS".equals(name) ? "FOLLOWING" : name);
             if (name.equals("BLENDED_FOR_YOU")) params.put("pagination_source", "feed_recs");
             if (name.equals("FAVORITES")) params.put("pagination_source", "favorites");
             if (name.equals("FOLLOWING") || name.equals("RECENTS")) params.put("pagination_source", "following");

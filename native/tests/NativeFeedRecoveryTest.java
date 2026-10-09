@@ -11,11 +11,15 @@ public final class NativeFeedRecoveryTest {
         public Object A09="cold_start_fetch";
         public Map<String,String> A0L=Collections.singletonMap("pagination_source","following");
     }
+    public static final class Controller { public Object A0X; Controller(Object session){A0X=session;} }
+    public static final class Envelope { public Object A00; Envelope(Object request){A00=request;} }
+    public static final class Result { public Object A03; public List<?> A02; Result(Object response){A03=response;} public void A02(List<?> rows){A02=rows;} }
+    public static final class Builder { public Map<String,String> values=new HashMap<>(); public void AOA(String key,String value){values.put(key,value);} }
     private static int checks;
     private static void check(boolean value,String message){if(!value)throw new AssertionError(message);checks++;}
     private static Response deliver(Session session,Request request,Response response) {
         response.A0P=request.A0H;Parser parser=new Parser();parser.A01=session;
-        NativeFeed.context(null,null,null,session,request,null);NativeFeed.response(response,parser);return response;
+        NativeFeed.context(null,null,null,session,request,null);NativeFeed.response(response,parser);NativeFeed.delivered(new Controller(session),new Envelope(request),new Result(response));return response;
     }
     public static void main(String[] args) throws Exception {
         long now=System.currentTimeMillis()/1000;
@@ -23,6 +27,25 @@ public final class NativeFeedRecoveryTest {
         Media older=new Media("older",now-20,"feed",new User(true,true));
         Media oneWay=new Media("one-way",now-30,"feed",new User(true,false));
         Media ad=new Media("ad",now-5,"feed",new User(true,true));ad.sponsored=true;
+        CalmaConfig.testMode=1;
+        Session wireAccount=new Session("9400"); Request wireRequest=new Request();
+        wireRequest.A0L=Collections.singletonMap("pagination_source","homecoming_all");
+        Builder builder=new Builder(); NativeFeed.context(null,builder,null,wireAccount,wireRequest,null);
+        builder.AOA("pagination_source","feed_recs"); builder.AOA("feed_type","RECENTS");
+        CalmaConfig.testMode=0; NativeFeed.wire(builder);
+        check("following".equals(builder.values.get("pagination_source")),"final wire uses captured request mode despite later experiment writes or selection changes");
+        check("FOLLOWING".equals(builder.values.get("feed_type")),"Friends and Following use the actual native Following protocol");
+        Builder other=new Builder();other.AOA("pagination_source","discover");NativeFeed.wire(other);
+        check("discover".equals(other.values.get("pagination_source")),"unrelated requests remain untouched");
+        CalmaConfig.testMode=1;
+        Media staleUser=new Media("stale-native-user",now-10,"feed",new User(false,false));
+        Response noEcho=NativeTimelineTest.page("wire-tail",staleUser);noEcho.A0P="server-generated-id";noEcho.A0O="homecoming_all";
+        Parser wireParser=new Parser();wireParser.A01=wireAccount;
+        NativeFeed.response(noEcho,wireParser);
+        Result wireResult=new Result(noEcho);wireResult.A02=Collections.emptyList();
+        NativeFeed.delivered(new Controller(wireAccount),new Envelope(new Request()),wireResult);
+        check(wireResult.A02.size()==1,"real delivery request restores post rejected by stale model even when server id/source differ");
+        check("wire-tail".equals(NativeTimelineProgress.next(wireAccount)),"unmatched response still advances native pagination");
         for(int mode:new int[]{2,1}) {
             CalmaConfig.testMode=mode;Session account=new Session("94"+mode);
             Request request=new Request();Wrapper stories=new Wrapper(null);
@@ -47,15 +70,30 @@ public final class NativeFeedRecoveryTest {
         NativeTimelineTest.Item pending=new NativeTimelineTest.Item("pending",now-15,unresolved);
         java.lang.reflect.Field activeField=NativeRelationLookup.class.getDeclaredField("ACTIVE");activeField.setAccessible(true);
         @SuppressWarnings("unchecked") Map<String,CompletableFuture<Void>> active=(Map<String,CompletableFuture<Void>>)activeField.get(null);
+        Session overlapAccount=new Session("9510");
+        CompletableFuture<Void> authorA=new CompletableFuture<>(),authorB=new CompletableFuture<>();
+        active.put("9510:800",authorA);active.put("9510:801",authorB);
+        CompletableFuture<Void> overlap=NativeRelationLookup.refresh(overlapAccount,Arrays.asList("800","801","800"));
+        CompletableFuture<Void> repeated=NativeRelationLookup.refresh(overlapAccount,Collections.singletonList("800"));
+        check(!overlap.isDone() && !repeated.isDone(),"overlapping pages reuse in-flight author lookups instead of starting duplicate native requests");
+        authorA.complete(null);
+        check(repeated.isDone() && !repeated.isCompletedExceptionally() && !overlap.isDone(),"one page can finish while the other author is pending");
+        authorB.complete(null);check(overlap.isDone() && !overlap.isCompletedExceptionally(),"shared author completion releases overlapping pages");
+        active.remove("9510:800");active.remove("9510:801");
         CompletableFuture<Void> blocked=new CompletableFuture<>();active.put("9500:888",blocked);
         Response first=deliver(account,new Request(),NativeTimelineTest.page("next",newest,pending));
         check(first.A0S.size()==1,"unknown author does not erase a known friend");
         check(!blocked.isDone() && first.A0a,"blocked metadata does not block parser or truncate feed");
         NativeTimelineTest.verify(account,"888",true);blocked.complete(null);active.remove("9500:888");
+        long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(2);
+        while(!NativeTimelineProgress.replay(account) && System.nanoTime()<deadline)Thread.sleep(5);
+        List<?> immediate=NativeTimelineProgress.local(account);
+        check(NativeTimelineProgress.replay(account) && immediate.size()==2,"resolved friend is ready for LOCAL delivery before any next page or EOF");
+        NativeTimelineProgress.rendered(account);
         Request tail=new Request();tail.A0H="next";tail.A0G="next";
         Response recovered=deliver(account,tail,NativeTimelineTest.page(null,older));
-        check(recovered.A0S.size()==2,"resolved earlier author is emitted without losing its post");
-        check(((Wrapper)recovered.A0S.get(0)).A0A()==pending,"newly resolved earlier post is chronologically ordered");
+        check(recovered.A0S.size()==1,"local delivery does not duplicate the resolved friend on the next page");
+        check(((Wrapper)immediate.get(1)).A0A()==pending,"local friends remain chronologically ordered");
         Response finalCache=deliver(account,new Request(),NativeTimelineTest.page("unused",newest));
         check(finalCache.A0S.size()==3,"resolved friends retained in complete timeline");
         Session brokenAccount=new Session("9501");

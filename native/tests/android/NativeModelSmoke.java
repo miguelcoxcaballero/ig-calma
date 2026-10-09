@@ -29,7 +29,9 @@ public final class NativeModelSmoke extends Instrumentation {
         return unsafe.getMethod("allocateInstance",Class.class).invoke(field.get(null),Class.forName(name,true,loader));
     }
     private void set(Object target,String name,Object value)throws Exception {
-        Field field=target.getClass().getDeclaredField(name);field.setAccessible(true);field.set(target,value);
+        Class<?> type=target.getClass();
+        while(type!=null){try{Field field=type.getDeclaredField(name);field.setAccessible(true);field.set(target,value);return;}catch(NoSuchFieldException missing){type=type.getSuperclass();}}
+        throw new NoSuchFieldException(name);
     }
     private Object media(ClassLoader loader,String id,long time,boolean mutual)throws Exception {
         Object user=allocate(loader,"com.instagram.user.model.User");
@@ -52,10 +54,23 @@ public final class NativeModelSmoke extends Instrumentation {
         set(response,"A0O","following");set(response,"A0N",cursor);set(response,"A0a",cursor!=null);set(response,"A0W",cursor!=null);
         return response;
     }
+    private Object request(ClassLoader loader,String id,String cursor)throws Exception {
+        Object request=allocate(loader,"X.02pp");set(request,"A0H",id);set(request,"A0G",cursor);
+        set(request,"A09",Class.forName("X.02pk",true,loader).getField(cursor==null?"A0J":"A0R").get(null));
+        set(request,"A0L",Collections.singletonMap("pagination_source","homecoming_all"));return request;
+    }
+    private Object deliver(ClassLoader loader,Object controller,Object request,Object page)throws Exception {
+        Object envelope=allocate(loader,"X.06lZ");set(envelope,"A00",request);
+        Object result=allocate(loader,"X.04ss");set(result,"A03",page);set(result,"A02",Collections.emptyList());
+        Class.forName("es.calma.instagram.nativeapp.NativeFeed",true,loader).getMethod("delivered",Object.class,Object.class,Object.class).invoke(null,controller,envelope,result);
+        check(!((List<?>)result.getClass().getMethod("A01").invoke(result)).isEmpty(),"Stock delivery list is updated, not only its parser model");
+        return result;
+    }
     private void feedModels(ClassLoader loader)throws Exception {
         Class<?> config=Class.forName("es.calma.instagram.nativeapp.CalmaConfig",true,loader);
         Method select=config.getDeclaredMethod("select",String.class);select.setAccessible(true);select.invoke(null,"RECENTS");
         Object session=allocate(loader,"com.instagram.common.session.UserSession");set(session,"userId","994400");
+        Object controller=allocate(loader,"X.05qX");set(controller,"A0X",session);
         Object parser=allocate(loader,"X.03gD");set(parser,"A01",session);
         Class<?> feed=Class.forName("es.calma.instagram.nativeapp.NativeFeed",true,loader);
         Method context=feed.getMethod("context",Object.class,Object.class,Object.class,Object.class,Object.class,Object.class);
@@ -64,22 +79,35 @@ public final class NativeModelSmoke extends Instrumentation {
         Object nextMedia=media(loader,"99440002",System.currentTimeMillis()/1000-20,true);
         check(Boolean.FALSE.equals(firstMedia.getClass().getMethod("EKS").invoke(firstMedia)),"Native sponsored predicate on real cached Media");
         Object firstRow=wrapper(loader,firstMedia),nextRow=wrapper(loader,nextMedia);
-        Request request=new Request();Object first=page(loader,request.A0H,"smoke-next",firstRow);
-        context.invoke(null,null,null,null,session,request,null);long start=android.os.SystemClock.elapsedRealtime();
-        response.invoke(null,first,parser);
-        check(android.os.SystemClock.elapsedRealtime()-start<1000,"Actual-model cold parse does not block UI");
-        check(((List<?>)first.getClass().getField("A0S").get(first)).contains(firstRow),"Cold Friends head keeps real native Media and wrapper");
+        Object request=request(loader,"smoke-head",null),first=page(loader,"server-generated-id","smoke-next",firstRow);
+        Object builder=allocate(loader,"X.01pg");Object parameters=Class.forName("X.02pv",true,loader).getConstructor().newInstance();set(builder,"A0a",parameters);
+        context.invoke(null,null,builder,null,session,request,null);
+        builder.getClass().getMethod("AOA",String.class,String.class).invoke(builder,"pagination_source","homecoming_all");
+        feed.getMethod("wire",Object.class).invoke(null,builder);
+        Map<?,?> actual=(Map<?,?>)parameters.getClass().getField("A00").get(parameters);
+        check("following".equals(actual.get("pagination_source").getClass().getField("A00").get(actual.get("pagination_source"))),"Final original HTTP parameter map overwrites experimental source");
+        check("FOLLOWING".equals(actual.get("feed_type").getClass().getField("A00").get(actual.get("feed_type"))),"Original HTTP map sends FOLLOWING for Friends");
+        long start=android.os.SystemClock.elapsedRealtime();response.invoke(null,first,parser);deliver(loader,controller,request,first);
+        check(android.os.SystemClock.elapsedRealtime()-start<1000,"Actual-model cold delivery does not block UI");
+        check(((List<?>)first.getClass().getField("A0S").get(first)).contains(firstRow),"Cold Friends delivers real native Media despite a different response ID");
         check((Boolean)first.getClass().getField("A0a").get(first),"Cold native cursor remains available");
-        request=new Request();request.A0H="smoke-next";request.A0G="smoke-next";
-        Object tail=page(loader,request.A0H,null,firstRow,nextRow);
-        context.invoke(null,null,null,null,session,request,null);response.invoke(null,tail,parser);
+        request=request(loader,"smoke-next","smoke-next");Object tail=page(loader,null,null,firstRow,nextRow);
+        context.invoke(null,null,null,null,session,request,null);response.invoke(null,tail,parser);deliver(loader,controller,request,tail);
         List<?> tailRows=(List<?>)tail.getClass().getField("A0S").get(tail);
-        check(!tailRows.contains(firstRow) && tailRows.contains(nextRow),"Real wrapper duplicates removed across pages");
+        check(!tailRows.contains(firstRow) && tailRows.contains(nextRow),"Real wrapper duplicates removed across pages without echoed request ID");
         check(!(Boolean)tail.getClass().getField("A0a").get(tail),"Real EOF terminates native feed");
-        request=new Request();Object cached=page(loader,request.A0H,"unused",firstRow);
-        context.invoke(null,null,null,null,session,request,null);response.invoke(null,cached,parser);
+        request=request(loader,"smoke-cached",null);Object cached=page(loader,null,"unused",firstRow);
+        context.invoke(null,null,null,null,session,request,null);response.invoke(null,cached,parser);deliver(loader,controller,request,cached);
         List<?> cachedRows=(List<?>)cached.getClass().getField("A0S").get(cached);
         check(cachedRows.contains(firstRow) && cachedRows.contains(nextRow),"Complete cache replays real Media and wrapper models");
+        select.invoke(null,"FOLLOWING");
+        Object stale=media(loader,"99440003",System.currentTimeMillis()/1000-5,false);
+        Object user=stale.getClass().getField("A04").get(stale);user=user.getClass().getMethod("A33").invoke(user);
+        Object dict=user.getClass().getField("A00").get(user),data=dict.getClass().getField("A00").get(dict);
+        for(Object status:Class.forName("X.02tG",true,loader).getEnumConstants())if("FollowStatusNotFollowing".equals(status.toString()))set(data,"A05",status);
+        request=request(loader,"stale-status",null);Object staleRow=wrapper(loader,stale),fresh=page(loader,null,"cursor",staleRow);
+        context.invoke(null,null,null,null,session,request,null);response.invoke(null,fresh,parser);deliver(loader,controller,request,fresh);
+        check(((List<?>)fresh.getClass().getField("A0S").get(fresh)).contains(staleRow),"Following survives actual stale NotFollowing enum in original User model");
         select.invoke(null,"RECENTS");
     }
     @Override public void onCreate(Bundle arguments) { super.onCreate(arguments); start(); }
@@ -151,7 +179,7 @@ public final class NativeModelSmoke extends Instrumentation {
             } catch (Throwable failure) { error[0] = failure; }
         });
         if (error[0] == null) {
-            result.putString("stream", "CALMA_NATIVE_MODELS_PASSED: allocation, native row, light/dark drawing, accessibility, recycling, four stock selector models, remaining time, zero-credit lock, real Media/dictionary/user/wrapper/response/parser models, cold head, native continuation, duplicate removal, completed cache\n");
+            result.putString("stream", "CALMA_NATIVE_MODELS_PASSED: allocation, native row, light/dark drawing, accessibility, recycling, four stock selector models, remaining time, zero-credit lock, real Media/dictionary/user/wrapper/response/parser models; actual HTTP parameter map and delivery envelope with absent/different response IDs, cold head, native continuation, duplicate removal, completed cache\n");
             finish(-1,result);
         } else {
             result.putString("stream", "CALMA_NATIVE_MODELS_FAILED: " + android.util.Log.getStackTraceString(error[0]));

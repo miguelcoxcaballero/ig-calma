@@ -11,11 +11,15 @@ import java.util.concurrent.ConcurrentHashMap;
 /** Calma filtering at the stock feed response boundary, before RecyclerView sees items. */
 public final class NativeFeed {
     private static final Map<String, Request> REQUESTS = new ConcurrentHashMap<>();
+    private static final Map<Object, Request> BUILDERS = java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
+    private static final Map<Object, Request> NATIVE_REQUESTS = java.util.Collections.synchronizedMap(new java.util.IdentityHashMap<>());
+    private static final Map<Object, RawPage> RAW = java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
     private static final Map<String, ChronologyState> CHRONOLOGY = new ConcurrentHashMap<>();
     private static final class Request {
         final boolean head, following;
         final int mode = CalmaConfig.mode();
         final long epoch = CalmaConfig.sessionId();
+        final String feed = CalmaConfig.feed();
         NativeTimeline.Context context;
         Request(boolean head, boolean following) { this.head = head; this.following = following; }
     }
@@ -27,8 +31,16 @@ public final class NativeFeed {
                 if (REQUESTS.size() > 128) REQUESTS.clear();
                 Map<?, ?> params = (Map<?, ?>) StockAccess.get(request, "A0L");
                 Map<?, ?> selected = parameters(params);
-                REQUESTS.put(owner + ':' + id, new Request(StockAccess.get(request, "A0G") == null,
-                        selected != null && "following".equals(selected.get("pagination_source"))));
+                Request tracked = new Request(StockAccess.get(request, "A0G") == null,
+                        selected != null && "following".equals(selected.get("pagination_source")));
+                REQUESTS.put(owner + ':' + id, tracked);
+                synchronized (NATIVE_REQUESTS) {
+                    if (NATIVE_REQUESTS.size() >= 512) {
+                        NATIVE_REQUESTS.entrySet().removeIf(e -> e.getValue().epoch != CalmaConfig.sessionId());
+                        if (NATIVE_REQUESTS.size() >= 512) NATIVE_REQUESTS.remove(NATIVE_REQUESTS.keySet().iterator().next());
+                    }
+                    NATIVE_REQUESTS.put(request, tracked);
+                }
             }
         } catch (ReflectiveOperationException | RuntimeException missingRequestContext) { /* Cached responses still filter. */ }
     }
@@ -37,8 +49,68 @@ public final class NativeFeed {
         request(session, request);
         try {
             Request tracked = REQUESTS.get(NativeRelations.owner(session) + ':' + StockAccess.get(request, "A0H"));
-            if (tracked != null) tracked.context = new NativeTimeline.Context(androidContext, session, request, parameters);
+            if (tracked != null) {
+                tracked.context = new NativeTimeline.Context(androidContext, session, request, parameters);
+                if (builder != null) BUILDERS.put(builder, tracked);
+            }
         } catch (ReflectiveOperationException | RuntimeException ignored) {}
+    }
+    /** Last write, after stock experiment/supplier parameters and before HTTP serialization. */
+    public static void wire(Object builder) {
+        Request request = BUILDERS.get(builder);
+        if (request == null) return; // Never change Discover, DMs, profiles or other requests.
+        try {
+            String source = request.following ? "following" : "FAVORITES".equals(request.feed) ? "favorites" : "feed_recs";
+            StockAccess.method(builder.getClass(), "AOA", String.class, String.class).invoke(builder, "pagination_source", source);
+            StockAccess.method(builder.getClass(), "AOA", String.class, String.class).invoke(builder, "feed_type", request.following ? "FOLLOWING" : request.feed);
+        } catch (ReflectiveOperationException | RuntimeException ignored) {}
+    }
+    private static final class RawPage {
+        final Object wrappers, media, cursor, source, more, auto;
+        RawPage(Object response) throws ReflectiveOperationException {
+            Object w = StockAccess.get(response, "A0S"), m = StockAccess.get(response, "A0U");
+            wrappers = w instanceof List ? new ArrayList<>((List<?>)w) : w;
+            media = m instanceof List ? new ArrayList<>((List<?>)m) : m;
+            cursor = StockAccess.get(response,"A0N"); source = StockAccess.get(response,"A0O");
+            more = StockAccess.get(response,"A0a"); auto = StockAccess.get(response,"A0W");
+        }
+        void restore(Object response) throws ReflectiveOperationException {
+            StockAccess.set(response,"A0S",wrappers); StockAccess.set(response,"A0U",media);
+            StockAccess.set(response,"A0N",cursor); StockAccess.set(response,"A0O",source);
+            StockAccess.set(response,"A0a",more); StockAccess.set(response,"A0W",auto);
+        }
+    }
+    /** Use the actual stock delivery request: response request_id is not a correlation contract. */
+    public static void delivered(Object controller, Object envelope, Object result) {
+        try {
+            Object session = StockAccess.get(controller,"A0X"), nativeRequest = StockAccess.get(envelope,"A00");
+            Object response = StockAccess.get(result,"A03");
+            Request request = NATIVE_REQUESTS.get(nativeRequest);
+            if (request == null) {
+                // Stock cache/network envelopes can contain a copy of 02pp. Match the
+                // client's own id AND cursor, never the optional server response id.
+                Object id = StockAccess.get(nativeRequest,"A0H"), cursor = StockAccess.get(nativeRequest,"A0G");
+                synchronized (NATIVE_REQUESTS) {
+                    for (Map.Entry<Object,Request> entry : NATIVE_REQUESTS.entrySet()) {
+                        if (java.util.Objects.equals(id,StockAccess.get(entry.getKey(),"A0H"))
+                                && java.util.Objects.equals(cursor,StockAccess.get(entry.getKey(),"A0G"))) {
+                            request = entry.getValue(); break;
+                        }
+                    }
+                }
+            }
+            if (request == null) return;
+            RawPage raw = RAW.remove(response);
+            if (raw != null) raw.restore(response);
+            process(response, session, request, true);
+            Object rows = StockAccess.get(response,"A0S");
+            if (!(rows instanceof List)) {
+                Object media = StockAccess.get(response,"A0U");
+                rows = media instanceof List ? StockAccess.method(result.getClass(),"A00",List.class).invoke(null,media) : new ArrayList<>();
+            }
+            StockAccess.method(result.getClass(),"A02",List.class).invoke(result,rows);
+            if (request.epoch == CalmaConfig.sessionId()) NativeTimelinePager.delivery(controller,envelope,request.head);
+        } catch (ReflectiveOperationException | RuntimeException ignored) { /* Parser's safe page remains available. */ }
     }
     private static final String[] SUGGESTION_FIELDS = {
         "A0N", "A0O", "A0P", "A0Q", "A0R", "A0S", "A0T", "A0U", "A0K", "A0W", "A04", "A0J",
@@ -59,11 +131,9 @@ public final class NativeFeed {
             result.put("pagination_source", "favorites"); return result;
         }
         if (CalmaConfig.mode() == 0) return original;
-        Object source = original == null ? null : original.get("pagination_source");
-        // Respect other explicitly selected native feeds (for example Favorites).
-        if (source != null && !"feed_recs".equals(source) && !"following".equals(source)) return original;
         Map<Object, Object> result = original == null ? new HashMap<>() : new HashMap<>(original);
         result.put("pagination_source", "following");
+        result.put("feed_type", "FOLLOWING");
         return result;
     }
 
@@ -72,12 +142,24 @@ public final class NativeFeed {
         if (response == null || parser == null) return;
         try {
             Object session = StockAccess.get(parser, "A01");
+            RAW.put(response, new RawPage(response));
+            String responseId = (String) StockAccess.get(response, "A0P");
+            Request request = responseId == null ? null : REQUESTS.remove(NativeRelations.owner(session) + ':' + responseId);
+            if (request != null && request.context != null) {
+                // The main delivery callback owns filtering. Do not discard unknown friends
+                // or consume a cursor while the stock response is still being constructed.
+                StockAccess.set(response,"A0E",Boolean.TRUE); StockAccess.set(response,"A0J",Integer.valueOf(0));
+                adsOnly(response,"A0S",true); adsOnly(response,"A0U",false); return;
+            }
+            process(response, session, request, false);
+        } catch (ReflectiveOperationException | RuntimeException ignored) {}
+    }
+    private static void process(Object response, Object session, Request request, boolean delivery) {
+        try {
             String owner = NativeRelations.owner(session);
             if (owner.length() == 0) return;
             if (NativeTimeline.capture(response, owner)) return;
             long now = System.currentTimeMillis() / 1000L;
-            String responseId = (String) StockAccess.get(response, "A0P");
-            Request request = responseId == null ? null : REQUESTS.remove(owner + ':' + responseId);
             if (request != null) CalmaConfig.scope(request.mode);
             // Ads stay disabled in every feed mode, including native/default.
             // These are the stock response's client-insertion controls.
@@ -96,8 +178,8 @@ public final class NativeFeed {
                 adsOnly(response, "A0S", true); adsOnly(response, "A0U", false); return;
             }
             Object source = StockAccess.get(response, "A0O");
-            boolean following = "following".equals(source) || (source == null && request != null && request.following);
-            if (following && request != null && request.context != null) {
+            boolean following = "following".equals(source) || (request != null && request.following);
+            if (delivery && following && request != null && request.context != null) {
                 NativeTimelineProgress.response(response, request.context, request.head, request.epoch, now);
                 return;
             }
@@ -143,7 +225,6 @@ public final class NativeFeed {
             // Never let extension errors crash cache parsing on the UI thread, or return
             // a successful empty page with auto-pagination still switched on.
             try {
-                Object session = StockAccess.get(parser, "A01");
                 NativeTimeline.Snapshot previous = NativeTimeline.saved(session);
                 if (previous != null) previous.apply(response);
                 else {
@@ -263,13 +344,13 @@ public final class NativeFeed {
                 Object author = StockAccess.call(dictionary, "A33");
                 if (author != null) {
                     String id = (String) StockAccess.call(author, "getId");
-                    if (id != null && !NativeRelations.verified(session, id) && !NativeRelations.permitted(session, author, 2, true)) ids.add(id);
+                    if (id != null && id.matches("[0-9]+") && !NativeRelations.verified(session, id) && !NativeRelations.permitted(session, author, 2, true)) ids.add(id);
                 }
                 Object collaborators = StockAccess.call(dictionary, "A8F");
                 if (collaborators instanceof List) for (Object collaborator : (List<?>) collaborators)
                     if (collaborator != null) {
                         String id = (String) StockAccess.call(collaborator, "getId");
-                        if (id != null && !NativeRelations.verified(session, id) && !NativeRelations.permitted(session, collaborator, 2, true)) ids.add(id);
+                        if (id != null && id.matches("[0-9]+") && !NativeRelations.verified(session, id) && !NativeRelations.permitted(session, collaborator, 2, true)) ids.add(id);
                     }
             } catch (ReflectiveOperationException | RuntimeException missingOptionalAuthor) { /* Filter rejects malformed items. */ }
         }

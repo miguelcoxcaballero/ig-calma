@@ -52,7 +52,7 @@ def finalize(apk: Path, build_tools: Path, morphe: Path) -> None:
         'version': version, 'versionCode': version_code, 'required': True,
         'apkUrl': f'https://github.com/miguelcoxcaballero/ig-calma/releases/download/v{version}/{apk.name}',
         'apkSha256': digest(apk), 'apkSizeBytes': apk.stat().st_size,
-        'releaseNotes': "Muestra la primera página sin esperar a todo el timeline. Carga el resto con el paginador original y conserva posts válidos aunque una comprobación falle.",
+        'releaseNotes': "Corrige la entrega de Friends y Following. Los amigos confirmados aparecen sin otra descarga del feed y las peticiones de paginación rechazadas pueden reintentarse.",
     }
     payload = json.dumps(manifest, indent=2, ensure_ascii=False) + '\n'
     for destination in (ROOT / 'android-update.json', NATIVE / 'android-update.json'):

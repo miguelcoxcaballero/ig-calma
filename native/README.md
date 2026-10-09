@@ -20,12 +20,12 @@ La entrada aceptada está fijada en [`stock.lock.json`](stock.lock.json):
 | Android mínimo | Android 9, API 28 |
 | Formato de entrada | APKM con `base.apk` y `split_config.xxhdpi.apk` |
 | Procedencia | [Variante de APKMirror](https://www.apkmirror.com/apk/instagram/instagram-instagram/instagram-439-0-0-37-89-release/instagram-439-0-0-37-89-4-android-apk-download/) |
-| Versión propia de Calma | `0.4.7`, definida en [`CalmaBuild.java`](src/es/calma/instagram/nativeapp/CalmaBuild.java) |
+| Versión propia de Calma | `0.4.8`, definida en [`CalmaBuild.java`](src/es/calma/instagram/nativeapp/CalmaBuild.java) |
 | Paquete resultante | `es.calma.instagram` |
-| versionCode resultante | `384510835` |
+| versionCode resultante | `384510836` |
 
 El manifiesto del APK conserva `versionName=439.0.0.37.89` para Instagram. La
-comparación de actualizaciones utiliza `CalmaBuild.VERSION`, actualmente `0.4.7`.
+comparación de actualizaciones utiliza `CalmaBuild.VERSION`, actualmente `0.4.8`.
 Son versiones distintas con funciones distintas.
 
 El build verifica el SHA-256 del APKM y de cada split, además de la cadena de firma
@@ -146,13 +146,13 @@ regenera los metadatos del cargador, alinea a **16 KB**, firma y verifica el res
 
 Los resultados quedan en:
 
-- `native/build/dist/IG-Calma-0.4.7.apk`.
+- `native/build/dist/IG-Calma-0.4.8.apk`.
 - `native/build/dist/SHA256SUMS.txt`, `build-info.json` y `verification.json`.
 - `native/build/patch-result.json` y `native/build/extension/build-report.json`.
 - `android-update.json` y `native/android-update.json`, idénticos y generados a partir del APK firmado.
 
 El build genera los archivos locales; no publica una release. El manifiesto de
-actualización apunta al APK de la release `v0.4.7` del repositorio configurado en el
+actualización apunta al APK de la release `v0.4.8` del repositorio configurado en el
 script. La publicación debe adjuntar exactamente ese APK y mantener su versión,
 tamaño y SHA-256 sincronizados con el manifiesto. Los dos manifiestos usan
 `required: true`; con `false`, Inhouse Read no ofrece la actualización. Publicar
@@ -259,10 +259,10 @@ Para verificar otra vez el APK firmado:
 
 ```sh
 python3 native/scripts/verify-apk.py \
-  --apk native/build/dist/IG-Calma-0.4.7.apk \
+  --apk native/build/dist/IG-Calma-0.4.8.apk \
   --stock /ruta/al/base.apk \
   --build-tools "$CALMA_SDK/build-tools/36.0.0"
-python3 native/tests/updater.py --apk native/build/dist/IG-Calma-0.4.7.apk
+python3 native/tests/updater.py --apk native/build/dist/IG-Calma-0.4.8.apk
 ```
 
 La verificación del artefacto comprueba firma, alineación de 16 KB, versiones,
@@ -319,3 +319,12 @@ Pruebas adicionales: `python3 native/tests/credits.py`, `config.py` y `feed.py`.
 La primera página se entrega sin descargar el resto del timeline ni esperar a una petición de amistad. `NativeTimelineProgress` acumula las páginas del controlador original, deduplica por ID y mantiene pendientes los autores que aún no se han resuelto. `05qX.A0G` activa la precarga mediante `05qX.A0J`/`GRO`, con los controles de peticiones en curso de Instagram. No se ejecuta un segundo transporte oculto de timeline.
 
 La precarga solo avanza con Home visible, se cancela al cambiar de selección y tiene un presupuesto de 90 segundos. Después, el scroll normal puede continuar la carga. Solo un final verificado y las relaciones resueltas generan una caché completa y `That's it`. Un fallo parcial no borra los posts válidos. Las pruebas de integración incluyen una primera carga sin caché, una relación bloqueada y una fila malformada. La instrumentación del APK usa los modelos originales con datos sintéticos en memoria; no se ha probado una cuenta autenticada.
+
+
+## Entrega de Friends y Following (0.4.8)
+
+La selección se fija en el mapa HTTP final de la petición principal, después de los parámetros de experimentos. Friends usa el protocolo `FOLLOWING` de Instagram y aplica el seguimiento mutuo localmente. El controlador nativo `05qX.A0C` entrega la página con su petición real y actualiza también la lista de `04ss`; no depende de que el servidor repita `request_id` ni de que la caché de User ya conozca a todas las cuentas seguidas.
+
+Las comprobaciones de amistad se agrupan por cuenta e ID, sin peticiones solapadas para el mismo autor. Al terminar se actualiza el controlador mediante su entrega `LOCAL` (`A0E`): no hay que llegar al final del timeline ni descargar otra cabecera para ver los amigos ya confirmados. Los intentos de paginación rechazados por estar ocupado el controlador se pueden reintentar. Una nueva cabecera reinicia ese control. Se invalida la caché de timeline de versiones anteriores.
+
+Validación: 108 aserciones JVM del feed/timeline/entrega, comprobación del flujo de los hooks en el DEX y pruebas del APK en Android API 34/35/36 (PENDING_RUNTIME_URL). La instrumentación usa los modelos originales de HTTP, peticiones, envoltorios de entrega, User, Media y respuesta con datos sintéticos. Comprueba respuestas con ID ausente o diferente y un User con `FollowStatusNotFollowing` antiguo. Estas pruebas no reproducen la cuenta autenticada ni la latencia de red del móvil del usuario.

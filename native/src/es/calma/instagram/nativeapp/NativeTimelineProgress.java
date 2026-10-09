@@ -6,7 +6,7 @@ import java.util.concurrent.*;
 /** Collect the original controller's pages; never run another timeline HTTP transport. */
 final class NativeTimelineProgress {
     private static final Map<String, Generation> GENERATIONS = new ConcurrentHashMap<>();
-    private static final ExecutorService CACHE = Executors.newSingleThreadExecutor(r -> {
+    private static final ScheduledExecutorService CACHE = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "CalmaTimelineCache"); t.setDaemon(true); return t;
     });
     private static final class Generation {
@@ -15,9 +15,10 @@ final class NativeTimelineProgress {
         final List<Object> wrappers = new ArrayList<>(), media = new ArrayList<>();
         final Set<String> sentWrappers = new HashSet<>(), sentMedia = new HashSet<>(), cursors = new HashSet<>();
         final ChronologyState chronology = new ChronologyState();
-        boolean hasWrappers, hasMedia, done, replay, replayed, diskChecked;
+        boolean hasWrappers, hasMedia, done, replay, diskChecked, resolving;
+        int retries;
         String next;
-        NativeTimeline.Snapshot snapshot;
+        volatile NativeTimeline.Snapshot snapshot;
         Generation(NativeTimeline.Context context, long epoch, long anchor) {
             this.context = context; this.epoch = epoch; this.anchor = anchor;
         }
@@ -47,19 +48,7 @@ final class NativeTimelineProgress {
                 catch (ReflectiveOperationException | RuntimeException invalidRow) { /* Other rows remain usable. */ }
             }
             g.media.addAll(ml);
-            List<String> missing = NativeFeed.missing(g.wrappers, g.media, context.session, now);
-            if (!missing.isEmpty()) NativeRelationLookup.refresh(context.session, missing).whenComplete((unused, failure) -> {
-                CACHE.execute(() -> {
-                    synchronized (generation) {
-                        if (!current(key, generation) || !generation.done) return;
-                        CalmaConfig.scope(generation.context.mode);
-                        try {
-                            if (complete(generation)) { generation.replay = true; NativeTimelinePager.wake(generation.context.session); }
-                        } catch (ReflectiveOperationException | RuntimeException ignored) { /* Next refresh can retry. */ }
-                        finally { CalmaConfig.scope(null); }
-                    }
-                });
-            });
+            resolve(key,g);
             // Deliver already-known friends immediately. Unresolved authors remain in the
             // accumulator and are reconsidered on the next page or the completion replay.
             if (g.hasWrappers) StockAccess.set(response, "A0S", delta(NativeFeed.filter(g.wrappers, true, now, true, context.session).items, true, g.sentWrappers, head));
@@ -91,6 +80,32 @@ final class NativeTimelineProgress {
                 });
             }
         }
+    }
+    private static void resolve(String key, Generation g) {
+        if (g.resolving) return;
+        List<String> missing = NativeFeed.missing(g.wrappers,g.media,g.context.session,g.anchor);
+        if (missing.isEmpty()) return;
+        g.resolving = true;
+        NativeRelationLookup.refresh(g.context.session,missing).whenComplete((unused,failure) -> CACHE.execute(() -> {
+            synchronized (g) {
+                g.resolving = false;
+                if (!current(key,g)) return;
+                CalmaConfig.scope(g.context.mode);
+                try {
+                    // Publish partial successes now, even while later pages are in flight.
+                    if (g.done) complete(g);
+                    g.replay = true; NativeTimelinePager.wake(g.context.session);
+                    if (failure == null || g.retries++ < 2) CACHE.schedule(() -> {
+                        synchronized (g) {
+                            if (!current(key,g)) return;
+                            CalmaConfig.scope(g.context.mode);
+                            try { resolve(key,g); } finally { CalmaConfig.scope(null); }
+                        }
+                    },failure == null ? 0 : 3200,TimeUnit.MILLISECONDS);
+                } catch (ReflectiveOperationException | RuntimeException ignored) {}
+                finally { CalmaConfig.scope(null); }
+            }
+        }));
     }
     private static boolean current(String key, Generation g) { return GENERATIONS.get(key) == g && g.epoch == CalmaConfig.sessionId(); }
     private static boolean complete(Generation g) throws ReflectiveOperationException {
@@ -127,8 +142,37 @@ final class NativeTimelineProgress {
         Generation g = GENERATIONS.get(key(session, CalmaConfig.mode()));
         if (g == null) return false;
         synchronized (g) {
-            if (g.epoch != CalmaConfig.sessionId() || !g.replay || g.replayed || g.snapshot == null) return false;
-            g.replayed = true; return true;
+            return g.epoch == CalmaConfig.sessionId() && g.replay;
+        }
+    }
+    static final class ViewPage {
+        public List<Object> A0S, A0U;
+        public boolean A0a,A0W;
+        public String A0N;
+    }
+    static List<?> local(Object session) throws ReflectiveOperationException {
+        Generation g = GENERATIONS.get(key(session,CalmaConfig.mode()));
+        if (g == null) return Collections.emptyList();
+        synchronized (g) {
+            if (!current(key(session,CalmaConfig.mode()),g)) return Collections.emptyList();
+            ViewPage page = new ViewPage();
+            page.A0S = g.hasWrappers ? NativeFeed.filter(g.wrappers,true,g.anchor,true,session).items : null;
+            page.A0U = g.hasMedia ? NativeFeed.filter(g.media,false,g.anchor,true,session).items : null;
+            if (g.snapshot != null) g.snapshot.apply(page);
+            if (g.done) NativeFeedEnd.appendStatus(page,session,g.snapshot != null);
+            List<?> rows = page.A0S;
+            if (rows == null && page.A0U != null) rows = (List<?>) StockAccess.method(Class.forName("X.04ss",false,session.getClass().getClassLoader()),"A00",List.class).invoke(null,page.A0U);
+            return rows == null ? Collections.emptyList() : rows;
+        }
+    }
+    static void rendered(Object session) throws ReflectiveOperationException {
+        Generation g = GENERATIONS.get(key(session,CalmaConfig.mode()));
+        if (g == null) return;
+        synchronized (g) {
+            if (!current(key(session,CalmaConfig.mode()),g)) return;
+            delta(NativeFeed.filter(g.wrappers,true,g.anchor,true,session).items,true,g.sentWrappers,false);
+            delta(NativeFeed.filter(g.media,false,g.anchor,true,session).items,false,g.sentMedia,false);
+            g.replay = false;
         }
     }
 }

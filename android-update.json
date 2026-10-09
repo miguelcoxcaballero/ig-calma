@@ -1,9 +1,9 @@
 {
-  "version": "0.4.7",
-  "versionCode": 384510835,
+  "version": "0.4.8",
+  "versionCode": 384510836,
   "required": true,
-  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.7/IG-Calma-0.4.7.apk",
-  "apkSha256": "1a4f94b39b252ef6d46fa35f01b63c2e5602de4f058577073fdcf51e5b7bb16a",
+  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.8/IG-Calma-0.4.8.apk",
+  "apkSha256": "bb31137e1ba74518afb5cba8254d0e0af43992b5e438880c4d55a52e431f054d",
   "apkSizeBytes": 146264749,
-  "releaseNotes": "Muestra la primera página sin esperar a todo el timeline. Carga el resto con el paginador original y conserva posts válidos aunque una comprobación falle."
+  "releaseNotes": "Corrige la entrega de Friends y Following. Los amigos confirmados aparecen sin otra descarga del feed y las peticiones de paginación rechazadas pueden reintentarse."
 }

@@ -2,7 +2,6 @@ package es.calma.instagram.nativeapp;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -36,59 +35,66 @@ final class NativeRelationLookup {
         List<String> ids = new ArrayList<>(new LinkedHashSet<>(input));
         ids.removeIf(id -> id == null || !id.matches("[0-9]+"));
         ids.removeIf(id -> NativeRelations.verified(session, id));
-        if (ids.size() > 100) {
-            List<CompletableFuture<Void>> chunks = new ArrayList<>();
-            for (int start = 0; start < ids.size(); start += 100)
-                chunks.add(refresh(session, new ArrayList<>(ids.subList(start, Math.min(start + 100, ids.size())))));
-            return CompletableFuture.allOf(chunks.toArray(new CompletableFuture<?>[0]));
-        }
-        Collections.sort(ids);
-        if (ids.isEmpty()) return CompletableFuture.completedFuture(null);
-        String key = owner + ':' + String.join(",", ids);
+        List<CompletableFuture<Void>> waiting = new ArrayList<>();
+        List<String> fresh = new ArrayList<>();
         synchronized (ACTIVE) {
-            CompletableFuture<Void> pending = ACTIVE.get(key);
-            if (pending != null) return pending;
-            Long attempted = ATTEMPTED.get(key);
             long now = System.currentTimeMillis();
-            if (attempted != null && now - attempted < RETRY_AFTER_MS) {
-                CompletableFuture<Void> rejected = new CompletableFuture<>();
-                rejected.completeExceptionally(new IllegalStateException("Friendship lookup retry pending"));
-                return rejected;
-            }
-            ATTEMPTED.put(key, now);
-            CompletableFuture<Void> result = new CompletableFuture<>();
-            ACTIVE.put(key, result);
-            if (ATTEMPTED.size() > 2048) ATTEMPTED.entrySet().removeIf(entry -> now - entry.getValue() >= RETRY_AFTER_MS);
-            List<String> requestIds = ids;
-            AtomicReference<Object> executing = new AtomicReference<>();
-            ScheduledFuture<?> deadline = DEADLINES.schedule(() -> {
-                if (result.completeExceptionally(new TimeoutException("Friendship lookup timed out"))) {
-                    ATTEMPTED.put(key, System.currentTimeMillis());
-                    Object request = executing.get();
-                    if (request != null) try { StockAccess.call(request, "cancel"); } catch (ReflectiveOperationException ignored) {}
-                    ACTIVE.remove(key, result);
+            for (String id : ids) {
+                String key = owner + ':' + id;
+                CompletableFuture<Void> pending = ACTIVE.get(key);
+                if (pending != null) { waiting.add(pending); continue; }
+                Long attempted = ATTEMPTED.get(key);
+                if (attempted != null && now - attempted < RETRY_AFTER_MS) {
+                    CompletableFuture<Void> rejected = new CompletableFuture<>();
+                    rejected.completeExceptionally(new IllegalStateException("Friendship lookup retry pending"));
+                    waiting.add(rejected); continue;
                 }
-            }, 15, TimeUnit.SECONDS);
-            WORKER.execute(() -> {
-                try {
-                    if (result.isDone()) return;
-                    Class<?> requests = Class.forName("X.0BnR", false, session.getClass().getClassLoader());
-                    Method factory = StockAccess.method(requests, "A04", session.getClass(), List.class, boolean.class, boolean.class, boolean.class);
-                    // Cache=false; include_followed_by=true; notify/update native user cache=true.
-                    Object request = factory.invoke(null, session, requestIds, false, true, true);
-                    executing.set(request);
-                    if (result.isDone()) return;
-                    StockAccess.call(request, "run");
-                    for (String id : requestIds) if (!NativeRelations.verified(session, id))
-                        throw new IllegalStateException("Incomplete friendship response");
-                    ATTEMPTED.remove(key);
-                    result.complete(null);
-                } catch (ReflectiveOperationException | RuntimeException failure) {
-                    ATTEMPTED.put(key, System.currentTimeMillis());
-                    result.completeExceptionally(failure);
-                } finally { deadline.cancel(false); ACTIVE.remove(key, result); }
-            });
-            return result;
+                CompletableFuture<Void> result = new CompletableFuture<>();
+                ACTIVE.put(key, result); waiting.add(result); fresh.add(id);
+            }
+            for (int start = 0; start < fresh.size(); start += 50) {
+                List<String> batch = new ArrayList<>(fresh.subList(start, Math.min(start + 50, fresh.size())));
+                Map<String,CompletableFuture<Void>> promises = new java.util.HashMap<>();
+                for (String id : batch) promises.put(id, ACTIVE.get(owner + ':' + id));
+                WORKER.execute(() -> execute(session, owner, batch, promises));
+            }
+        }
+        return CompletableFuture.allOf(waiting.toArray(new CompletableFuture<?>[0]));
+    }
+    private static void execute(Object session, String owner, List<String> ids, Map<String,CompletableFuture<Void>> promises) {
+        AtomicReference<Object> executing = new AtomicReference<>();
+        ScheduledFuture<?> deadline = DEADLINES.schedule(() -> {
+            finish(owner, promises, new TimeoutException("Friendship lookup timed out"));
+            Object request = executing.get();
+            if (request != null) try { StockAccess.call(request, "cancel"); } catch (ReflectiveOperationException ignored) {}
+        }, 15, TimeUnit.SECONDS);
+        try {
+            Class<?> requests = Class.forName("X.0BnR", false, session.getClass().getClassLoader());
+            Method factory = StockAccess.method(requests, "A04", session.getClass(), List.class, boolean.class, boolean.class, boolean.class);
+            Object request = factory.invoke(null, session, ids, false, true, true);
+            executing.set(request);
+            StockAccess.call(request, "run");
+            for (String id : ids) {
+                CompletableFuture<Void> result = promises.get(id);
+                if (NativeRelations.verified(session, id)) result.complete(null);
+                else result.completeExceptionally(new IllegalStateException("Incomplete friendship response"));
+            }
+            finish(owner, promises, null);
+        } catch (ReflectiveOperationException | RuntimeException failure) { finish(owner, promises, failure); }
+        finally { deadline.cancel(false); }
+    }
+    private static void finish(String owner, Map<String,CompletableFuture<Void>> promises, Throwable failure) {
+        for (Map.Entry<String,CompletableFuture<Void>> entry : promises.entrySet()) {
+            String key = owner + ':' + entry.getKey();
+            CompletableFuture<Void> result = entry.getValue();
+            if (failure != null) result.completeExceptionally(failure);
+            if (result.isCompletedExceptionally()) ATTEMPTED.put(key,System.currentTimeMillis());
+            else ATTEMPTED.remove(key);
+            ACTIVE.remove(key,result);
+        }
+        if (ATTEMPTED.size() > 2048) {
+            long now = System.currentTimeMillis();
+            ATTEMPTED.entrySet().removeIf(e -> now-e.getValue() >= RETRY_AFTER_MS);
         }
     }
 

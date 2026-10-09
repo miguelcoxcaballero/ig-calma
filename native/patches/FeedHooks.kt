@@ -55,9 +55,17 @@ val calmaNativeFeed = bytecodePatch(
             invoke-static/range {v$register .. v$register}, $FEED->parameters(Ljava/util/Map;)Ljava/util/Map;
             move-result-object v$register
         """.trimIndent())
+        // A01 serializes the final builder map, after A04 merges the optional supplier.
+        val wire = mutableClassDefBy("LX/03u7;").methods.single { it.name == "A01" && it.parameterTypes.firstOrNull() == "LX/03u7;" }
+        check(wire.returnType == "LX/03ci;")
+        wire.addInstructions(0, "invoke-static/range {p0 .. p0}, $FEED->wire(Ljava/lang/Object;)V")
         val controller = mutableClassDefBy("LX/05qX;")
         check(controller.fields.any { it.name == "A0X" && it.type == "Lcom/instagram/common/session/UserSession;" })
         check(controller.methods.any { it.name == "A0J" && it.parameterTypes.map { t -> t.toString() } == listOf("LX/0AHw;", "LX/02pk;", "Ljava/lang/String;", "Ljava/util/Map;") && it.returnType == "Z" })
+        val delivery = controller.methods.single { it.name == "A0C" && it.parameterTypes == listOf("LX/08KU;", "LX/04ss;", "LX/06lY;", "I", "Z") }
+        delivery.addInstructions(0, "invoke-static/range {p0 .. p2}, $FEED->delivered(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V")
+        check(controller.methods.any { it.name == "A0E" && it.parameterTypes == listOf("LX/08KU;", "Ljava/util/List;", "Z", "Z") })
+        check(mutableClassDefBy("LX/04ss;").methods.any { it.name == "A02" && it.parameterTypes == listOf("Ljava/util/List;") })
         val completed = controller.methods.single { it.name == "A0G" && it.parameterTypes.map { t -> t.toString() } == listOf("LX/06lY;") }
         completed.implementation!!.instructions.withIndex().filter { it.value.opcode == Opcode.RETURN_VOID }.toList().reversed().forEach {
             completed.replaceInstruction(it.index, "invoke-static/range {p0 .. p0}, Les/calma/instagram/nativeapp/NativeTimelinePager;->completed(Ljava/lang/Object;)V")

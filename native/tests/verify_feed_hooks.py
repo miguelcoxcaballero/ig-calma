@@ -6,8 +6,8 @@ p = argparse.ArgumentParser(); p.add_argument('apk', type=pathlib.Path); p.add_a
 classpath = str(ROOT/'native/build/tools') + ':' + str(args.morphe)
 with tempfile.TemporaryDirectory(prefix='calma-feed-hooks-') as tmp:
     dex = pathlib.Path(tmp)/'feed.dex'
-    subprocess.run(['java','-Xmx1g','-cp',classpath,'es.calma.tools.DexSubset',str(args.apk),str(dex),'LX/02px;','LX/0ICa;','LX/02qb;','LX/06gK;','LX/05qX;'],check=True,stdout=subprocess.DEVNULL)
-    output = subprocess.check_output(['java','-Xmx512m','-cp',classpath,'es.calma.tools.DexInspect',str(dex),'unsafeParseFromJson|A00|A01|A0G|bindView'],text=True)
+    subprocess.run(['java','-Xmx1g','-cp',classpath,'es.calma.tools.DexSubset',str(args.apk),str(dex),'LX/02px;','LX/0ICa;','LX/02qb;','LX/06gK;','LX/05qX;','LX/03u7;'],check=True,stdout=subprocess.DEVNULL)
+    output = subprocess.check_output(['java','-Xmx512m','-cp',classpath,'es.calma.tools.DexInspect',str(dex),'unsafeParseFromJson|A00|A01|A0C|A0G|bindView'],text=True)
     blocks = re.split(r'(?=^METHOD )', output, flags=re.M)
     feed = next(block for block in blocks if block.startswith('METHOD LX/02px;->unsafeParseFromJson'))
     batch = next(block for block in blocks if block.startswith('METHOD LX/0ICa;->A00'))
@@ -39,6 +39,10 @@ with tempfile.TemporaryDirectory(prefix='calma-feed-hooks-') as tmp:
     assert params_ins[map_index+2][1].startswith('move-result-object'), 'Selected map must replace the map register'
     assert params_ins[map_index+3][0] not in params_targets, 'Inbound branch bypasses Following selection'
     assert 'NativeFeed;->context(' in params_ins[0][1], 'Native request context must be captured at entry'
+    wire = next(block for block in blocks if block.startswith('METHOD LX/03u7;->A01'))
+    assert 'NativeFeed;->wire(' in instructions(wire)[0][1], 'Final HTTP serialization bypasses selected feed'
+    delivery = next(block for block in blocks if block.startswith('METHOD LX/05qX;->A0C'))
+    assert 'NativeFeed;->delivered(' in instructions(delivery)[0][1], 'Actual request/response delivery bypasses filtering'
     end = next(block for block in blocks if block.startswith('METHOD LX/06gK;->bindView'))
     end_ins = instructions(end)
     assert 'NativeFeedEnd;->bind(' in end_ins[0][1]

@@ -99,11 +99,15 @@ public final class NativeRelations {
     }
     static boolean permitted(Object session, Object user, int mode, boolean followingResponse) {
         if (mode != 0 && user == null) return false;
+        State verified = user == null ? null : cached(session, id(user));
+        if (mode != 0 && verified != null && Boolean.FALSE.equals(verified.following)) return false;
         return permits(state(session, user, id(user)), mode, followingResponse);
     }
     private static boolean permits(State state, int mode, boolean followingResponse) {
         if (mode == 0) return true;
-        boolean follows = Boolean.TRUE.equals(state.following) || (state.following == null && followingResponse);
+        // The Following endpoint is authoritative for membership. Native User objects
+        // may carry a default/stale NotFollowing value; a fresh verified unfollow above wins.
+        boolean follows = Boolean.TRUE.equals(state.following) || (followingResponse && (mode == 1 || state.following == null));
         return follows && (mode == 1 || Boolean.TRUE.equals(state.followedBy));
     }
 }
