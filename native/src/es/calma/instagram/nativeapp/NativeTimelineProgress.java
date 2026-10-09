@@ -7,11 +7,15 @@ import java.util.concurrent.*;
 final class NativeTimelineProgress {
     private static final Map<String, Generation> GENERATIONS = new ConcurrentHashMap<>();
     private static final ScheduledExecutorService CACHE = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = new Thread(r, "CalmaTimelineRelations"); t.setDaemon(true); return t;
+    });
+    private static final ExecutorService DISK = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "CalmaTimelineCache"); t.setDaemon(true); return t;
     });
+    private static final Set<String> RELATION_UPDATES = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private static final class Generation {
         final NativeTimeline.Context context;
-        final long epoch, anchor, started = System.nanoTime();
+        final long epoch, anchor;
         final List<Object> wrappers = new ArrayList<>(), media = new ArrayList<>();
         final Set<String> sentWrappers = new HashSet<>(), sentMedia = new HashSet<>(), cursors = new HashSet<>();
         final ChronologyState chronology = new ChronologyState();
@@ -66,7 +70,7 @@ final class NativeTimelineProgress {
             if (head && !refresh && !g.diskChecked && !g.done) {
                 g.diskChecked = true;
                 // Disk decoding and serialization must not hold the native parser/UI.
-                CACHE.execute(() -> {
+                DISK.execute(() -> {
                     CalmaConfig.scope(context.mode);
                     try {
                         NativeTimeline.Snapshot disk = NativeTimelineStore.read(context, response, now);
@@ -80,6 +84,27 @@ final class NativeTimelineProgress {
                 });
             }
         }
+    }
+    /** Deliver each parsed batch's useful results without waiting for other requests or disk IO. */
+    static void relationshipChanged(String owner) {
+        if (!RELATION_UPDATES.add(owner)) return;
+        CACHE.schedule(() -> {
+            RELATION_UPDATES.remove(owner);
+            for (Map.Entry<String,Generation> entry : GENERATIONS.entrySet()) {
+                Generation g=entry.getValue();
+                if (g.context.mode!=2 || !entry.getKey().startsWith(owner+':')) continue;
+                synchronized (g) {
+                    if (!current(entry.getKey(),g)) continue;
+                    CalmaConfig.scope(g.context.mode);
+                    try {
+                        if (g.done) complete(g);
+                        g.replay=true;
+                        NativeTimelinePager.wake(g.context.session);
+                    } catch (ReflectiveOperationException | RuntimeException ignored) { }
+                    finally { CalmaConfig.scope(null); }
+                }
+            }
+        },30,TimeUnit.MILLISECONDS);
     }
     private static void resolve(String key, Generation g) {
         if (g.resolving) return;
@@ -115,7 +140,7 @@ final class NativeTimelineProgress {
             g.hasWrappers ? NativeFeed.filter(g.wrappers, true, g.anchor, true, g.context.session).items : null,
             g.hasMedia ? NativeFeed.filter(g.media, false, g.anchor, true, g.context.session).items : null, g.anchor);
         NativeTimeline.Snapshot saved = g.snapshot;
-        CACHE.execute(() -> NativeTimelineStore.write(g.context, saved));
+        DISK.execute(() -> NativeTimelineStore.write(g.context, saved));
         return true;
     }
     private static List<Object> delta(List<Object> rows, boolean wrapped, Set<String> sent, boolean head) {
@@ -134,7 +159,7 @@ final class NativeTimelineProgress {
         Generation g = GENERATIONS.get(key(session, CalmaConfig.mode()));
         if (g == null) return null;
         synchronized (g) {
-            if (g.epoch != CalmaConfig.sessionId() || System.nanoTime() - g.started > TimeUnit.SECONDS.toNanos(90)) return null;
+            if (g.epoch != CalmaConfig.sessionId()) return null;
             return g.done ? null : g.next;
         }
     }

@@ -2,6 +2,7 @@ package es.calma.patches
 
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
+import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
 import app.morphe.patcher.util.smali.ExternalLabel
 
@@ -88,7 +89,8 @@ val calmaFeedSelector = bytecodePatch(
             // Run after the stock method has applied its Fragment resumed state.
             lifecycle.implementation!!.instructions.withIndex().filter { it.value.opcode == com.android.tools.smali.dexlib2.Opcode.RETURN_VOID }
                 .map { it.index }.reversed().forEach { index ->
-                    lifecycle.addInstructions(index, "invoke-static/range {p0 .. p0}, $BUDGET->$helper(Ljava/lang/Object;)V")
+                    lifecycle.replaceInstruction(index, "invoke-static/range {p0 .. p0}, $BUDGET->$helper(Ljava/lang/Object;)V")
+                    lifecycle.addInstructions(index+1, "return-void")
                 }
         }
         home.methods.single { it.name == "onHiddenChanged" }.addInstructions(0,

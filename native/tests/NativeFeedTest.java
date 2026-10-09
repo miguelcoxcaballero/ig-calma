@@ -19,6 +19,8 @@ public final class NativeFeedTest {
     public static final class UserDictionary {
         private final Friendship friendship;
         UserDictionary(Boolean following, Boolean followedBy) { friendship = new Friendship(following, followedBy); }
+        public Boolean currentUserFollower;
+        public Boolean EAW() { return currentUserFollower; }
         public Friendship C8H() { return friendship; }
         public Boolean A1J() { return friendship.followedBy; }
         public Object C5s() { return null; }
@@ -159,6 +161,12 @@ public final class NativeFeedTest {
         Media friendClip = new Media("friend-clip",now-4,"clips",new User(true,true));
         Response friendsClips = response(friendClip,new Media("one-way-clip",now-3,"clips",new User(true,false)));apply(friendsClips);
         check(friendsClips.A0U.equals(Arrays.asList(friendClip)),"Friends retains mutual Reels while excluding one-way authors");
+        User modern = new User(false,null); modern.A00.currentUserFollower=true;
+        Media modernPost = new Media("modern-friend",now-2,"feed",modern);
+        Response modernFriends=response(modernPost);apply(modernFriends);
+        check(modernFriends.A0U.equals(Arrays.asList(modernPost)),"Friends trusts Following membership and reads is_following_current_user despite stale follow enum");
+        Response staleFriend=response(new Media("stale-mutual",now-2,"feed",new User(false,true)));apply(staleFriend);
+        check(staleFriend.A0U.size()==1,"Friends accepts confirmed followers from Following despite stale not-following state");
         CalmaConfig.testMode = 1;
         Response storyShell = new Response();
         Wrapper control = new Wrapper(null), suggested = new Wrapper(null);
@@ -171,14 +179,14 @@ public final class NativeFeedTest {
         check(nativeCards.A0S.equals(Arrays.asList(breakNudge, followRequests)), "cross-app recommendations removed while native break and follow-request controls remain");
         Session session = new Session("400");
         Status mutualStatus = new Status(true, true);
-        NativeRelations.beginStatus(session, "200", mutualStatus); NativeRelations.endStatus(mutualStatus);
+        NativeRelations.beginStatus(session, "200", mutualStatus); NativeRelations.statusField(mutualStatus,"following"); NativeRelations.endStatus(mutualStatus);
         check(NativeRelations.isMutual(session, "200"), "verified native batch works when User is absent from native cache");
         check(!NativeRelations.isMutual(new Session("401"), "200"), "friendship facts stay within the requesting account");
         Status incompleteStatus = new Status(true, null);
-        NativeRelations.beginStatus(session, "201", incompleteStatus); NativeRelations.endStatus(incompleteStatus);
+        NativeRelations.beginStatus(session, "201", incompleteStatus); NativeRelations.statusField(incompleteStatus,"following"); NativeRelations.endStatus(incompleteStatus);
         check(!NativeRelations.resolved(session, "201"), "missing followed_by stays unknown rather than false");
         Status unfollowed = new Status(false, true);
-        NativeRelations.beginStatus(session, "200", unfollowed); NativeRelations.endStatus(unfollowed);
+        NativeRelations.beginStatus(session, "200", unfollowed); NativeRelations.statusField(unfollowed,"following"); NativeRelations.endStatus(unfollowed);
         check(!NativeRelations.isMutual(session, "200"), "new verified unfollow overrides older mutual result");
         Response stale = response(mutual);
         NativeFeed.request(new Session(), new Request());

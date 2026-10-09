@@ -60,11 +60,16 @@ val calmaNativeFeed = bytecodePatch(
         check(wire.returnType == "LX/03ci;")
         wire.addInstructions(0, "invoke-static/range {p0 .. p0}, $FEED->wire(Ljava/lang/Object;)V")
         val controller = mutableClassDefBy("LX/05qX;")
+        check(mutableClassDefBy("LX/05pW;").fields.any { it.name == "A01" && it.type == "Landroidx/fragment/app/Fragment;" })
         check(controller.fields.any { it.name == "A0X" && it.type == "Lcom/instagram/common/session/UserSession;" })
         check(controller.methods.any { it.name == "A0J" && it.parameterTypes.map { t -> t.toString() } == listOf("LX/0AHw;", "LX/02pk;", "Ljava/lang/String;", "Ljava/util/Map;") && it.returnType == "Z" })
         val delivery = controller.methods.single { it.name == "A0C" && it.parameterTypes == listOf("LX/08KU;", "LX/04ss;", "LX/06lY;", "I", "Z") }
         delivery.addInstructions(0, "invoke-static/range {p0 .. p2}, $FEED->delivered(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V")
-        check(controller.methods.any { it.name == "A0E" && it.parameterTypes == listOf("LX/08KU;", "Ljava/util/List;", "Z", "Z") })
+        val localDelivery = controller.methods.single { it.name == "A0E" && it.parameterTypes == listOf("LX/08KU;", "Ljava/util/List;", "Z", "Z") }
+        localDelivery.addInstructions(0,"""
+            invoke-static/range {p0 .. p2}, $FEED->localRows(Ljava/lang/Object;Ljava/lang/Object;Ljava/util/List;)Ljava/util/List;
+            move-result-object p2
+        """.trimIndent())
         check(mutableClassDefBy("LX/04ss;").methods.any { it.name == "A02" && it.parameterTypes == listOf("Ljava/util/List;") })
         val completed = controller.methods.single { it.name == "A0G" && it.parameterTypes.map { t -> t.toString() } == listOf("LX/06lY;") }
         completed.implementation!!.instructions.withIndex().filter { it.value.opcode == Opcode.RETURN_VOID }.toList().reversed().forEach {
@@ -133,6 +138,9 @@ val calmaNativeFeed = bytecodePatch(
         check(instructions[parseIndex + 1].opcode == Opcode.GOTO)
         check(instructions[parseIndex + 2].opcode == Opcode.IF_EQZ)
         val relations = "Les/calma/instagram/nativeapp/NativeRelations;"
+        val statusParser = mutableClassDefBy("LX/0BnS;").methods.single { it.name == "A00" }
+        check(statusParser.parameterTypes == listOf("LX/03q7;", "LX/0BnY;", "Ljava/lang/String;"))
+        statusParser.addInstructions(0,"invoke-static/range {p1 .. p2}, $relations->statusField(Ljava/lang/Object;Ljava/lang/String;)V")
         val guard = instructions[parseIndex + 2] as BuilderOffsetInstruction
         val guardRegister = (guard as OneRegisterInstruction).registerA
         val guardTarget = instructions[guard.target.location.index]
@@ -144,5 +152,6 @@ val calmaNativeFeed = bytecodePatch(
         check(status.fields.any { it.name == "A02" && it.type == "Ljava/lang/Boolean;" })
         val user = mutableClassDefBy("Lcom/instagram/user/model/LiveTreeUserDict;")
         check(user.methods.any { it.name == "C8H" && it.returnType == "Lcom/instagram/user/model/FriendshipStatus;" })
+        check(user.methods.any { it.name == "EAW" && it.returnType == "Ljava/lang/Boolean;" })
     }
 }

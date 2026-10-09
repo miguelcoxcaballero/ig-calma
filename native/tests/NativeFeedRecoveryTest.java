@@ -99,6 +99,28 @@ public final class NativeFeedRecoveryTest {
         Session brokenAccount=new Session("9501");
         Response malformed=deliver(brokenAccount,new Request(),NativeTimelineTest.page("valid-cursor",newest,new Object()));
         check(malformed.A0S.size()==1 && malformed.A0a,"one malformed row preserves valid post and continuation");
+        Session partialAccount=new Session("9599");Request partialRequest=new Request();
+        NativeTimelineTest.IdentifiedUser partialUser=new NativeTimelineTest.IdentifiedUser("777");
+        Response partial=NativeTimelineTest.page("partial-next",new NativeTimelineTest.Item("partial-friend",now-2,partialUser));
+        partial.A0P=null;partial.A0O="homecoming_all";
+        Parser partialParser=new Parser();partialParser.A01=partialAccount;
+        NativeFeed.context(null,null,null,partialAccount,partialRequest,null);
+        NativeFeed.response(partial,partialParser);
+        check(partial.A0S.size()==1 && partial.A0a,"uncorrelated parser must not empty unknown Friends before native delivery");
+        CompletableFuture<Void> stillRunning=new CompletableFuture<>();active.put("9599:777",stillRunning);
+        NativeFeed.delivered(new Controller(partialAccount),new Envelope(partialRequest),new Result(partial));
+        check(partial.A0S.isEmpty(),"unknown relationship stays hidden at UI delivery");
+        check(NativeFeed.localRows(new Controller(partialAccount),new Envelope(partialRequest),Arrays.asList(new Wrapper(newest),new Wrapper(oneWay))).size()==1,"native local/cache delivery cannot bypass the Friends filter");
+        Status partialStatus=new Status(false,true);NativeRelations.beginStatus(partialAccount,"777",partialStatus);
+        NativeRelations.statusField(partialStatus,"followed_by");NativeRelations.endStatus(partialStatus);
+        check(NativeRelations.verified(partialAccount,"777"),"batch omitting following does not fabricate a verified unfollow");
+        deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(2);
+        while(!NativeTimelineProgress.replay(partialAccount) && System.nanoTime()<deadline)Thread.sleep(5);
+        check(!stillRunning.isDone() && NativeTimelineProgress.local(partialAccount).size()==1,"parsed friend becomes displayable before the batch/request finishes");
+        Status realUnfollow=new Status(false,true);NativeRelations.beginStatus(partialAccount,"777",realUnfollow);
+        NativeRelations.statusField(realUnfollow,"following");NativeRelations.endStatus(realUnfollow);
+        check(NativeTimelineProgress.local(partialAccount).isEmpty(),"explicit verified unfollow still wins over Following source");
+        stillRunning.complete(null);active.remove("9599:777");
         CalmaConfig.testMode=0;
         Media unknown=new Media("algorithm",now-300000,"clips",new User(false,false));
         for(String source:new String[]{"feed_recs","favorites"}) {

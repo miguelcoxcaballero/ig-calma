@@ -6,8 +6,8 @@ p = argparse.ArgumentParser(); p.add_argument('apk', type=pathlib.Path); p.add_a
 classpath = str(ROOT/'native/build/tools') + ':' + str(args.morphe)
 with tempfile.TemporaryDirectory(prefix='calma-feed-hooks-') as tmp:
     dex = pathlib.Path(tmp)/'feed.dex'
-    subprocess.run(['java','-Xmx1g','-cp',classpath,'es.calma.tools.DexSubset',str(args.apk),str(dex),'LX/02px;','LX/0ICa;','LX/02qb;','LX/06gK;','LX/05qX;','LX/03u7;'],check=True,stdout=subprocess.DEVNULL)
-    output = subprocess.check_output(['java','-Xmx512m','-cp',classpath,'es.calma.tools.DexInspect',str(dex),'unsafeParseFromJson|A00|A01|A0C|A0G|bindView'],text=True)
+    subprocess.run(['java','-Xmx1g','-cp',classpath,'es.calma.tools.DexSubset',str(args.apk),str(dex),'LX/02px;','LX/0ICa;','LX/0BnS;','LX/02qb;','LX/06gK;','LX/05qX;','LX/03u7;'],check=True,stdout=subprocess.DEVNULL)
+    output = subprocess.check_output(['java','-Xmx512m','-cp',classpath,'es.calma.tools.DexInspect',str(dex),'unsafeParseFromJson|A00|A01|A0C|A0E|A0G|bindView'],text=True)
     blocks = re.split(r'(?=^METHOD )', output, flags=re.M)
     feed = next(block for block in blocks if block.startswith('METHOD LX/02px;->unsafeParseFromJson'))
     batch = next(block for block in blocks if block.startswith('METHOD LX/0ICa;->A00'))
@@ -23,6 +23,8 @@ with tempfile.TemporaryDirectory(prefix='calma-feed-hooks-') as tmp:
         branch = re.search(r'-> @([0-9a-f]+)',instruction)
         if branch:
             assert int(branch[1],16) not in feed_returns, 'Feed branch bypasses filtering hook'
+    status_parser = next(block for block in blocks if block.startswith('METHOD LX/0BnS;->A00('))
+    assert 'NativeRelations;->statusField(' in instructions(status_parser)[0][1], 'Native JSON fields must establish presence before primitive defaults are read'
     batch_ins = instructions(batch)
     ends = [address for address,instruction in batch_ins if 'NativeRelations;->endStatus(' in instruction]
     begins = [address for address,instruction in batch_ins if 'NativeRelations;->beginStatus(' in instruction]
@@ -43,6 +45,8 @@ with tempfile.TemporaryDirectory(prefix='calma-feed-hooks-') as tmp:
     assert 'NativeFeed;->wire(' in instructions(wire)[0][1], 'Final HTTP serialization bypasses selected feed'
     delivery = next(block for block in blocks if block.startswith('METHOD LX/05qX;->A0C'))
     assert 'NativeFeed;->delivered(' in instructions(delivery)[0][1], 'Actual request/response delivery bypasses filtering'
+    local = next(block for block in blocks if block.startswith('METHOD LX/05qX;->A0E'))
+    assert 'NativeFeed;->localRows(' in instructions(local)[0][1], 'Native local/cache UI delivery bypasses filtering'
     end = next(block for block in blocks if block.startswith('METHOD LX/06gK;->bindView'))
     end_ins = instructions(end)
     assert 'NativeFeedEnd;->bind(' in end_ins[0][1]

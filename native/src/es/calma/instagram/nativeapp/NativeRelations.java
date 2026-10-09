@@ -9,7 +9,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class NativeRelations {
     private static final long FRESH_MS = 15 * 60_000L;
     private static final Map<String, State> VERIFIED = new ConcurrentHashMap<>();
-    private static final Map<Object, String> PARSING = Collections.synchronizedMap(new IdentityHashMap<>());
+    private static final Map<Object, Parsing> PARSING = Collections.synchronizedMap(new IdentityHashMap<>());
+    private static final class Parsing {
+        final String owner, key;
+        boolean following;
+        Parsing(String owner, String id) { this.owner=owner; this.key=owner+':'+id; }
+    }
     private NativeRelations() {}
     private static final class State {
         final Boolean following, followedBy;
@@ -36,17 +41,23 @@ public final class NativeRelations {
         if (owner.length() == 0 || id == null || !id.matches("[0-9]+") || status == null) return;
         synchronized (PARSING) {
             if (PARSING.size() > 256) PARSING.clear();
-            PARSING.put(status, owner + ':' + id);
+            PARSING.put(status, new Parsing(owner,id));
         }
     }
+    /** The native primitive defaults to false even when JSON omits following. */
+    public static void statusField(Object status, String name) {
+        Parsing parsing=PARSING.get(status);
+        if (parsing!=null && "following".equals(name)) parsing.following=true;
+    }
     public static void endStatus(Object status) {
-        String key = PARSING.remove(status);
-        if (key == null) return;
+        Parsing parsing = PARSING.remove(status);
+        if (parsing == null) return;
         try {
-            Boolean following = (Boolean) StockAccess.get(status, "A0H");
+            Boolean following = parsing.following ? (Boolean) StockAccess.get(status, "A0H") : null;
             Boolean followedBy = (Boolean) StockAccess.get(status, "A02");
             if (VERIFIED.size() > 10000) VERIFIED.entrySet().removeIf(entry -> System.currentTimeMillis() - entry.getValue().updated >= FRESH_MS);
-            VERIFIED.put(key, new State(following, followedBy));
+            VERIFIED.put(parsing.key, new State(following, followedBy));
+            NativeTimelineProgress.relationshipChanged(parsing.owner);
         } catch (ReflectiveOperationException | RuntimeException incomplete) { /* Never cache fabricated false values. */ }
     }
     private static State cached(Object session, String id) {
@@ -61,6 +72,10 @@ public final class NativeRelations {
             Boolean following = friendship == null ? null : (Boolean) StockAccess.call(friendship, "C66");
             Boolean followedBy = friendship == null ? null : (Boolean) StockAccess.call(friendship, "C5v");
             if (followedBy == null) followedBy = (Boolean) StockAccess.call(dictionary, "A1J");
+            if (followedBy == null) {
+                try { followedBy = (Boolean) StockAccess.call(dictionary,"EAW"); }
+                catch (NoSuchMethodException olderFixture) { }
+            }
             if (following == null) {
                 Object status = StockAccess.call(dictionary, "C5s");
                 String value = status == null ? "" : status.toString();
@@ -71,8 +86,9 @@ public final class NativeRelations {
         } catch (ReflectiveOperationException | RuntimeException incomplete) { return new State(null, null); }
     }
     private static State state(Object session, Object user, String id) {
-        State nativeState = nativeState(user);
         State response = id == null ? null : cached(session, id);
+        if (response != null && response.known(2)) return response;
+        State nativeState = nativeState(user);
         if (response == null) return nativeState;
         return new State(response.following == null ? nativeState.following : response.following,
                 response.followedBy == null ? nativeState.followedBy : response.followedBy);
@@ -89,7 +105,7 @@ public final class NativeRelations {
     }
     static boolean known(Object user, int mode) { return nativeState(user).known(mode); }
     static boolean known(Object session, Object user, int mode) { return state(session, user, id(user)).known(mode); }
-    static boolean verified(Object session, String id) { State value = cached(session, id); return value != null && value.known(2); }
+    static boolean verified(Object session, String id) { State value = cached(session, id); return value != null && value.followedBy != null; }
     static boolean resolved(Object session, String id) { return state(session, user(session, id), id).known(2); }
     public static boolean isMutual(Object session, String id) { return permits(state(session, user(session, id), id), 2, false); }
     public static boolean isFollowing(Object session, String id) { return permits(state(session, user(session, id), id), 1, false); }
@@ -101,13 +117,16 @@ public final class NativeRelations {
         if (mode != 0 && user == null) return false;
         State verified = user == null ? null : cached(session, id(user));
         if (mode != 0 && verified != null && Boolean.FALSE.equals(verified.following)) return false;
+        if (mode == 1 && followingResponse) return true;
+        if (mode == 2 && followingResponse && verified != null && verified.followedBy != null)
+            return Boolean.TRUE.equals(verified.followedBy);
         return permits(state(session, user, id(user)), mode, followingResponse);
     }
     private static boolean permits(State state, int mode, boolean followingResponse) {
         if (mode == 0) return true;
         // The Following endpoint is authoritative for membership. Native User objects
         // may carry a default/stale NotFollowing value; a fresh verified unfollow above wins.
-        boolean follows = Boolean.TRUE.equals(state.following) || (followingResponse && (mode == 1 || state.following == null));
+        boolean follows = Boolean.TRUE.equals(state.following) || followingResponse;
         return follows && (mode == 1 || Boolean.TRUE.equals(state.followedBy));
     }
 }

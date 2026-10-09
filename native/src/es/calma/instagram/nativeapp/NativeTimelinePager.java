@@ -2,6 +2,8 @@ package es.calma.instagram.nativeapp;
 
 import android.os.Handler;
 import android.os.Looper;
+import android.graphics.Rect;
+import android.view.View;
 import java.lang.ref.WeakReference;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -11,10 +13,22 @@ public final class NativeTimelinePager {
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static final Map<String, WeakReference<Object>> CONTROLLERS = new ConcurrentHashMap<>();
     private static final Map<String, String> ATTEMPTED = new ConcurrentHashMap<>();
+    private static final Map<String, Integer> BUSY_RETRIES = new ConcurrentHashMap<>();
     private static final Map<String, Object> HEADS = new ConcurrentHashMap<>();
     private static final Map<String, Long> EPOCHS = new ConcurrentHashMap<>();
     private static final Set<String> QUEUED = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private NativeTimelinePager() {}
+    /** Preloading follows the actual feed view, independently of For you credit/menu state. */
+    static boolean visible(Object controller) {
+        try {
+            Object fragment=StockAccess.get(StockAccess.get(controller,"A0Y"),"A01");
+            if (!Boolean.TRUE.equals(StockAccess.call(fragment,"isResumed"))
+                    || Boolean.TRUE.equals(StockAccess.call(fragment,"isHidden"))) return false;
+            View view=(View)StockAccess.call(fragment,"getView"); Rect area=new Rect();
+            return view!=null && view.getWindowVisibility()==View.VISIBLE && view.isShown()
+                    && view.getGlobalVisibleRect(area) && view.getWidth()>0 && area.width()>=view.getWidth()*.9f;
+        } catch (ReflectiveOperationException | RuntimeException unavailable) { return false; }
+    }
     public static void delivery(Object controller, Object request, boolean head) {
         try {
             Object session = StockAccess.get(controller,"A0X"); String owner = NativeRelations.owner(session);
@@ -22,6 +36,7 @@ public final class NativeTimelinePager {
             if (head || !Long.valueOf(CalmaConfig.sessionId()).equals(EPOCHS.get(owner))) {
                 HEADS.put(owner,request); EPOCHS.put(owner,CalmaConfig.sessionId());
                 ATTEMPTED.remove(owner);
+                BUSY_RETRIES.remove(owner);
             }
             wake(session);
         } catch (ReflectiveOperationException | RuntimeException ignored) {}
@@ -41,12 +56,15 @@ public final class NativeTimelinePager {
         }
     }
     static void wake(Object session) {
+        wake(session,0);
+    }
+    private static void wake(Object session,long delay) {
         String owner = NativeRelations.owner(session);
         long epoch = CalmaConfig.sessionId();
         if (owner.isEmpty() || !QUEUED.add(owner)) return;
         MAIN.postDelayed(() -> {
             QUEUED.remove(owner);
-            if (epoch != CalmaConfig.sessionId() || CalmaConfig.mode() == 0 || !NativeFeedBudget.timelineVisible()) return;
+            if (epoch != CalmaConfig.sessionId() || CalmaConfig.mode() == 0) return;
             WeakReference<Object> ref = CONTROLLERS.get(owner);
             Object controller = ref == null ? null : ref.get();
             if (controller == null) return;
@@ -64,19 +82,20 @@ public final class NativeTimelinePager {
                         NativeTimelineProgress.rendered(session);
                     }
                 }
-                if (cursor == null) return;
+                if (cursor == null || !visible(controller)) return;
                 String attempt = epoch + ":" + cursor;
                 if (attempt.equals(ATTEMPTED.get(owner))) return;
                 Class<?> reasonType = Class.forName("X.02pk", false, loader);
                 Object reason = reasonType.getField("A0R").get(null);
                 Object trigger = Class.forName("X.08cS", false, loader).getConstructor(String.class).newInstance("calma_timeline_preload");
                 Map<String,String> params = Collections.singletonMap("pagination_source", "following");
-                // GRO, called by A0J, owns the native in-flight/cursor guards. A rejected
-                // request is left to the next stock completion or normal scroll retry.
+                // GRO owns native in-flight guards. Retry a busy controller without requiring
+                // another scroll gesture or a For you budget tick to restart preloading.
                 Object accepted = StockAccess.method(controller.getClass(), "A0J", Class.forName("X.0AHw", false, loader), reasonType, String.class, Map.class)
                     .invoke(controller, trigger, reason, cursor, params);
-                if (Boolean.TRUE.equals(accepted)) ATTEMPTED.put(owner,attempt);
+                if (Boolean.TRUE.equals(accepted)) { ATTEMPTED.put(owner,attempt); BUSY_RETRIES.remove(owner); }
+                else if (BUSY_RETRIES.merge(owner,1,Integer::sum)<=6) wake(session,250);
             } catch (ReflectiveOperationException | RuntimeException ignored) { /* Native scroll remains available. */ }
-        }, 120);
+        }, delay);
     }
 }

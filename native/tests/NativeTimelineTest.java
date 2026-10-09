@@ -30,7 +30,7 @@ public class NativeTimelineTest {
     static Response page(String cursor,Object...items){Response r=new Response();r.A0S=new ArrayList<>();for(Object item:items)r.A0S.add(item instanceof Wrapper?item:new Wrapper(item));r.A0N=cursor;r.A0a=cursor!=null;return r;}
     static Media post(String id,long time){return new Media(id,time,"feed",new User(true,true));}
     static NativeTimeline.Context context(String owner,TimelineRequest request){return new NativeTimeline.Context(null,new Session(owner),request,null);}
-    static void verify(Session session,String id,boolean mutual){Status status=new Status(true,mutual);NativeRelations.beginStatus(session,id,status);NativeRelations.endStatus(status);}
+    static void verify(Session session,String id,boolean mutual){Status status=new Status(true,mutual);NativeRelations.beginStatus(session,id,status); NativeRelations.statusField(status,"following"); NativeRelations.endStatus(status);}
     static <T> T worker(Callable<T> action)throws Exception{ExecutorService e=Executors.newSingleThreadExecutor();try{return e.submit(action).get(8,TimeUnit.SECONDS);}finally{e.shutdownNow();}}
     static void fails(Callable<?> action,String message)throws Exception{try{action.call();throw new AssertionError(message);}catch(IllegalStateException expected){checks++;}}
     public static void main(String[] args)throws Exception{

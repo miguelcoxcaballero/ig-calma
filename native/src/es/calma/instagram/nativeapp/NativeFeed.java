@@ -20,6 +20,7 @@ public final class NativeFeed {
         final int mode = CalmaConfig.mode();
         final long epoch = CalmaConfig.sessionId();
         final String feed = CalmaConfig.feed();
+        String owner;
         NativeTimeline.Context context;
         Request(boolean head, boolean following) { this.head = head; this.following = following; }
     }
@@ -33,6 +34,7 @@ public final class NativeFeed {
                 Map<?, ?> selected = parameters(params);
                 Request tracked = new Request(StockAccess.get(request, "A0G") == null,
                         selected != null && "following".equals(selected.get("pagination_source")));
+                tracked.owner = owner;
                 REQUESTS.put(owner + ':' + id, tracked);
                 synchronized (NATIVE_REQUESTS) {
                     if (NATIVE_REQUESTS.size() >= 512) {
@@ -99,17 +101,16 @@ public final class NativeFeed {
                     }
                 }
             }
-            if (request == null) return;
             RawPage raw = RAW.remove(response);
             if (raw != null) raw.restore(response);
-            process(response, session, request, true);
+            process(response, session, request, request != null);
             Object rows = StockAccess.get(response,"A0S");
             if (!(rows instanceof List)) {
                 Object media = StockAccess.get(response,"A0U");
                 rows = media instanceof List ? StockAccess.method(result.getClass(),"A00",List.class).invoke(null,media) : new ArrayList<>();
             }
             StockAccess.method(result.getClass(),"A02",List.class).invoke(result,rows);
-            if (request.epoch == CalmaConfig.sessionId()) NativeTimelinePager.delivery(controller,envelope,request.head);
+            if (request != null && request.epoch == CalmaConfig.sessionId()) NativeTimelinePager.delivery(controller,envelope,request.head);
         } catch (ReflectiveOperationException | RuntimeException ignored) { /* Parser's safe page remains available. */ }
     }
     private static final String[] SUGGESTION_FIELDS = {
@@ -117,6 +118,28 @@ public final class NativeFeed {
         "A0L", "A0V", "A0e", "A0d", "A0H", "A0M", "A0j", "A0b", "A0h", "A0Z", "A0a", "A0c", "A0g", "A0i"
     };
     private NativeFeed() {}
+
+    /** Stock disk/local deliveries bypass network parsing; filter at their adapter boundary too. */
+    public static List<?> localRows(Object controller,Object envelope,List<?> rows) {
+        if (CalmaConfig.mode()==0) return rows;
+        try {
+            Object session=StockAccess.get(controller,"A0X"), nativeRequest=StockAccess.get(envelope,"A00");
+            Request request=NATIVE_REQUESTS.get(nativeRequest);
+            if (request!=null && request.epoch!=CalmaConfig.sessionId()) return java.util.Collections.emptyList();
+            Object params=StockAccess.get(nativeRequest,"A0L");
+            boolean following=request!=null ? request.following : params instanceof Map && "following".equals(((Map<?,?>)params).get("pagination_source"));
+            return filter(rows,true,System.currentTimeMillis()/1000,following,session).items;
+        } catch (ReflectiveOperationException | RuntimeException unavailable) { return java.util.Collections.emptyList(); }
+    }
+
+    private static boolean awaitingDelivery(Object session) {
+        String owner = NativeRelations.owner(session);
+        synchronized (NATIVE_REQUESTS) {
+            for (Request request : NATIVE_REQUESTS.values())
+                if (owner.equals(request.owner) && request.epoch == CalmaConfig.sessionId() && request.context != null) return true;
+        }
+        return false;
+    }
 
     /** Called only for the stock main-feed request's parameter map. */
     public static Map<?, ?> parameters(Map<?, ?> original) {
@@ -145,9 +168,10 @@ public final class NativeFeed {
             RAW.put(response, new RawPage(response));
             String responseId = (String) StockAccess.get(response, "A0P");
             Request request = responseId == null ? null : REQUESTS.remove(NativeRelations.owner(session) + ':' + responseId);
-            if (request != null && request.context != null) {
+            if ((request != null && request.context != null) || awaitingDelivery(session)) {
                 // The main delivery callback owns filtering. Do not discard unknown friends
                 // or consume a cursor while the stock response is still being constructed.
+                // The server may omit or replace request_id, including for an empty Friends page.
                 StockAccess.set(response,"A0E",Boolean.TRUE); StockAccess.set(response,"A0J",Integer.valueOf(0));
                 adsOnly(response,"A0S",true); adsOnly(response,"A0U",false); return;
             }

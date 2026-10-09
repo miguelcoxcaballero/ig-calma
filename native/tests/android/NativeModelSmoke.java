@@ -110,6 +110,27 @@ public final class NativeModelSmoke extends Instrumentation {
         check(((List<?>)fresh.getClass().getField("A0S").get(fresh)).contains(staleRow),"Following survives actual stale NotFollowing enum in original User model");
         select.invoke(null,"RECENTS");
     }
+    private void friendshipModels(ClassLoader loader)throws Exception {
+        Object session=allocate(loader,"com.instagram.common.session.UserSession");set(session,"userId","994410");
+        Field scoped=Class.forName("X.04BG",false,loader).getDeclaredField("A00");scoped.setAccessible(true);scoped.set(session,new java.util.concurrent.ConcurrentHashMap<>());
+        Object cache=allocate(loader,"com.instagram.user.model.UserCache");set(cache,"A00",session);set(cache,"A01",new java.util.concurrent.ConcurrentHashMap<>());
+        session.getClass().getMethod("A04",Class.class,Object.class).invoke(session,cache.getClass(),cache);
+        String json="{\"friendship_statuses\":{\"994411\":{\"followed_by\":true},\"994412\":{\"following\":true,\"followed_by\":false},\"994413\":{\"following\":false,\"followed_by\":true},\"994414\":{\"following\":true,\"followed_by\":true}},\"status\":\"ok\"}";
+        Object parser=Class.forName("X.02tC",true,loader).getMethod("A00",String.class).invoke(null,json);
+        try {Class.forName("X.0ICa",true,loader).getMethod("A00",Class.forName("X.03q7",false,loader),session.getClass(),boolean.class).invoke(null,parser,session,false);}
+        finally {((java.io.Closeable)parser).close();}
+        Class<?> relations=Class.forName("es.calma.instagram.nativeapp.NativeRelations",true,loader);
+        Method permit=relations.getDeclaredMethod("permitted",Object.class,Object.class,int.class,boolean.class);permit.setAccessible(true);
+        Object post=media(loader,"99441001",System.currentTimeMillis()/1000-10,false);
+        Object author=post.getClass().getField("A04").get(post).getClass().getMethod("A33").invoke(post.getClass().getField("A04").get(post));
+        Object dict=author.getClass().getField("A00").get(author),data=dict.getClass().getField("A00").get(dict);
+        check(Boolean.TRUE.equals(permit.invoke(null,session,author,2,true)),"Actual batch JSON with only followed_by confirms Friends without inventing a false following value");
+        set(data,"A8X","994412");check(Boolean.FALSE.equals(permit.invoke(null,session,author,2,true)),"Actual one-way batch JSON stays excluded");
+        set(data,"A8X","994413");check(Boolean.FALSE.equals(permit.invoke(null,session,author,2,true)),"Actual explicit unfollow overrides Following source");
+        check(Boolean.TRUE.equals(relations.getMethod("isMutual",Object.class,String.class).invoke(null,session,"994414")),"Actual native parser captures mutual status even without cached User");
+        set(data,"A8X","994415");set(data,"A2E",null);set(data,"A3r",true);
+        check(Boolean.TRUE.equals(permit.invoke(null,session,author,2,true)),"Actual modern is_following_current_user field permits Friends from Following");
+    }
     private Object getStatic(Class<?> type,String name)throws Exception {Field f=type.getDeclaredField(name);f.setAccessible(true);return f.get(null);}
     private void setStatic(Class<?> type,String name,Object value)throws Exception {Field f=type.getDeclaredField(name);f.setAccessible(true);f.set(null,value);}
     private void reelModels(ClassLoader loader,Context context)throws Exception {
@@ -158,6 +179,7 @@ public final class NativeModelSmoke extends Instrumentation {
                 ClassLoader loader = context.getClassLoader();
                 feedModels(loader);
                 reelModels(loader,context);
+                friendshipModels(loader);
                 Class<?> end = Class.forName("es.calma.instagram.nativeapp.NativeFeedEnd", true, loader);
                 Object nativeModel = end.getMethod("newModel", Object.class, Object.class).invoke(null, null, null);
                 check(nativeModel != null && nativeModel.getClass().getName().equals("X.0AMQ"), "Mapped native model allocation");
@@ -217,7 +239,7 @@ public final class NativeModelSmoke extends Instrumentation {
             } catch (Throwable failure) { error[0] = failure; }
         });
         if (error[0] == null) {
-            result.putString("stream", "CALMA_NATIVE_MODELS_PASSED: allocation, native row, light/dark drawing, accessibility, recycling, four stock selector models, remaining time, zero-credit lock, real Media/dictionary/user/wrapper/response/parser models; actual HTTP parameter map and delivery envelope with absent/different response IDs, cold head, native continuation, duplicate removal, completed cache; actual ClipsViewerConfig/ViewPager2 single-clip lock and earned-time restore\n");
+            result.putString("stream", "CALMA_NATIVE_MODELS_PASSED: allocation, native row, light/dark drawing, accessibility, recycling, four stock selector models, remaining time, zero-credit lock, real Media/dictionary/user/wrapper/response/parser models; actual HTTP parameter map and delivery envelope with absent/different response IDs, cold head, native continuation, duplicate removal, completed cache; actual ClipsViewerConfig/ViewPager2 single-clip lock and earned-time restore; actual friendship JSON parser, omitted following and modern follower fields\n");
             finish(-1,result);
         } else {
             result.putString("stream", "CALMA_NATIVE_MODELS_FAILED: " + android.util.Log.getStackTraceString(error[0]));

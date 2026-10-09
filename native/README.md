@@ -20,12 +20,12 @@ La entrada aceptada está fijada en [`stock.lock.json`](stock.lock.json):
 | Android mínimo | Android 9, API 28 |
 | Formato de entrada | APKM con `base.apk` y `split_config.xxhdpi.apk` |
 | Procedencia | [Variante de APKMirror](https://www.apkmirror.com/apk/instagram/instagram-instagram/instagram-439-0-0-37-89-release/instagram-439-0-0-37-89-4-android-apk-download/) |
-| Versión propia de Calma | `0.4.9`, definida en [`CalmaBuild.java`](src/es/calma/instagram/nativeapp/CalmaBuild.java) |
+| Versión propia de Calma | `0.4.10`, definida en [`CalmaBuild.java`](src/es/calma/instagram/nativeapp/CalmaBuild.java) |
 | Paquete resultante | `es.calma.instagram` |
-| versionCode resultante | `384510837` |
+| versionCode resultante | `384510838` |
 
 El manifiesto del APK conserva `versionName=439.0.0.37.89` para Instagram. La
-comparación de actualizaciones utiliza `CalmaBuild.VERSION`, actualmente `0.4.9`.
+comparación de actualizaciones utiliza `CalmaBuild.VERSION`, actualmente `0.4.10`.
 Son versiones distintas con funciones distintas.
 
 El build verifica el SHA-256 del APKM y de cada split, además de la cadena de firma
@@ -146,13 +146,13 @@ regenera los metadatos del cargador, alinea a **16 KB**, firma y verifica el res
 
 Los resultados quedan en:
 
-- `native/build/dist/IG-Calma-0.4.9.apk`.
+- `native/build/dist/IG-Calma-0.4.10.apk`.
 - `native/build/dist/SHA256SUMS.txt`, `build-info.json` y `verification.json`.
 - `native/build/patch-result.json` y `native/build/extension/build-report.json`.
 - `android-update.json` y `native/android-update.json`, idénticos y generados a partir del APK firmado.
 
 El build genera los archivos locales; no publica una release. El manifiesto de
-actualización apunta al APK de la release `v0.4.9` del repositorio configurado en el
+actualización apunta al APK de la release `v0.4.10` del repositorio configurado en el
 script. La publicación debe adjuntar exactamente ese APK y mantener su versión,
 tamaño y SHA-256 sincronizados con el manifiesto. Los dos manifiestos usan
 `required: true`; con `false`, Inhouse Read no ofrece la actualización. Publicar
@@ -259,10 +259,10 @@ Para verificar otra vez el APK firmado:
 
 ```sh
 python3 native/scripts/verify-apk.py \
-  --apk native/build/dist/IG-Calma-0.4.9.apk \
+  --apk native/build/dist/IG-Calma-0.4.10.apk \
   --stock /ruta/al/base.apk \
   --build-tools "$CALMA_SDK/build-tools/36.0.0"
-python3 native/tests/updater.py --apk native/build/dist/IG-Calma-0.4.9.apk
+python3 native/tests/updater.py --apk native/build/dist/IG-Calma-0.4.10.apk
 ```
 
 La verificación del artefacto comprueba firma, alineación de 16 KB, versiones,
@@ -337,3 +337,12 @@ Validación: 108 aserciones JVM del feed/timeline/entrega, comprobación del flu
 Con minutos disponibles, los Reels de For you conservan sus opciones originales de paginación. La construcción y precarga no modifican la configuración; al abrir se guardan sus valores originales con referencias débiles y se restauran si vuelve a utilizarse en For you. Se invalida la caché antigua que omitía Reels. El actualizador Inhouse no cambia.
 
 Además de las pruebas JVM y del DEX final, la instrumentación comprueba `ClipsViewerConfig`, `ViewPager2`, el guard de `019Z.A03` y la política real de créditos en Android 14–16. [Ejecución](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38004528156). Usa datos sintéticos; no prueba reproducción autenticada ni gestos físicos en el teléfono.
+
+
+## Friends vacío y continuidad de Following (0.4.10)
+
+El parser de red conserva las publicaciones hasta la entrega nativa aunque el servidor omita o cambie `request_id`. La entrega filtra antes del adaptador. Friends acepta el vínculo de seguimiento del endpoint Following, consulta también `is_following_current_user` y distingue un `following` omitido de un `following:false` explícito. La presencia del campo se captura dentro de `0BnS.A00`, sin inferir un unfollow del valor primitivo por defecto. Un unfollow confirmado sigue excluyendo al autor.
+
+Cada respuesta de amistad puede activar la entrega local antes de que finalicen los demás autores. La lectura/escritura de snapshots usa otra cola. La precarga comprueba la vista real de Home (`05qX.A0Y.A01`), conserva las comprobaciones nativas de peticiones en curso, reintenta hasta seis veces a intervalos de 250 ms tras un rechazo y después espera otro evento nativo. Ya no se detiene a los 90 segundos mientras Home siga visible. El replay de Friends se prepara también cuando Home está oculto, sin descargar nuevas páginas fuera de esa vista.
+
+Validación: `native/tests/feed.py`, `pager.py`, checks del DEX y parser JSON de amistades original en Android 14–16. [Ejecución](PENDING_RUNTIME_URL). Los datos de estas pruebas son sintéticos; no miden la latencia de una cuenta real.

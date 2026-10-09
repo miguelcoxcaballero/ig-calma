@@ -1,9 +1,9 @@
 {
-  "version": "0.4.9",
-  "versionCode": 384510837,
+  "version": "0.4.10",
+  "versionCode": 384510838,
   "required": true,
-  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.9/IG-Calma-0.4.9.apk",
-  "apkSha256": "f04f1ae5975e553ecb4d34180db95c4e754e94203909af86987c66f45ea482e0",
-  "apkSizeBytes": 146264749,
-  "releaseNotes": "Los Reels aparecen en Friends y Following. Puedes abrir el Reel del feed o de un mensaje, sin deslizar a otros. En For you, con minutos disponibles, los Reels mantienen el scroll normal."
+  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.10/IG-Calma-0.4.10.apk",
+  "apkSha256": "d8318afbe6e9691ffe0e7469a4660a78e187f35641671a95a8ecf5cbd86e6d58",
+  "apkSizeBytes": 146268845,
+  "releaseNotes": "Corrige Friends vacío al comprobar amistades. Following precarga las siguientes páginas sin esperar al scroll y sin el corte de 90 segundos. Mantiene los Reels individuales y los minutos de For you."
 }
