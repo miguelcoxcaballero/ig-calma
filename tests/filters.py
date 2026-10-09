@@ -8,7 +8,7 @@ def post(user, key, kind='p', header=True):
     return f'<article id="{key}"><header>{f"<a href=\"/{user}/\">{user}</a>" if header else "Unknown"}</header><a href="/{kind}/{key}/">Time</a><div>Content {key}</div><button>Like</button></article>'
 
 def fixture(posts):
-    return '<nav><a href="/reels/">Reels</a><a href="/direct/inbox/">Inbox</a></nav><main><aside id="stories">Stories and suggestions</aside><section id="feed">' + posts + '</section><section id="discovery">More recommendations</section></main>'
+    return '<nav><a href="/reels/">Reels</a><a href="/direct/inbox/">Inbox</a></nav><main><aside id="stories"><button>Tu historia</button><a href="/stories/alice/123/">Alice</a></aside><section id="feed">' + posts + '</section><section id="discovery">More recommendations</section></main>'
 
 def install(page, html, config):
     page.route('https://www.instagram.com/**', lambda route: route.fulfill(status=200, content_type='text/html', body=html))
@@ -27,7 +27,8 @@ with sync_playwright() as p:
     html = fixture(post('alice','a1') + post('bob','b1') + post('alice','r1','reel') + post('alice','unknown',header=False) + post('alice','a2') + post('alice','a3'))
     install(page, html, config)
     assert visible(page,'#a1') and visible(page,'#a2')
-    for key in ['b1','r1','unknown','a3','stories','discovery']:
+    assert visible(page, '#stories') and visible(page, '#stories button'), 'Preserve Instagram stories and your story button'
+    for key in ['b1','r1','unknown','a3','discovery']:
         assert not visible(page,'#'+key), key
     assert not visible(page,'nav a[href="/reels/"]')
     assert page.evaluate('window.__calma.count()') == 2

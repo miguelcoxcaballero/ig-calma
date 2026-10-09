@@ -2,6 +2,7 @@
   'use strict';
   if (window.__calmaDiscover) window.__calmaDiscover.destroy();
   const searchSelector = 'input[type="search"],input[placeholder="Buscar"],input[placeholder="Search"],input[aria-label="Buscar"],input[aria-label="Search"]';
+  const searchContainer = '[role="dialog"],[role="search"]';
   const postPattern = /^\/(?:([a-z0-9._]{1,30})\/)?(p|reel)\/([A-Za-z0-9_-]{1,24})\/?$/i;
   const reserved = new Set(['accounts','direct','explore','reels','reel','p','stories','about','legal','privacy']);
   let active = window.CALMA_ACTIVE !== false, dead = false, frame = 0, owner = '', epoch = 0, stopped = false;
@@ -17,6 +18,7 @@
     html[data-calma-discover=true] main a.calma-discover-approved,html[data-calma-discover=true] [role=main] a.calma-discover-approved,html[data-calma-discover=true] article.calma-discover-approved{visibility:visible!important}
     [data-calma-search-scope] a[href]{visibility:hidden!important}
     [data-calma-search-scope] a.calma-discover-profile,[data-calma-search-scope] a.calma-discover-approved{visibility:visible!important}
+    html[data-calma-home=true] :is(main,[role=main]) [data-calma-search-scope] a.calma-discover-approved{visibility:visible!important}
     .calma-discover-pending{visibility:hidden!important;pointer-events:none!important}
     .calma-discover-rejected{display:none!important}
     html[data-calma-discover=true][data-calma-reels=true] main .calma-discover-approved video,html[data-calma-discover=true][data-calma-reels=true] [role=main] .calma-discover-approved video,html[data-calma-discover=true][data-calma-reels=true] video{visibility:hidden!important}
@@ -27,7 +29,7 @@
   const status = document.createElement('p');status.id='calma-discover-status';status.setAttribute('role','status');
   function exploring(){return /^\/explore(?:\/|$)/.test(location.pathname);}
   function path(link){try{const u=new URL(link.href,location.href);return u.origin===location.origin?u.pathname:'';}catch(_){return '';}}
-  function guard(){document.documentElement.dataset.calmaDiscover=String(exploring() && !document.querySelector('input[type=password]'));}
+  function guard(){const value=String(exploring() && !document.querySelector('input[type=password]'));if(document.documentElement.dataset.calmaDiscover!==value)document.documentElement.dataset.calmaDiscover=value;}
   function profile(p){const m=p.match(/^\/([a-z0-9._]{1,30})\/?$/i);return m && !reserved.has(m[1].toLowerCase())?m[1].toLowerCase():'';}
   function reset(){epoch++;if(controller)controller.abort();clearTimeout(pace);pace=0;controller=null;busy=false;requests=0;stopped=false;metadata.clear();pending.clear();queue.length=0;}
   function clear(el){el.classList.remove('calma-discover-approved','calma-discover-profile','calma-discover-rejected','calma-discover-pending');}
@@ -78,8 +80,9 @@
     const state=window.__calmaRelations || {};
     if(owner!==(state.owner || '')){owner=state.owner || '';reset();}
     const following=new Set(state.following || []);
-    intersection.disconnect();scopes.clear();
-    document.querySelectorAll('[data-calma-search-scope]').forEach(el=>el.removeAttribute('data-calma-search-scope'));
+    intersection.disconnect();
+    for(const scope of scopes)if(scope.hasAttribute('data-calma-search-scope'))scope.removeAttribute('data-calma-search-scope');
+    scopes.clear();
     if(exploring() && !document.querySelector('input[type=password]')){
       const main=document.querySelector('main,[role=main]');if(main)scopes.add(main);
     }
@@ -110,24 +113,38 @@
       if(status.textContent!==text)status.textContent=text;
     }else status.remove();
     if(!scopes.size){if(controller)controller.abort();queue.length=0;pending.clear();}
+    observe();
   }
   function schedule(){if(active && !frame)frame=requestAnimationFrame(()=>{frame=0;scan();});}
   function route(){guard();scan();}
-  function visibility(){active=window.CALMA_ACTIVE!==false;observer.disconnect();cancelAnimationFrame(frame);frame=0;if(!active){intersection.disconnect();if(controller)controller.abort();}else{observe();scan();}}
+  function visibility(){active=window.CALMA_ACTIVE!==false;observer.disconnect();cancelAnimationFrame(frame);frame=0;if(!active){intersection.disconnect();if(controller)controller.abort();}else scan();}
   const observer=new MutationObserver(records=>{
     let changed=false;
+    const explore=exploring();
     for(const record of records){
       if(record.target===status || status.contains(record.target))continue;
+      const inScope=[...scopes].some(scope=>scope.contains(record.target));
       if(record.type==='attributes'){
+        if(!explore && !inScope)continue;
         record.target.classList.remove('calma-discover-approved','calma-discover-profile');
         const card=record.target.closest('article');if(card)card.classList.remove('calma-discover-approved');
       }
-      if(exploring() || [...scopes].some(scope=>scope.contains(record.target)) || [...record.addedNodes].some(n=>n.nodeType===1 && (n.matches(searchSelector) || n.querySelector(searchSelector))))changed=true;
+      if(explore || inScope){changed=true;continue;}
+      // On Home only watch for search panels. Incoming feed posts and reactions
+      // need no discovery filtering, and DMs have no observer at all.
+      if(record.target.closest?.(searchContainer) ||
+        [...record.addedNodes].some(n=>n.nodeType===1 && (n.matches(searchContainer) || n.querySelector(searchContainer))) ||
+        [...record.removedNodes].some(n=>n.nodeType===1 && [...scopes].some(scope=>n.contains(scope))))changed=true;
     }
     if(changed)schedule();
   });
-  function observe(){observer.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['href']});}
-  if(active)observe();
+  function observe(){
+    observer.disconnect();
+    if(!active || dead || (!exploring() && location.pathname!=='/'))return;
+    const options={subtree:true,childList:true};
+    if(exploring() || scopes.size){options.attributes=true;options.attributeFilter=['href'];}
+    observer.observe(document.documentElement,options);
+  }
   function click(event){const link=event.target.closest?.('a[href]');if(link && [...scopes].some(scope=>scope.contains(link)) && (postPattern.test(path(link)) || profile(path(link))) && !link.classList.contains('calma-discover-approved')){event.preventDefault();event.stopImmediatePropagation();}}
   function play(event){const media=event.target;if(media instanceof HTMLMediaElement && [...scopes].some(scope=>scope.contains(media)) && (window.CALMA_CONFIG.reels || !media.closest('.calma-discover-approved')))media.pause();}
   document.addEventListener('play',play,true);document.addEventListener('click',click,true);document.addEventListener('calma-route',route);document.addEventListener('calma-relations',scan);document.addEventListener('calma-visibility',visibility);

@@ -30,7 +30,7 @@ public class UpdateActivity extends Activity {
         web.getSettings().setJavaScriptEnabled(true); web.getSettings().setDomStorageEnabled(true);
         web.getSettings().setAllowFileAccess(false); web.getSettings().setAllowContentAccess(false);
         web.getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-        web.getSettings().setUserAgentString(web.getSettings().getUserAgentString()+" InhouseReadApp/0.3.6");
+        web.getSettings().setUserAgentString(web.getSettings().getUserAgentString()+" InhouseReadApp/0.3.7");
         photosInstaller=new PhotosUpdateInstaller(this,new PhotosUpdateInstaller.Listener(){
             public void progress(long downloaded,long total){lastDownloaded=downloaded;lastTotal=total;bridge.notifyAppUpdateProgress(downloaded,total);}
             public void stage(String stage){if("verifying".equals(stage))bridge.notifyAppUpdateResult("downloading","Verificando…",lastDownloaded,lastTotal,100);}
@@ -46,7 +46,7 @@ public class UpdateActivity extends Activity {
     }
     private final InhouseNativeBridge bridge=new InhouseNativeBridge();
     public class InhouseNativeBridge {
-        @JavascriptInterface public String getAppVersion(){try{return getPackageManager().getPackageInfo(getPackageName(),0).versionName;}catch(Exception e){return "0.3.6";}}
+        @JavascriptInterface public String getAppVersion(){try{return getPackageManager().getPackageInfo(getPackageName(),0).versionName;}catch(Exception e){return "0.3.7";}}
         @JavascriptInterface public String getPendingUpdateManifest(){String value=getIntent().getStringExtra("manifest");return value==null?"":value;}
         @JavascriptInterface public void installAppUpdate(String url,String hash){
             photosInstaller.installUpdate(url,hash,new PhotosUpdateInstaller.Result(){

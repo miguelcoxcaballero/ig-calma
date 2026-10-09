@@ -6,14 +6,17 @@
   const accepted = new Set();
   const reserved = new Set(['accounts', 'about', 'direct', 'explore', 'reel', 'reels', 'p', 'stories', 'legal', 'privacy', 'developer', 'web', 'challenge']);
   let dead = false, timer = 0, previousPath = location.pathname, running = false;
-  let lastOwner = null, allowSource, allowMode, scanAllLinks = true;
+  let lastOwner = null, allowSource, allowMode, scanAllLinks = true, feedDirty = true;
   let articleInfo = new WeakMap(), active = window.CALMA_ACTIVE !== false;
   const changedLinks = new Set();
   const css = document.createElement('style');
   css.id = 'calma-style';
-  css.textContent = '.calma-hidden,.calma-extra{display:none!important}#calma-end{display:block!important;box-sizing:border-box;margin:16px auto;padding:24px 16px;width:min(100%,480px);border-top:1px solid color-mix(in srgb,CanvasText 12%,Canvas);background:Canvas;color:CanvasText;text-align:center;font:13px/1.5 system-ui,sans-serif}#calma-end strong{display:block;font-size:15px;font-weight:600;margin-bottom:4px}#calma-end span{opacity:.65}';
+  css.textContent = '.calma-hidden,.calma-extra,#calma-end[hidden]{display:none!important}#calma-end{display:block!important;box-sizing:border-box;margin:16px auto;padding:24px 16px;width:min(100%,480px);border-top:1px solid color-mix(in srgb,CanvasText 12%,Canvas);background:Canvas;color:CanvasText;text-align:center;font:13px/1.5 system-ui,sans-serif}#calma-end strong{display:block;font-size:15px;font-weight:600;margin-bottom:4px}#calma-end span{opacity:.65}';
   (document.head || document.documentElement).appendChild(css);
-  css.textContent += 'html[data-calma-home="true"] main,html[data-calma-home="true"] [role="main"],html[data-calma-home="true"] video{visibility:hidden!important}html[data-calma-home="true"] article.calma-approved,html[data-calma-home="true"] article.calma-approved video,html[data-calma-home="true"] #calma-end{visibility:visible!important}';
+  // Keep Instagram's stories, skeletons and pagination controls visible. Only
+  // unverified posts and video frames need the synchronous navigation guard.
+  css.textContent += 'html[data-calma-home="true"] :is(main,[role="main"]) article:not(.calma-approved),html[data-calma-home="true"] video{visibility:hidden!important}html[data-calma-home="true"] article.calma-approved video{visibility:visible!important}';
+  css.textContent += 'html[data-calma-home="true"] :is(main,[role="main"]) a:is([href*="/p/"],[href*="/reel/"],[href*="/reels/"]){visibility:hidden!important}html[data-calma-home="true"] article.calma-approved a:is([href*="/p/"],[href*="/reel/"],[href*="/reels/"]){visibility:visible!important}';
   css.textContent += 'html[data-calma-home="true"][data-calma-reels="true"] video,html[data-calma-home="true"][data-calma-reels="true"] article.calma-approved video{visibility:hidden!important}html[data-calma-home="true"][data-calma-reels="true"] a[href*="/reel/"]{display:none!important}';
   function routeGuard() {
     const id=window.__calmaRelations?window.__calmaRelations.owner:config.owner;
@@ -33,10 +36,15 @@
   marker.append(markerTitle, markerSubtitle);
   function path(link) { try { const url = new URL(link.getAttribute('href'), location.href); return /(^|\.)instagram\.com$/.test(url.hostname) ? url.pathname : ''; } catch (_) { return ''; } }
   function reelPath(p) { return /^\/reels?(\/|$)/.test(p); }
+  const postPattern = /^\/(?:([a-zA-Z0-9._]{1,30})\/)?(p|reel)\/([^/]+)\/?$/;
+  const profilePattern = /^\/(?:stories\/)?([a-zA-Z0-9._]{1,30})\/?$/;
+  const reelLabel = '[aria-label="Reel"],[aria-label="Reels"],[aria-label="Clip"]';
+  function beforeBoundary(link, boundary) {
+    return !boundary || link === boundary || !!(link.compareDocumentPosition(boundary) & Node.DOCUMENT_POSITION_FOLLOWING);
+  }
   function postInfo(article) {
     if (articleInfo.has(article)) return articleInfo.get(article);
     const links = [...article.querySelectorAll('a[href]')];
-    const postPattern = /^\/(?:([a-zA-Z0-9._]{1,30})\/)?(p|reel)\/([^/]+)\/?$/;
     const permalink = links.map(path).find(p => postPattern.test(p));
     if (!permalink) { articleInfo.set(article, null); return null; }
     const match = permalink.match(postPattern);
@@ -46,26 +54,27 @@
     const mediaImages = [...article.querySelectorAll('img')].filter(img => {
       if (img.closest('header')) return false;
       const anchor = img.closest('a[href]');
-      return !anchor || !/^\/(?:stories\/)?[a-zA-Z0-9._]{1,30}\/?$/.test(path(anchor));
+      return !anchor || !profilePattern.test(path(anchor));
     });
     const boundary = mediaImages[0] || article.querySelector('video') || links.find(a => path(a) === permalink);
     const candidateLinks = [...new Set([...(header ? header.querySelectorAll('a[href]') : []),
-      ...links.filter(a => a === boundary || !!(a.compareDocumentPosition(boundary) & Node.DOCUMENT_POSITION_FOLLOWING))])];
+      ...links.filter(a => beforeBoundary(a, boundary))])];
     const authors = new Set(match[1] ? [match[1].toLowerCase()] : []);
     for (const link of candidateLinks) {
-      const profile = path(link).match(/^\/(?:stories\/)?([a-zA-Z0-9._]{1,30})\/?$/);
+      const profile = path(link).match(profilePattern);
       if (profile && !reserved.has(profile[1].toLowerCase())) authors.add(profile[1].toLowerCase());
     }
     const info = {id: '/' + match[2] + '/' + match[3], authors, photos: mediaImages.length > 0,
+      boundary, mediaImages, identityLinks: new Set(links.filter(a => postPattern.test(path(a)) || (candidateLinks.includes(a) && profilePattern.test(path(a))))),
       video: !!article.querySelector('video'),
-      reel: match[2] === 'reel' || !!article.querySelector('[aria-label="Reel"],[aria-label="Reels"],[aria-label="Clip"]')};
+      reel: match[2] === 'reel' || !!article.querySelector(reelLabel)};
     articleInfo.set(article, info);
     return info;
   }
   function hideDiscovery(main) {
     // Do not prune arbitrary branches: React keeps its pagination sentinels,
     // loading indicators and virtual-feed spacers alongside the posts.
-    main.querySelectorAll('aside,[data-calma-discovery],#stories,#discovery').forEach(el => {
+    main.querySelectorAll('[data-calma-discovery],#discovery').forEach(el => {
       if (!el.querySelector('article') && !el.classList.contains('calma-extra')) el.classList.add('calma-extra');
     });
   }
@@ -80,20 +89,46 @@
   }
   function scheduleScan() {
     if (dead || !active || timer) return;
-    timer = requestAnimationFrame(() => { timer = 0; scan(); });
+    timer = requestAnimationFrame(() => { timer = 0; scan(false); });
   }
-  function scan() {
+  const pendingImages = new Set(), primedImages = new WeakSet();
+  // Prepare nearby, approved photos before they enter the viewport. This leaves
+  // the native feed loader in charge of pagination and never requests media
+  // from a rejected post or rewrites its URL.
+  const imageObserver = new IntersectionObserver(entries => {
+    let budget = 4;
+    for (const entry of entries) {
+      if (!entry.isIntersecting || !active) continue;
+      const img = entry.target;
+      if (!img.closest('article.calma-approved') || location.pathname !== '/') continue;
+      if (!budget--) break;
+      img.loading = 'eager'; img.decoding = 'async';
+      imageObserver.unobserve(img); pendingImages.delete(img); primedImages.add(img);
+    }
+  }, {rootMargin: '900px 0px', threshold: 0});
+  function prepareImages(info, show) {
+    if (!info) return;
+    for (const img of info.mediaImages.slice(0, 2)) {
+      if (!show) { imageObserver.unobserve(img); pendingImages.delete(img); }
+      else if ((img.getAttribute('src') || img.getAttribute('srcset')) && !primedImages.has(img) && !pendingImages.has(img)) {
+        pendingImages.add(img); imageObserver.observe(img);
+      }
+    }
+  }
+  function scan(force = true) {
     if (dead || running) return;
     if (!active) { routeGuard(); return; }
+    if (force) feedDirty = true;
     running = true;
     try {
       routeGuard();
       const relations = window.__calmaRelations || {};
-      if (lastOwner !== relations.owner) { accepted.clear(); lastOwner = relations.owner; }
+      if (lastOwner !== relations.owner) { accepted.clear(); lastOwner = relations.owner; feedDirty = true; }
       const source = config.mode === 1 ? relations.following : relations.friends;
       if (source !== allowSource || config.mode !== allowMode) {
         allowSource = source; allowMode = config.mode;
         allow = new Set(source || []);
+        feedDirty = true;
       }
       if (previousPath !== location.pathname) {
         previousPath = location.pathname;
@@ -101,6 +136,8 @@
         document.querySelectorAll('.calma-hidden,.calma-extra').forEach(el => el.classList.remove('calma-hidden', 'calma-extra'));
         marker.remove();
         scanAllLinks = true;
+        feedDirty = true;
+        imageObserver.disconnect(); pendingImages.clear();
       }
       if (config.reels) {
         if (reelPath(location.pathname) && !(window.__calmaReelGate && window.__calmaReelGate.locked())) { location.replace('https://www.instagram.com'+(config.allowedReelPath||'/')); return; }
@@ -112,8 +149,11 @@
       scanAllLinks = false; changedLinks.clear();
       // Account allowlists apply only to the home feed, never to login forms or messages.
       if (location.pathname !== '/' || document.querySelector('input[type="password"]')) { marker.remove(); return; }
+      if (!feedDirty) return;
+      feedDirty = false;
       const main = document.querySelector('main,[role="main"]');
       if (!main) return;
+      hideDiscovery(main);
       const articles = [...main.querySelectorAll('article')];
       if (!articles.length) {
         if (marker.parentElement !== main) main.appendChild(marker);
@@ -136,13 +176,14 @@
         }
         article.classList.toggle('calma-hidden', !show);
         article.classList.toggle('calma-approved', show);
+        prepareImages(info, show);
         if ((!info || info.video) && (!show || config.reels)) article.querySelectorAll('video').forEach(video => {
           if (!video.paused) video.pause();
           if (video.hasAttribute('autoplay')) video.removeAttribute('autoplay');
         });
         if (show) rendered.add(info.id);
       }
-      hideDiscovery(main);
+      for (const img of pendingImages) if (!img.isConnected) { imageObserver.unobserve(img); pendingImages.delete(img); }
       // Own status lives outside React's post list, never between a post and its sentinel.
       if (marker.parentElement !== main) main.appendChild(marker);
       setMessage();
@@ -162,9 +203,12 @@
       title = 'Has llegado al límite de ' + config.limit + ' publicaciones';
       subtitle = 'Puedes iniciar otra sesión desde los ajustes.';
     } else {
-      title = 'Más publicaciones';
-      subtitle = accepted.size + ' de ' + config.limit + ' · Desliza para cargar más';
+      // Loading is not the end of the feed. Preserve the original loader and
+      // avoid inserting an extra footer that moves its pagination sentinel.
+      if (!marker.hidden) marker.hidden = true;
+      return;
     }
+    if (marker.hidden) marker.hidden = false;
     if (markerTitle.textContent !== title) markerTitle.textContent = title;
     if (markerSubtitle.textContent !== subtitle) markerSubtitle.textContent = subtitle;
   }
@@ -177,6 +221,41 @@
     if ((reelPath(location.pathname) && !(window.__calmaReelGate && window.__calmaReelGate.locked())) || event.target.closest('.calma-hidden,.calma-extra') || location.pathname==='/') event.target.pause();
   }
   function relationsChanged() { allowSource = null; scan(); }
+  function changesPost(record, info) {
+    if (!info) return true;
+    const target = record.target;
+    if (record.type === 'attributes') {
+      if (record.attributeName === 'aria-label') {
+        return /^(Reel|Reels|Clip)$/.test(record.oldValue || '') || target.matches(reelLabel);
+      }
+      if (record.attributeName === 'href') {
+        return info.identityLinks.has(target) || postPattern.test(path(target)) ||
+          (profilePattern.test(path(target)) && (target.closest('header') || beforeBoundary(target, info.boundary)));
+      }
+      return false;
+    }
+    for (const node of [...record.addedNodes, ...record.removedNodes]) {
+      if (node.nodeType !== Node.ELEMENT_NODE) continue;
+      // Text, likes, comments and reaction counters are not author changes.
+      if (node.matches('video,' + reelLabel) || node.querySelector('video,' + reelLabel)) return true;
+      if (info.mediaImages.some(img => node === img || node.contains(img))) return true;
+      const newImages = node.matches('img') ? [node] : [...node.querySelectorAll('img')];
+      if (newImages.some(img => img.isConnected && (!info.photos || beforeBoundary(img, info.boundary)))) return true;
+      if ([...info.identityLinks].some(link => node === link || node.contains(link))) return true;
+      const links = node.matches('a[href]') ? [node] : [...node.querySelectorAll('a[href]')];
+      if (links.some(link => link.isConnected && (postPattern.test(path(link)) ||
+          (profilePattern.test(path(link)) && (link.closest('header') || beforeBoundary(link, info.boundary)))))) return true;
+    }
+    return false;
+  }
+  function affectsFeed(node) {
+    return node.nodeType === Node.ELEMENT_NODE &&
+      (node.matches('article,main,[role="main"],[data-calma-discovery],#discovery') ||
+       !!node.querySelector('article,main,[role="main"],[data-calma-discovery],#discovery'));
+  }
+  function containsLinks(node) {
+    return node.nodeType === Node.ELEMENT_NODE && (node.matches('a[href]') || !!node.querySelector('a[href]'));
+  }
   // Observe structure and link changes; ignore our own class writes to avoid loops.
   const observer = new MutationObserver(records => {
     // DM text, reactions and typing indicators never need a feed/link scan.
@@ -187,25 +266,30 @@
       if (record.target === marker || marker.contains(record.target)) continue;
       const target = record.target.nodeType === Node.ELEMENT_NODE ? record.target : record.target.parentElement;
       const article = target && target.closest('article');
-      if (article) {
+      if (article && changesPost(record, articleInfo.get(article))) {
         articleInfo.delete(article);
         if (location.pathname === '/' && article.classList.contains('calma-approved')) article.classList.remove('calma-approved');
+        feedDirty = true; changed = true;
       }
       if (record.type === 'attributes') {
-        if (record.attributeName === 'href') changedLinks.add(target);
+        if (record.attributeName === 'href' && config.reels) { changedLinks.add(target); changed = true; }
       } else {
-        for (const node of record.addedNodes) if (node.nodeType === Node.ELEMENT_NODE) changedLinks.add(node);
+        if (!article && [...record.addedNodes, ...record.removedNodes].some(affectsFeed)) {
+          feedDirty = true; changed = true;
+        }
+        if (config.reels) for (const node of record.addedNodes) if (containsLinks(node)) {
+          changedLinks.add(node); changed = true;
+        }
       }
-      changed = true;
     }
     if (changed) scheduleScan();
   });
   function observe() {
-    observer.observe(document.documentElement, {childList: true, subtree: true, attributes: true, attributeFilter: ['href', 'aria-label']});
+    observer.observe(document.documentElement, {childList: true, subtree: true, attributes: true, attributeOldValue: true, attributeFilter: ['href', 'aria-label']});
   }
   function visibility(event) {
     active = event.detail ? event.detail.active !== false : window.CALMA_ACTIVE !== false;
-    observer.disconnect(); cancelAnimationFrame(timer); timer = 0; changedLinks.clear();
+    observer.disconnect(); imageObserver.disconnect(); pendingImages.clear(); cancelAnimationFrame(timer); timer = 0; changedLinks.clear();
     if (!active) return;
     articleInfo = new WeakMap(); scanAllLinks = true;
     observe(); scan();
@@ -219,7 +303,7 @@
   window.addEventListener('popstate', notifyRoute);
   window.__calma = {
     destroy() {
-      dead = true; observer.disconnect(); cancelAnimationFrame(timer);
+      dead = true; observer.disconnect(); imageObserver.disconnect(); pendingImages.clear(); cancelAnimationFrame(timer);
       document.removeEventListener('click', clickBlock, true); document.removeEventListener('play', pauseReel, true);
       document.removeEventListener('calma-relations', relationsChanged);
       document.removeEventListener('calma-route', routeChange); window.removeEventListener('popstate', notifyRoute);

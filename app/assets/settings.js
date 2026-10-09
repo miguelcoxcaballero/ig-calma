@@ -61,7 +61,7 @@
     '<div id="calma-permission-row" class="calma-row" hidden><span id="calma-permissions" role="status"></span><button class="calma-link" type="button" data-action="permissions">Dar permiso</button></div></div>' +
     '<div class="calma-actions"><button type="button" data-action="save" disabled>Guardar</button><span id="calma-saved" role="status" aria-live="polite"></span></div>' +
     '<div class="calma-group"><button class="calma-row calma-update" type="button" data-action="update"><span>Actualizar aplicación</span><span class="calma-chevron" aria-hidden="true">›</span></button></div>' +
-    '<p class="calma-footer">Calma · 0.3.6</p>';
+    '<p class="calma-footer">Calma · 0.3.7</p>';
   function text(selector, value) {
     const element = section.querySelector(selector);
     if (element.textContent !== value) element.textContent = value;

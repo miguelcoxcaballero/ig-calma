@@ -23,7 +23,10 @@ with sync_playwright() as p:
  context.route('https://www.instagram.com/**',route)
  page=context.new_page();page.goto('https://www.instagram.com/explore/')
  page.evaluate('window.CALMA_CONFIG={owner:"1",mode:0,reels:true,limit:20};window.__calmaRelations={owner:"1",following:["alice"],friends:[],followingReady:true,friendsReady:true}')
- page.evaluate(filters);page.evaluate(script)
+ page.evaluate(filters)
+ page.evaluate('''window.discoveryMutations=0;const NativeObserver=window.MutationObserver;
+ window.MutationObserver=class extends NativeObserver {constructor(callback){super((records,observer)=>{window.discoveryMutations++;callback(records,observer)})}};void 0;''')
+ page.evaluate(script)
  assert page.locator('#known').is_visible() and page.locator('#friend-profile').is_visible()
  for key in ['outsider','reel','unknown-friend','unknown-other','other-profile']:assert not page.locator('#'+key).is_visible(),key
  page.evaluate('window.hiddenPauses=0;const video=document.createElement("video");video.pause=()=>window.hiddenPauses++;document.querySelector("#unknown-friend").appendChild(video);video.dispatchEvent(new Event("play",{bubbles:true}))')
@@ -45,12 +48,30 @@ with sync_playwright() as p:
  assert page.locator('#unknown-friend').is_visible() and len(calls)==2
  page.evaluate('history.pushState({},"","/bob/")')
  assert page.locator('#outsider').is_visible() and not page.locator('#calma-discover-status').count(), 'Profile navigation restores content'
+ page.evaluate('history.pushState({},"","/")')
+ page.wait_for_timeout(100)
+ page.evaluate('window.discoveryMutations=0;document.querySelector("#known").href="/alice/p/ABC/"')
+ page.wait_for_timeout(100)
+ assert page.evaluate('window.discoveryMutations')==0, 'Home link recycling must not wake the discovery observer without a search panel'
  # Search dialog works while Home remains the active route.
- page.evaluate('history.pushState({},"","/");document.body.insertAdjacentHTML("beforeend",\'<section role="dialog"><input placeholder="Buscar"><a id="search-alice" href="/alice/">Alice</a><a id="search-bob" href="/bob/">Bob</a></section>\')')
+ page.evaluate('history.pushState({},"","/");document.querySelector("main").insertAdjacentHTML("beforeend",\'<section role="dialog"><input placeholder="Buscar"><a id="search-alice" href="/alice/">Alice</a><a id="search-bob" href="/bob/">Bob</a><a id="search-photo" href="/alice/p/CAB/">Photo</a></section>\')')
  page.wait_for_function('document.querySelector("[role=dialog]").hasAttribute("data-calma-search-scope")')
  assert page.locator('#search-alice').is_visible() and not page.locator('#search-bob').is_visible()
+ assert page.locator('#search-photo').is_visible(), 'Verified search photos inside Home main must remain visible'
+ page.evaluate('window.closedSearch=document.querySelector("[role=dialog]");window.closedSearch.remove()')
+ page.wait_for_timeout(100)
+ page.evaluate('window.discoveryMutations=0;document.querySelector("#known").href="/alice/p/ABC/"')
+ page.wait_for_timeout(100)
+ assert page.evaluate('window.discoveryMutations')==0, 'Closing search must stop observing Home links again'
+ assert page.evaluate('!window.closedSearch.querySelector("#search-bob").classList.contains("calma-discover-rejected")'), 'Detached search results must release their filter state'
+ page.evaluate('document.body.appendChild(window.closedSearch)')
+ page.wait_for_function('document.querySelector("[role=dialog]").hasAttribute("data-calma-search-scope")')
  page.evaluate('history.pushState({},"","/direct/inbox/")')
  assert page.locator('#search-bob').is_visible(), 'DM recipient dialogs must remain unfiltered'
+ page.evaluate('''window.discoveryMutations=0;
+ for(let i=0;i<100;i++){const message=document.createElement('a');message.href='/alice/';message.textContent='Message';document.querySelector('main').appendChild(message);message.href='/bob/';message.remove()}''')
+ page.wait_for_timeout(100)
+ assert page.evaluate('window.discoveryMutations')==0, 'Incoming DM messages must do no discovery observer work'
  page.evaluate('document.querySelector("[role=dialog]").remove();history.pushState({},"","/explore/");window.__calmaRelations.owner="2";document.dispatchEvent(new Event("calma-relations"))')
  reject=True
  page.wait_for_function('document.querySelector("#calma-discover-status").textContent.includes("comprobar")')

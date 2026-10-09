@@ -35,5 +35,25 @@ with sync_playwright() as p:
     page.evaluate('window.__calmaRelations={owner:""}')
     page.locator('#home').click()
     assert len(commands)==2, 'Logged-out SPA must not issue a retained-tab command'
-    print('PASS: retained-tab handoff, same-tab SPA routing, thread links, draft preservation, inactive media pause and logout gate.')
+    # Safe tracking/language queries must still reach the retained inbox. Feature
+    # routes remain on Instagram's router so their destination is not discarded.
+    page.evaluate('window.__calmaRelations={owner:"1"};window.CALMA_TAB="home";history.replaceState({},"","/");document.querySelector("#dm").href="/direct/inbox/?hl=es&utm_source=nav"')
+    page.locator('#dm').click();page.wait_for_timeout(100)
+    assert len(commands)==3 and 'calma_tab=direct' in commands[-1]
+    page.evaluate('document.querySelector("#dm").href="/direct/inbox/?message_id=42"')
+    page.locator('#dm').click();page.wait_for_timeout(100)
+    assert len(commands)==3 and page.url.endswith('/direct/inbox/?message_id=42')
+    page.evaluate('window.CALMA_TAB="direct";document.querySelector("#home").href="/?hl=es"')
+    page.locator('#home').click();page.wait_for_timeout(100)
+    assert len(commands)==4 and 'calma_tab=home' in commands[-1]
+    # Preloading must not finish at document commit while the inbox is a shell.
+    page.evaluate('history.replaceState({},"","/direct/inbox/");document.body.innerHTML="<main><div role=progressbar></div></main>"')
+    assert not page.evaluate('__calmaNavigation.inboxReady()')
+    page.evaluate('document.querySelector("main").innerHTML="<a href=/direct/t/123/>Alice</a><div role=progressbar></div>"')
+    assert not page.evaluate('__calmaNavigation.inboxReady()'), 'An inbox still mounting must keep warming'
+    page.evaluate('document.querySelector("[role=progressbar]").remove()')
+    assert page.evaluate('__calmaNavigation.inboxReady()'), 'Hydrated thread controls can be retained'
+    page.evaluate('history.replaceState({},"","/")')
+    assert not page.evaluate('__calmaNavigation.inboxReady()'), 'A redirected Home is not a ready inbox'
+    print('PASS: warm inbox readiness, tracking-query handoff, feature routes, retained-tab handoff, same-tab SPA routing, thread links, draft preservation, inactive media pause and logout gate.')
     browser.close()

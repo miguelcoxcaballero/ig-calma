@@ -16,7 +16,10 @@ import org.json.*;
 import java.io.*;
 
 public class MainActivity extends Activity {
-    private WebView web, homeWeb, directWeb;
+    private WebView web, homeWeb, directWeb, warmingTab;
+    private Runnable warmCheck, warmTimeout;
+    private long warmStarted;
+    private boolean inboxWarmPending = false;
     private final java.util.Map<WebView,String> reelPermissions = new java.util.IdentityHashMap<>();
     private final java.util.Map<WebView,Integer> generations = new java.util.IdentityHashMap<>();
     private String retainedOwner = "";
@@ -64,7 +67,10 @@ public class MainActivity extends Activity {
         tab.setVerticalScrollBarEnabled(false); tab.setHorizontalScrollBarEnabled(false);
         tab.setBackgroundColor(systemDark()?Color.BLACK:Color.WHITE);
         tab.setVisibility(View.INVISIBLE); tab.setAlpha(0f);
-        root.addView(tab, new FrameLayout.LayoutParams(-1, -1));
+        // A warming inbox stays behind the active, opaque WebView.
+        root.addView(tab, 0, new FrameLayout.LayoutParams(-1, -1));
+        tab.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
+        tab.setFocusable(false);tab.setFocusableInTouchMode(false);
         if(direct)directWeb=tab;else homeWeb=tab;
         WebSettings ws=tab.getSettings(); ws.setJavaScriptEnabled(true); ws.setDomStorageEnabled(true);
         ws.setAllowFileAccess(false); ws.setAllowContentAccess(false);
@@ -82,8 +88,8 @@ public class MainActivity extends Activity {
                 if(request.isForMainFrame() && v==web && handleSettingsAction(uri))return true;
                 if(!trusted(uri)) { if(v==web)toast("Abre este enlace en tu navegador."); return true; }
                 if(request.isForMainFrame() && v==web && !owner().isEmpty()) {
-                    boolean toDirect="/direct/inbox/".equals(uri.getPath()) || "/direct/inbox".equals(uri.getPath());
-                    boolean toHome="/".equals(uri.getPath()) && uri.getQuery()==null;
+                    boolean toDirect=("/direct/inbox/".equals(uri.getPath()) || "/direct/inbox".equals(uri.getPath())) && tabQuery(uri);
+                    boolean toHome="/".equals(uri.getPath()) && tabQuery(uri);
                     if((toDirect && v!=directWeb) || (toHome && v==directWeb)) {selectTab(toDirect);return true;}
                 }
                 if(request.isForMainFrame() && prefs.getBoolean("reels",true) && reelPath(uri.getPath())) {
@@ -102,6 +108,8 @@ public class MainActivity extends Activity {
             }
             @Override public void onPageStarted(WebView v,String url,android.graphics.Bitmap favicon) {
                 if(!isLive(v))return;
+                // Never expose the warming inbox while the active page is hidden for injection.
+                if(v==web)stopInboxWarmup(false);
                 if(!reelPath(Uri.parse(url).getPath()))reelPermissions.remove(v);
                 generations.put(v,generation(v)+1); v.setAlpha(0f);
             }
@@ -115,7 +123,7 @@ public class MainActivity extends Activity {
                 });
             }
             @Override public void onReceivedError(WebView v,WebResourceRequest r,WebResourceError e) {
-                if(r.isForMainFrame() && isLive(v)){v.setAlpha(1f);if(v==web)toast("No se pudo cargar. Comprueba tu conexión.");}
+                if(r.isForMainFrame() && isLive(v)){if(v==warmingTab)stopInboxWarmup(true);v.setAlpha(1f);if(v==web)toast("No se pudo cargar. Comprueba tu conexión.");}
             }
             @Override public boolean onRenderProcessGone(WebView v,RenderProcessGoneDetail detail) {
                 boolean active=v==web, wasDirect=v==directWeb;
@@ -139,11 +147,16 @@ public class MainActivity extends Activity {
         WebView target=direct?directWeb:homeWeb;
         if(target==null)target=createTab(direct);
         if(target==web)return;
+        stopInboxWarmup(target==directWeb);
         if(web!=null) {
             visibility(web,false); web.onPause(); web.clearFocus(); web.setVisibility(View.INVISIBLE);
+            web.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
+            web.setFocusable(false);web.setFocusableInTouchMode(false);
             ((android.view.inputmethod.InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(web.getWindowToken(),0);
         }
         web=target; web.setVisibility(View.VISIBLE);web.bringToFront();web.onResume();
+        web.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);
+        web.setFocusable(true);web.setFocusableInTouchMode(true);
         visibility(web,!paused);injectAppearance();
         web.requestFocus();
         // Restore the conversation, but never revive an old Reel/profile on a tab button.
@@ -151,6 +164,13 @@ public class MainActivity extends Activity {
         if(path!=null && !owner().isEmpty() && (direct?!path.startsWith("/direct/"):!"/".equals(path))) {
             web.setAlpha(0f);web.loadUrl(direct?"https://www.instagram.com/direct/inbox/":"https://www.instagram.com/");
         }
+    }
+    private boolean tabQuery(Uri uri) {
+        if(uri.getFragment()!=null)return false;
+        for(String key:uri.getQueryParameterNames()) {
+            if(!key.equals("hl") && !key.equals("igsh") && !key.equals("igshid") && !key.matches("utm_(source|medium|campaign|content|term)"))return false;
+        }
+        return true;
     }
     private boolean handleTabAction(WebView source,Uri uri) {
         if(!trusted(uri) || uri.getQueryParameter("calma_tab")==null)return false;
@@ -161,6 +181,9 @@ public class MainActivity extends Activity {
     }
     private void disposeTab(WebView tab) {
         if(tab==null)return;
+        if(tab==web && warmingTab!=null && tab!=warmingTab)stopInboxWarmup(false);
+        if(tab==warmingTab)stopInboxWarmup(true);
+        if(tab==directWeb)inboxWarmPending=false;
         if(tab==homeWeb)homeWeb=null;if(tab==directWeb)directWeb=null;if(tab==web)web=null;
         reelPermissions.remove(tab);generations.remove(tab);root.removeView(tab);tab.stopLoading();tab.destroy();
     }
@@ -172,17 +195,47 @@ public class MainActivity extends Activity {
         disposeTab(inactive);
     }
     private void schedulePrewarm() {
-        if(paused || directWeb!=null || owner().isEmpty() || prewarmScheduled)return;
+        if(paused || directWeb==web || (directWeb!=null && !inboxWarmPending) || owner().isEmpty() || prewarmScheduled || warmingTab!=null)return;
         prewarmScheduled=true;
-        handler.postDelayed(() -> {prewarmScheduled=false;prewarmInbox();},2500);
+        handler.postDelayed(() -> {prewarmScheduled=false;prewarmInbox();},1500);
     }
     private void prewarmInbox() {
-        if(paused || isFinishing() || isDestroyed() || directWeb!=null || owner().isEmpty())return;
+        if(paused || isFinishing() || isDestroyed() || directWeb==web || (directWeb!=null && !inboxWarmPending) || owner().isEmpty() || web==null || web.getAlpha()<1f)return;
         reconcileOwner();
         ActivityManager.MemoryInfo info=new ActivityManager.MemoryInfo();
         ((ActivityManager)getSystemService(ACTIVITY_SERVICE)).getMemoryInfo(info);
         if(info.lowMemory || ((ActivityManager)getSystemService(ACTIVITY_SERVICE)).isLowRamDevice())return;
-        createTab(true);
+        WebView tab=directWeb==null?createTab(true):directWeb;
+        warmingTab=tab;inboxWarmPending=true;warmStarted=SystemClock.uptimeMillis();
+        // INVISIBLE/onPause at document commit leaves React's inbox unmounted. Let it
+        // finish rendering under the opaque active page, with our own controllers idle.
+        tab.getSettings().setOffscreenPreRaster(true);
+        tab.setVisibility(View.VISIBLE);tab.onResume();web.bringToFront();visibility(tab,false);
+        warmCheck=new Runnable() {
+            @Override public void run() {
+                if(warmingTab!=tab || warmCheck!=this || !isLive(tab))return;
+                if(paused || tab==web || web==null || web.getAlpha()<1f){stopInboxWarmup(false);return;}
+                if(SystemClock.uptimeMillis()-warmStarted>=12000){stopInboxWarmup(true);return;}
+                final int epoch=generation(tab);
+                tab.evaluateJavascript("!!(window.__calmaNavigation && window.__calmaNavigation.inboxReady())",value -> {
+                    if(warmingTab!=tab || warmCheck!=this || !isLive(tab))return;
+                    if(epoch==generation(tab) && "true".equals(value) && SystemClock.uptimeMillis()-warmStarted>=1500)stopInboxWarmup(true);
+                    else handler.postDelayed(this,500);
+                });
+            }
+        };
+        warmTimeout=() -> {if(warmingTab==tab)stopInboxWarmup(true);};
+        handler.postDelayed(warmCheck,500);handler.postDelayed(warmTimeout,12000);
+    }
+    private void stopInboxWarmup(boolean finished) {
+        if(warmCheck!=null){handler.removeCallbacks(warmCheck);warmCheck=null;}
+        if(warmTimeout!=null){handler.removeCallbacks(warmTimeout);warmTimeout=null;}
+        WebView tab=warmingTab;warmingTab=null;
+        if(finished)inboxWarmPending=false;
+        if(isLive(tab)){
+            tab.getSettings().setOffscreenPreRaster(false);
+            if(tab!=web){visibility(tab,false);tab.onPause();tab.clearFocus();tab.setVisibility(View.INVISIBLE);}
+        }
     }
     @Override public void onTrimMemory(int level) {
         super.onTrimMemory(level);
@@ -285,7 +338,7 @@ public class MainActivity extends Activity {
             tab.evaluateJavascript("window.CALMA_ACTIVE="+(tab==web && !paused)+";window.CALMA_TAB="+JSONObject.quote(tab==directWeb?"direct":"home")+";window.CALMA_APPEARANCE={dark:"+systemDark()+",reduceMotion:"+reduceMotion()+"};\n"+appearance+"\nwindow.CALMA_CONFIG="+config+";\n"+relations+"\n"+reelGate+"\n"+filters+"\n"+discover+"\n"+settingsPage+"\n"+navigation,value -> {
                 if(!isLive(tab) || epoch!=generation(tab))return;
                 tab.setAlpha(1f);
-                if(tab!=web || paused){visibility(tab,false);tab.onPause();}
+                if(tab!=web || paused){visibility(tab,false);if(tab!=warmingTab || paused)tab.onPause();}
                 if(tab==web)schedulePrewarm();
             });
         }catch(JSONException e){toast("No se pudo aplicar la configuración");}
@@ -297,7 +350,7 @@ public class MainActivity extends Activity {
         updateChecker.getSettings().setJavaScriptEnabled(true);updateChecker.getSettings().setDomStorageEnabled(true);
         updateChecker.getSettings().setAllowFileAccess(false);updateChecker.getSettings().setAllowContentAccess(false);
         updateChecker.getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-        updateChecker.getSettings().setUserAgentString(updateChecker.getSettings().getUserAgentString()+" InhouseReadApp/0.3.6");
+        updateChecker.getSettings().setUserAgentString(updateChecker.getSettings().getUserAgentString()+" InhouseReadApp/0.3.7");
         updateChecker.addJavascriptInterface(new UpdateCheckBridge(),"InhouseNative");
         updateChecker.addJavascriptInterface(new UpdateOfferBridge(),"InhouseUpdateHost");
         updateChecker.setWebViewClient(new UpdateAssetClient(this){
@@ -309,7 +362,7 @@ public class MainActivity extends Activity {
         });
         updateChecker.loadUrl("https://appassets.androidplatform.net/updates/index.html?inhouse_app=1&quiet=1");
     }
-    public class UpdateCheckBridge {@JavascriptInterface public String getAppVersion(){try{return getPackageManager().getPackageInfo(getPackageName(),0).versionName;}catch(Exception e){return "0.3.6";}}}
+    public class UpdateCheckBridge {@JavascriptInterface public String getAppVersion(){try{return getPackageManager().getPackageInfo(getPackageName(),0).versionName;}catch(Exception e){return "0.3.7";}}}
     public class UpdateOfferBridge {@JavascriptInterface public void offer(String manifest){runOnUiThread(() -> {pendingUpdate=manifest;showPendingUpdate();});}}
     private void showPendingUpdate(){
         if(pendingUpdate.isEmpty() || updateOffered || paused || !hasWindowFocus() || isFinishing() || isDestroyed())return;
@@ -328,7 +381,7 @@ public class MainActivity extends Activity {
         else super.onBackPressed();
     }
     @Override protected void onPause() {
-        paused=true;handler.removeCallbacks(identityWatcher);
+        paused=true;handler.removeCallbacks(identityWatcher);stopInboxWarmup(false);
         if(web!=null){visibility(web,false);web.onPause();}
         if(updateChecker!=null)updateChecker.onPause();
         super.onPause();CookieManager.getInstance().flush();

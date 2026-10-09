@@ -1,9 +1,9 @@
 {
-  "version": "0.3.6",
-  "versionCode": 10,
+  "version": "0.3.7",
+  "versionCode": 11,
   "required": true,
-  "apkUrl": "https://raw.githubusercontent.com/miguelcoxcaballero/ig-calma/main/downloads/IG-Calma-0.3.6.apk",
-  "apkSha256": "762aebdb40e6d67ec95b0bb03e4d5f100885828e0ef8644f0bdd8a2d266a1b34",
-  "apkSizeBytes": 1180935,
-  "releaseNotes": "Actualizador corregido: comprobación inmediata al abrir, popup original de Inhouse Read e instalador Kotlin reutilizado de Inhouse Photos."
+  "apkUrl": "https://raw.githubusercontent.com/miguelcoxcaballero/ig-calma/main/downloads/IG-Calma-0.3.7.apk",
+  "apkSha256": "11a7581d4da266d8e1fc97e7ab3bcf7900ff352a2d8a075f261820362777abb5",
+  "apkSizeBytes": 1185031,
+  "releaseNotes": "Historias restauradas, menos saltos al filtrar el feed, precarga de fotos próximas y corrección de la precarga de mensajes."
 }
