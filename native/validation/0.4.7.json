@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "version": "0.4.7",
-  "recordedAt": "2026-10-09T22:45:50+00:00",
+  "recordedAt": "2026-10-09T22:46:20+00:00",
   "runtimeTesting": {
     "scope": "Logged-out startup on official Android Emulator with ARM64 translation",
     "ciUrl": "https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38000442165",
@@ -66,7 +66,7 @@
         "baselineSha256": "a6704ec701cdd424b3de35ebe3577602d317ee643b0cde239a232b2ccc57ab3b",
         "nativeModelSmoke": {
           "passed": true,
-          "scope": "Actual native end-model allocation, inline row, light/dark rendering, accessibility, recycling and four original selector models with remaining time and credit lock; no logged-in feed"
+          "scope": "Actual native end-model allocation, inline row, light/dark rendering, accessibility, recycling and four original selector models with remaining time and credit lock; no logged-in feed; actual Media, LiveTree dictionaries, User, wrapper, response and parser-context models with synthetic cached fields: cold main-thread head, cursor, cross-page deduplication and complete cache replay; no authenticated HTTP"
         },
         "outcome": "startup_passed"
       },
@@ -121,7 +121,7 @@
         "baselineSha256": "a6704ec701cdd424b3de35ebe3577602d317ee643b0cde239a232b2ccc57ab3b",
         "nativeModelSmoke": {
           "passed": true,
-          "scope": "Actual native end-model allocation, inline row, light/dark rendering, accessibility, recycling and four original selector models with remaining time and credit lock; no logged-in feed"
+          "scope": "Actual native end-model allocation, inline row, light/dark rendering, accessibility, recycling and four original selector models with remaining time and credit lock; no logged-in feed; actual Media, LiveTree dictionaries, User, wrapper, response and parser-context models with synthetic cached fields: cold main-thread head, cursor, cross-page deduplication and complete cache replay; no authenticated HTTP"
         },
         "outcome": "startup_passed"
       },
@@ -177,7 +177,7 @@
         "baselineSha256": "a6704ec701cdd424b3de35ebe3577602d317ee643b0cde239a232b2ccc57ab3b",
         "nativeModelSmoke": {
           "passed": true,
-          "scope": "Actual native end-model allocation, inline row, light/dark rendering, accessibility, recycling and four original selector models with remaining time and credit lock; no logged-in feed"
+          "scope": "Actual native end-model allocation, inline row, light/dark rendering, accessibility, recycling and four original selector models with remaining time and credit lock; no logged-in feed; actual Media, LiveTree dictionaries, User, wrapper, response and parser-context models with synthetic cached fields: cold main-thread head, cursor, cross-page deduplication and complete cache replay; no authenticated HTTP"
         },
         "outcome": "startup_passed"
       }
