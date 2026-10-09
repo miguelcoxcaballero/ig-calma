@@ -24,10 +24,10 @@ final class NativeRelationLookup {
     private static final ScheduledExecutorService DEADLINES = Executors.newSingleThreadScheduledExecutor(runnable -> {
         Thread thread = new Thread(runnable, "CalmaRelationTimeout"); thread.setDaemon(true); return thread;
     });
-    private static final Map<String, Long> PAUSED = new ConcurrentHashMap<>();
+
     private static final Map<String, CompletableFuture<Void>> ACTIVE = new ConcurrentHashMap<>();
     private static final Map<String, Long> ATTEMPTED = new ConcurrentHashMap<>();
-    private static final long RETRY_AFTER_MS = 5 * 60_000L;
+    private static final long RETRY_AFTER_MS = 3_000L;
     private NativeRelationLookup() {}
 
     static CompletableFuture<Void> refresh(Object session, List<String> input) {
@@ -35,7 +35,13 @@ final class NativeRelationLookup {
         if (owner.length() == 0) return CompletableFuture.completedFuture(null);
         List<String> ids = new ArrayList<>(new LinkedHashSet<>(input));
         ids.removeIf(id -> id == null || !id.matches("[0-9]+"));
-        if (ids.size() > 100) ids = new ArrayList<>(ids.subList(0, 100));
+        ids.removeIf(id -> NativeRelations.verified(session, id));
+        if (ids.size() > 100) {
+            List<CompletableFuture<Void>> chunks = new ArrayList<>();
+            for (int start = 0; start < ids.size(); start += 100)
+                chunks.add(refresh(session, new ArrayList<>(ids.subList(start, Math.min(start + 100, ids.size())))));
+            return CompletableFuture.allOf(chunks.toArray(new CompletableFuture<?>[0]));
+        }
         Collections.sort(ids);
         if (ids.isEmpty()) return CompletableFuture.completedFuture(null);
         String key = owner + ':' + String.join(",", ids);
@@ -44,9 +50,11 @@ final class NativeRelationLookup {
             if (pending != null) return pending;
             Long attempted = ATTEMPTED.get(key);
             long now = System.currentTimeMillis();
-            Long paused = PAUSED.get(owner);
-            if (paused != null && now - paused < RETRY_AFTER_MS) return CompletableFuture.completedFuture(null);
-            if (attempted != null && now - attempted < RETRY_AFTER_MS) return CompletableFuture.completedFuture(null);
+            if (attempted != null && now - attempted < RETRY_AFTER_MS) {
+                CompletableFuture<Void> rejected = new CompletableFuture<>();
+                rejected.completeExceptionally(new IllegalStateException("Friendship lookup retry pending"));
+                return rejected;
+            }
             ATTEMPTED.put(key, now);
             CompletableFuture<Void> result = new CompletableFuture<>();
             ACTIVE.put(key, result);
@@ -55,7 +63,7 @@ final class NativeRelationLookup {
             AtomicReference<Object> executing = new AtomicReference<>();
             ScheduledFuture<?> deadline = DEADLINES.schedule(() -> {
                 if (result.completeExceptionally(new TimeoutException("Friendship lookup timed out"))) {
-                    PAUSED.put(owner, System.currentTimeMillis());
+                    ATTEMPTED.put(key, System.currentTimeMillis());
                     Object request = executing.get();
                     if (request != null) try { StockAccess.call(request, "cancel"); } catch (ReflectiveOperationException ignored) {}
                     ACTIVE.remove(key, result);
@@ -71,12 +79,12 @@ final class NativeRelationLookup {
                     executing.set(request);
                     if (result.isDone()) return;
                     StockAccess.call(request, "run");
-                    boolean anyResolved = false;
-                    for (String id : requestIds) if (NativeRelations.resolved(session, id)) { anyResolved = true; break; }
-                    if (!anyResolved) PAUSED.put(owner, System.currentTimeMillis());
+                    for (String id : requestIds) if (!NativeRelations.verified(session, id))
+                        throw new IllegalStateException("Incomplete friendship response");
+                    ATTEMPTED.remove(key);
                     result.complete(null);
                 } catch (ReflectiveOperationException | RuntimeException failure) {
-                    PAUSED.put(owner, System.currentTimeMillis());
+                    ATTEMPTED.put(key, System.currentTimeMillis());
                     result.completeExceptionally(failure);
                 } finally { deadline.cancel(false); ACTIVE.remove(key, result); }
             });
@@ -88,11 +96,11 @@ final class NativeRelationLookup {
         if (ids.isEmpty()) return;
         CompletableFuture<Void> request = refresh(session, ids);
         if (mainThread()) return;
-        try { request.get(2500, TimeUnit.MILLISECONDS); }
+        try { request.get(16, TimeUnit.SECONDS); }
         catch (Exception pendingOrRejected) { /* A later native cache update keeps the verified account data. */ }
     }
 
-    private static boolean mainThread() {
+    static boolean mainThread() {
         try {
             Class<?> looper = Class.forName("android.os.Looper");
             return looper.getMethod("myLooper").invoke(null) == looper.getMethod("getMainLooper").invoke(null);

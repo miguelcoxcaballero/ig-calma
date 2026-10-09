@@ -6,8 +6,8 @@ p = argparse.ArgumentParser(); p.add_argument('apk', type=pathlib.Path); p.add_a
 classpath = str(ROOT/'native/build/tools') + ':' + str(args.morphe)
 with tempfile.TemporaryDirectory(prefix='calma-feed-hooks-') as tmp:
     dex = pathlib.Path(tmp)/'feed.dex'
-    subprocess.run(['java','-Xmx1g','-cp',classpath,'es.calma.tools.DexSubset',str(args.apk),str(dex),'LX/02px;','LX/0ICa;','LX/02qb;'],check=True,stdout=subprocess.DEVNULL)
-    output = subprocess.check_output(['java','-Xmx512m','-cp',classpath,'es.calma.tools.DexInspect',str(dex),'unsafeParseFromJson|A00|A01'],text=True)
+    subprocess.run(['java','-Xmx1g','-cp',classpath,'es.calma.tools.DexSubset',str(args.apk),str(dex),'LX/02px;','LX/0ICa;','LX/02qb;','LX/06gK;'],check=True,stdout=subprocess.DEVNULL)
+    output = subprocess.check_output(['java','-Xmx512m','-cp',classpath,'es.calma.tools.DexInspect',str(dex),'unsafeParseFromJson|A00|A01|bindView'],text=True)
     blocks = re.split(r'(?=^METHOD )', output, flags=re.M)
     feed = next(block for block in blocks if block.startswith('METHOD LX/02px;->unsafeParseFromJson'))
     batch = next(block for block in blocks if block.startswith('METHOD LX/0ICa;->A00'))
@@ -38,4 +38,12 @@ with tempfile.TemporaryDirectory(prefix='calma-feed-hooks-') as tmp:
     assert 'NativeFeed;->parameters(' in params_ins[map_index+1][1], 'Main-feed parameter map bypasses Following selection'
     assert params_ins[map_index+2][1].startswith('move-result-object'), 'Selected map must replace the map register'
     assert params_ins[map_index+3][0] not in params_targets, 'Inbound branch bypasses Following selection'
+    assert 'NativeFeed;->context(' in params_ins[0][1], 'Native request context must be captured at entry'
+    end = next(block for block in blocks if block.startswith('METHOD LX/06gK;->bindView'))
+    end_ins = instructions(end)
+    assert 'NativeFeedEnd;->bind(' in end_ins[0][1]
+    assert end_ins[1][1].startswith('move-result v0')
+    assert end_ins[2][1].startswith('if-eqz v0')
+    assert end_ins[3][1] == 'return-void'
+    assert int(re.search(r'-> @([0-9a-f]+)',end_ins[2][1])[1],16) == end_ins[4][0], 'Non-Calma end rows must run original binder'
     print('Native feed bytecode: response, request and friendship hooks are reached by actual control flow')

@@ -74,8 +74,8 @@ public final class NativeRelations {
         State nativeState = nativeState(user);
         State response = id == null ? null : cached(session, id);
         if (response == null) return nativeState;
-        return new State(nativeState.following == null ? response.following : nativeState.following,
-                nativeState.followedBy == null ? response.followedBy : nativeState.followedBy);
+        return new State(response.following == null ? nativeState.following : response.following,
+                response.followedBy == null ? nativeState.followedBy : response.followedBy);
     }
     private static String id(Object user) {
         try { return (String) StockAccess.call(user, "getId"); }
@@ -89,6 +89,7 @@ public final class NativeRelations {
     }
     static boolean known(Object user, int mode) { return nativeState(user).known(mode); }
     static boolean known(Object session, Object user, int mode) { return state(session, user, id(user)).known(mode); }
+    static boolean verified(Object session, String id) { State value = cached(session, id); return value != null && value.known(2); }
     static boolean resolved(Object session, String id) { return state(session, user(session, id), id).known(2); }
     public static boolean isMutual(Object session, String id) { return permits(state(session, user(session, id), id), 2, false); }
     public static boolean isFollowing(Object session, String id) { return permits(state(session, user(session, id), id), 1, false); }

@@ -48,13 +48,42 @@ val calmaNativeFeed = bytecodePatch(
         check(reads.size == 1) { "Stock feed request map must have one read" }
         // Correlate a response with its requesting account and head/tail request.
         // Insert after finding original instruction offsets, then update the map offset.
-        params.addInstructions(0, "invoke-static/range {p3 .. p4}, $FEED->request(Ljava/lang/Object;Ljava/lang/Object;)V")
+        params.addInstructions(0, "invoke-static/range {p0 .. p5}, $FEED->context(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V")
         val read = reads.single()
         val register = (read.value as TwoRegisterInstruction).registerA
         params.addInstructions(read.index + 2, """
             invoke-static/range {v$register .. v$register}, $FEED->parameters(Ljava/util/Map;)Ljava/util/Map;
             move-result-object v$register
         """.trimIndent())
+        // Reject a changed native transport/codec rather than silently shipping a broken cache.
+        check(mutableClassDefBy("LX/02pp;").methods.any { it.name == "<init>" && it.parameterTypes.size == 25 })
+        check(mutableClassDefBy("LX/02dy;").methods.any { it.name == "A01" && it.parameterTypes.size == 5 && it.returnType == "LX/03Da;" })
+        check(mutableClassDefBy("LX/02pk;").fields.any { it.name == "A0R" && it.type == "LX/02pk;" })
+        check(mutableClassDefBy("LX/0AMQ;").methods.none { it.name == "<init>" })
+        check(mutableClassDefBy("LX/0AMQ;").superclass == "LX/03u8;")
+        check(mutableClassDefBy("LX/03u8;").methods.any { it.name == "<init>" && it.parameterTypes == listOf("Ljava/lang/String;") })
+        val endFactory = mutableClassDefBy("Les/calma/instagram/nativeapp/NativeFeedEnd;").methods.single { it.name == "newModel" }
+        check(endFactory.implementation!!.registerCount >= 2)
+        endFactory.addInstructions(0, """
+            new-instance v0, LX/0AMQ;
+            const-string v1, "XDTEndOfFeedDemarcator"
+            invoke-direct {v0, v1}, LX/03u8;-><init>(Ljava/lang/String;)V
+            return-object v0
+        """.trimIndent())
+        check(mutableClassDefBy("LX/06qT;").methods.any { it.name == "<init>" && it.parameterTypes.map { t -> t.toString() } == listOf("LX/0AMQ;", "LX/04a3;") })
+        check(mutableClassDefBy("Lcom/instagram/feed/media/MediaExtKt;").methods.any { it.name == "A1h" && it.parameterTypes.map { t -> t.toString() } == listOf("Lcom/instagram/feed/media/Media;") && it.returnType == "[B" })
+        check(mutableClassDefBy("LX/04ve;").methods.any { it.name == "A00" && it.parameterTypes.map { t -> t.toString() } == listOf("Lcom/instagram/common/session/UserSession;", "[B") })
+        val endBinder = mutableClassDefBy("LX/06gK;").methods.single { it.name == "bindView" }
+        check(endBinder.parameterTypes.map { it.toString() } == listOf("I", "Landroid/view/View;", "Ljava/lang/Object;", "Ljava/lang/Object;"))
+        val originalBind = endBinder.implementation!!.instructions.first()
+        // v0 is a local before the original body; p2/p3 are the original row and content.
+        check(endBinder.implementation!!.registerCount - 5 >= 1)
+        endBinder.addInstructionsWithLabels(0, """
+            invoke-static/range {p2 .. p3}, Les/calma/instagram/nativeapp/NativeFeedEnd;->bind(Landroid/view/View;Ljava/lang/Object;)Z
+            move-result v0
+            if-eqz v0, :calma_original_end_row
+            return-void
+        """.trimIndent(), ExternalLabel("calma_original_end_row", originalBind))
         val wrapper = mutableClassDefBy("LX/05qw;")
         check(wrapper.methods.any { it.name == "A0A" && it.returnType == "Lcom/instagram/feed/media/Media;" })
         check(wrapper.fields.any { it.name == "A0x" && it.type == "Lcom/instagram/model/reels/netego/Ad4adDictImpl;" })

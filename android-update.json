@@ -1,9 +1,9 @@
 {
-  "version": "0.4.2",
-  "versionCode": 384510830,
+  "version": "0.4.3",
+  "versionCode": 384510831,
   "required": true,
-  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.2/IG-Calma-0.4.2.apk",
-  "apkSha256": "e204620481f53c88c2f6f1413db1475d6853de12c451e13ed2bfde7a68ff8221",
-  "apkSizeBytes": 146244269,
-  "releaseNotes": "Feed solo de amigos, Explorar de cuentas seguidas y búsqueda libre al escribir, sin sugerencias en vacío."
+  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.3/IG-Calma-0.4.3.apk",
+  "apkSha256": "f97029712084d911fe15e17394d66ef1b1fe982f4e2369e5f5cd2a5e32c12539",
+  "apkSizeBytes": 146252461,
+  "releaseNotes": "Timeline de amigos guardado y ordenado, comprobación de amistades corregida y final That's it."
 }

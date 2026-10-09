@@ -14,6 +14,7 @@ public final class NativeFeed {
     private static final Map<String, ChronologyState> CHRONOLOGY = new ConcurrentHashMap<>();
     private static final class Request {
         final boolean head, following;
+        NativeTimeline.Context context;
         Request(boolean head, boolean following) { this.head = head; this.following = following; }
     }
     public static void request(Object session, Object request) {
@@ -28,6 +29,17 @@ public final class NativeFeed {
                         selected != null && "following".equals(selected.get("pagination_source"))));
             }
         } catch (ReflectiveOperationException | RuntimeException missingRequestContext) { /* Cached responses still filter. */ }
+    }
+    public static void context(Object androidContext, Object builder, Object unused, Object session, Object request, Object parameters) {
+        if (NativeTimeline.internal()) return;
+        request(session, request);
+        try {
+            Request tracked = REQUESTS.get(NativeRelations.owner(session) + ':' + StockAccess.get(request, "A0H"));
+            if (tracked != null) tracked.context = new NativeTimeline.Context(androidContext, session, request, parameters);
+        } catch (ReflectiveOperationException | RuntimeException ignored) {}
+    }
+    static final class LoadFailure extends RuntimeException {
+        LoadFailure(Throwable cause) { super("Could not finish the friends timeline", cause); }
     }
     private static final String[] SUGGESTION_FIELDS = {
         "A0N", "A0O", "A0P", "A0Q", "A0R", "A0S", "A0T", "A0U", "A0K", "A0W", "A04", "A0J",
@@ -53,6 +65,7 @@ public final class NativeFeed {
             Object session = StockAccess.get(parser, "A01");
             String owner = NativeRelations.owner(session);
             if (owner.length() == 0) return;
+            if (NativeTimeline.capture(response, owner)) return;
             long now = System.currentTimeMillis() / 1000L;
             // Ads stay disabled in every feed mode, including native/default.
             // These are the stock response's client-insertion controls.
@@ -67,18 +80,34 @@ public final class NativeFeed {
             Request request = responseId == null ? null : REQUESTS.remove(owner + ':' + responseId);
             Object source = StockAccess.get(response, "A0O");
             boolean following = "following".equals(source) || (source == null && request != null && request.following);
+            if (following && request != null && request.head && request.context != null && CalmaConfig.mode() == 2) {
+                try {
+                    NativeTimeline.Snapshot snapshot = NativeTimeline.load(response, request.context, now);
+                    snapshot.apply(response);
+                    NativeFeedEnd.append(response, session);
+                    return;
+                } catch (Exception failure) { throw new LoadFailure(failure); }
+            }
             Object wrappers = StockAccess.get(response, "A0S");
             Object media = StockAccess.get(response, "A0U");
+            List<?> rawWrappers = wrappers instanceof List ? (List<?>) wrappers : java.util.Collections.emptyList();
+            List<?> rawMedia = media instanceof List ? (List<?>) media : java.util.Collections.emptyList();
+            List<String> missing = missing(rawWrappers, rawMedia, session, now);
+            if (!missing.isEmpty()) {
+                NativeRelationLookup.awaitOffMainThread(session, missing);
+                if (!missing(rawWrappers, rawMedia, session, now).isEmpty())
+                    throw new LoadFailure(new IllegalStateException("Friendship data pending"));
+            }
             boolean exhausted = true, sawPosts = false;
             Page wrapperPage = null, mediaPage = null;
             if (wrappers instanceof List) {
-                resolveMissing((List<?>) wrappers, true, session, following);
+
                 wrapperPage = filter((List<?>) wrappers, true, now, following, session);
                 sawPosts |= wrapperPage.sawPosts;
                 if (wrapperPage.sawPosts) exhausted &= wrapperPage.entirePageOlder;
             }
             if (media instanceof List) {
-                resolveMissing((List<?>) media, false, session, following);
+
                 mediaPage = filter((List<?>) media, false, now, following, session);
                 sawPosts |= mediaPage.sawPosts;
                 if (mediaPage.sawPosts) exhausted &= mediaPage.entirePageOlder;
@@ -100,12 +129,25 @@ public final class NativeFeed {
                 StockAccess.set(response, "A0N", null);
             }
         } catch (ReflectiveOperationException | RuntimeException unexpectedStockShape) {
-            // A recognized feed may never expose accounts merely because an optional
-            // native value failed to decode. Keep its pagination available for recovery.
+            // Never let extension errors crash cache parsing on the UI thread, or return
+            // a successful empty page with auto-pagination still switched on.
             try {
-                StockAccess.set(response, "A0S", new ArrayList<>());
-                StockAccess.set(response, "A0U", new ArrayList<>());
-            } catch (ReflectiveOperationException unsupportedResponse) { /* Not a feed. */ }
+                Object session = StockAccess.get(parser, "A01");
+                NativeTimeline.Snapshot previous = NativeTimeline.saved(session);
+                if (previous != null) previous.apply(response);
+                else {
+                    StockAccess.set(response, "A0S", new ArrayList<>());
+                    StockAccess.set(response, "A0U", new ArrayList<>());
+                }
+                NativeTimeline.finish(response);
+                NativeFeedEnd.appendStatus(response, session, false);
+            } catch (ReflectiveOperationException | RuntimeException unsupportedShape) {
+                try {
+                    StockAccess.set(response, "A0S", new ArrayList<>());
+                    StockAccess.set(response, "A0U", new ArrayList<>());
+                    NativeTimeline.finish(response);
+                } catch (ReflectiveOperationException ignored) {}
+            }
         }
     }
 
@@ -114,7 +156,7 @@ public final class NativeFeed {
         final long time;
         DatedItem(Object item, long time) { this.item = item; this.time = time; }
     }
-    private static final class Page {
+    static final class Page {
         final List<Object> items;
         final boolean entirePageOlder, sawPosts, ordered;
         final long newest, oldest;
@@ -123,7 +165,7 @@ public final class NativeFeed {
             this.ordered = ordered; this.newest = newest; this.oldest = oldest;
         }
     }
-    private static Page filter(List<?> original, boolean wrapped, long now, boolean following, Object session)
+    static Page filter(List<?> original, boolean wrapped, long now, boolean following, Object session)
             throws ReflectiveOperationException {
         List<DatedItem> posts = new ArrayList<>(original.size());
         List<Object> controls = new ArrayList<>();
@@ -176,29 +218,48 @@ public final class NativeFeed {
         return new Page(items, sawPost && allOlder && descending, sawPost, descending, newest, oldest);
     }
 
-    private static void resolveMissing(List<?> items, boolean wrapped, Object session, boolean following) {
-        if (CalmaConfig.mode() != 2) return;
+    static List<String> missing(List<?> wrappers, List<?> media, Object session, long now) {
         List<String> ids = new ArrayList<>();
+        if (CalmaConfig.mode() != 2) return ids;
+        collectMissing(wrappers, true, session, now, ids);
+        collectMissing(media, false, session, now, ids);
+        return new ArrayList<>(new java.util.LinkedHashSet<>(ids));
+    }
+    private static void collectMissing(List<?> items, boolean wrapped, Object session, long now, List<String> ids) {
         for (Object item : items) {
             try {
                 if (item == null || (wrapped && NativeAds.feedWrapper(item))) continue;
                 Object media = wrapped ? StockAccess.call(item, "A0A") : item;
                 if (media == null || NativeAds.media(media)) continue;
                 Object dictionary = StockAccess.get(media, "A04");
+                if (!RecentFeedPolicy.withinWindow((Long) StockAccess.call(dictionary, "A6X"), now)) continue;
+                if (CalmaConfig.reels() && "clips".equals(StockAccess.call(dictionary, "A7W"))) continue;
                 Object author = StockAccess.call(dictionary, "A33");
-                if (author != null && !NativeRelations.known(session, author, CalmaConfig.mode())) {
-                    ids.add((String) StockAccess.call(author, "getId"));
+                if (author != null) {
+                    String id = (String) StockAccess.call(author, "getId");
+                    if (id != null && !NativeRelations.verified(session, id)) ids.add(id);
                 }
                 Object collaborators = StockAccess.call(dictionary, "A8F");
-                if (collaborators instanceof List) for (Object collaborator : (List<?>) collaborators) {
-                    if (!NativeRelations.known(session, collaborator, CalmaConfig.mode())) ids.add((String) StockAccess.call(collaborator, "getId"));
-                }
-            } catch (ReflectiveOperationException | RuntimeException missingOptionalAuthor) { /* Process other posts. */ }
+                if (collaborators instanceof List) for (Object collaborator : (List<?>) collaborators)
+                    if (collaborator != null) {
+                        String id = (String) StockAccess.call(collaborator, "getId");
+                        if (id != null && !NativeRelations.verified(session, id)) ids.add(id);
+                    }
+            } catch (ReflectiveOperationException | RuntimeException missingOptionalAuthor) { /* Filter rejects malformed items. */ }
         }
-        NativeRelationLookup.awaitOffMainThread(session, ids);
+    }
+    static boolean oldPage(List<?> wrappers, List<?> media, long now, ChronologyState chronology, boolean head)
+            throws ReflectiveOperationException {
+        Page w = filter(wrappers, true, now, true, null);
+        Page m = filter(media, false, now, true, null);
+        boolean sawPosts = w.sawPosts || m.sawPosts;
+        boolean ordered = chronology.observe(1, head, Math.max(w.newest, m.newest), Math.min(w.oldest, m.oldest), w.ordered && m.ordered);
+        return sawPosts && ordered && (!w.sawPosts || w.entirePageOlder) && (!m.sawPosts || m.entirePageOlder);
     }
 
     private static boolean suggestion(Object wrapper) throws ReflectiveOperationException {
+        try { if (StockAccess.get(wrapper, "A0n") != null || StockAccess.get(wrapper, "A0m") != null) return true; }
+        catch (NoSuchFieldException testModel) {}
         if (CalmaConfig.reels() && StockAccess.get(wrapper, "A03") != null) return true;
         if (CalmaConfig.mode() != 0) {
             for (String field : SUGGESTION_FIELDS) if (StockAccess.get(wrapper, field) != null) return true;

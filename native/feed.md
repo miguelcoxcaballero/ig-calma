@@ -1,55 +1,50 @@
-# Native feed integration
+# Native friends timeline
 
-The code in `src/es/calma/instagram/nativeapp/` and `patches/FeedHooks.kt` is original Calma code. The mappings below were derived from the downloaded stock Instagram 439.0.0.37.89 APK, not from a third-party feature patch. The patch refuses a different version or an unexpected verified model shape.
+Calma's original hooks are mapped against the stock Instagram 439.0.0.37.89 APK. No third-party feature patches are used.
 
-## Following and the 48-hour window
+## Complete snapshot (0.4.3)
 
-`NativeFeed.parameters` selects Instagram's own `following` main-feed source. In the stock DEX, `X.06yP` maps both the `FOLLOWING` and `RECENTS` selections to `following` and `feed_timeline_following`. Instagram still owns authenticated requests, pagination, media caching and RecyclerView rendering.
+The main request selects Instagram's `following` source. Its request ID correlates the response with the actual UserSession and request context. A head response starts a snapshot on its native worker. Continuations use Instagram's own `02dy.A01` authenticated request factory, cloned `02pp` parameters, a fresh request ID and the native pagination reason. They do not extract credentials or call a separate web API.
 
-The default Following mode performs no additional friendship requests and never waits for a lookup. The response's `pagination_source`, or a matched request ID when that field is absent, identifies this native Following source. Explicit native relationship properties are respected when present.
+Calma collects the entire 48-hour interval, starts batched friendship checks alongside pagination, then sorts globally and deduplicates media IDs. The time window is fixed at the start of synchronization. Native controls and stories from the head are retained once; later pages cannot inject another story/control row. Both feed-item and direct-media representations are handled. Ads, suggestions, old posts and hidden Reels are excluded.
 
-Posts use their native `taken_at` value in seconds, retain the inclusive last 48 hours, and are sorted from newest to oldest within each response. Missing dates are excluded rather than invented. Dates more than five minutes ahead of the device clock are excluded. There is no 20-post or 100-post limit. Coauthor relationships are considered and duplicate IDs within a page are removed. Instagram retains its ordinary identity-based handling of repeated media across pages.
+A response is complete only when the server reports no more pages or an entirely old organic page proves the boundary in a continuously chronological stream. Empty pages, advertisements and out-of-order pages do not prove the end. Repeated/missing continuation cursors fail instead of looping. Each continuation has a 20-second deadline and cancellation; a synchronization has a 90-second deadline. There is no fixed post-count limit. Very large or slow timelines can hit that deadline and need a retry.
 
-Native controls keep their original positions relative to retained post slots; sorting does not move a leading story/control row to the end. Known recommendation and cross-app units are removed, while neutral controls, follow requests and take-a-break controls remain. The response disables later client-side insertions in filtered modes.
+Only a complete generation replaces the saved snapshot. The native RecyclerView receives all its rows together and no continuation cursor, so scrolling that snapshot never requests another feed page. Warm head responses reuse it. Pull-to-refresh, the new-post pill, new-follow and explicit content-refresh reasons build a fresh generation. Settings changes invalidate the old generation. The main thread never waits on the account synchronization lock.
 
-Pagination stops only when every nonempty media representation of a native Following page is entirely older than the window and the observed stream remains chronological. An empty filtered page, unknown timestamp, ranked source, disagreement between response representations, or an out-of-order page is insufficient to declare the end. Account and head/tail request metadata isolate chronology tracking. A new native head request starts a fresh chronology.
+The first synchronization needs a connection and may take longer than loading one page. Full metadata loading is not a promise that every photo/video byte is already downloaded: those assets still use Instagram's own media cache. No full-resolution bitmaps are kept by Calma.
 
-Global chronology relies on Instagram's native Following stream. Sorting one response cannot move a late post above posts already rendered from earlier responses. If an out-of-order page is observed, Calma keeps pagination available rather than dropping that late post or claiming that it has reached the time boundary. Server completeness and ordering still need verification with a real account.
+## Friendship correctness and load failures
 
-## Stock mappings
+Every recent eligible author/coauthor with a numeric ID is checked against fresh, account-scoped `friendships/show_many/` results, including users whose native model incorrectly contains an old `false`. The stock `0BnR.A04` request uses cache=false, include_followed_by=true and native-cache notification=true. Its parser hook captures `following` (`0BnY.A0H`) and nullable `followed_by` (`A02`) even without a cached User.
 
-| Stock member | Meaning |
+Fresh verified facts take precedence over stale model fields. Missing fields remain unknown. Requests larger than 100 users are split into complete batches, not truncated. Active duplicate batches share a future. Failed batches have a three-second retry backoff; they do not disable all checks for an account for five minutes. Requests have a 15-second deadline. A snapshot waits for its friendship results before filtering; a slow result no longer permanently discards its posts after 2.5 seconds.
+
+Network failures, unresolved relationships and pagination cycles do not become a successful empty page with more loading enabled. The previous complete timeline is retained when available, pagination is stopped, and an inline native end-row says `No se pudo cargar` / `Desliza hacia abajo para reintentar`. Exceptions cannot escape the extension into UI-thread cache parsing. A failed/incomplete generation never displays `That's it`.
+
+## Local storage and end row
+
+Snapshots are held per account in memory. A private `files/calma-timeline/<account>.snapshot` also stores filtered media metadata with Instagram's original `MediaExtKt.A1h` / `04ve.A00` codec. Atomic replacement and per-record SHA-256 checks prevent a partially written file from replacing a valid cache. No tokens or credentials are stored. Persistent snapshots are reused only within 15 minutes, with matching Reels settings; head controls are taken from the current native response. The disk cache has a 64 MiB metadata budget; exceeding it skips persistence, not posts in the in-memory timeline.
+
+A completed snapshot appends Instagram's own `06qT` end-of-feed model in a `05qw` wrapper. Only the Calma completion ID is drawn with the large `That's it` text and outlined smiley. `06gK.bindView` retains its original path for every other row. The completion is an actual measured feed row, not an overlay. It adapts to the device's light/dark mode and supplies an accessibility label. Recycled rows restore their original native binding path.
+
+## Verified mappings
+
+| Stock member | Purpose |
 | --- | --- |
-| `X.02qb.A01` / request `X.02pp.A0L` | Main-feed parameter map |
-| request `A0H`, `A0G` | Request ID and requested cursor |
-| `X.02px.unsafeParseFromJson` | Main-feed response parser |
-| parser `X.03gD.A01` | Actual requesting `UserSession` |
-| response `X.07do.A0S`, `A0U` | Feed-item and direct-media representations |
-| response `A0O`, `A0P` | Pagination source and response request ID |
-| response `A0a`, `A0W`, `A0N` | More available, auto load more, next cursor |
-| response `A0E`, `A08` | Disable client insertions, suggested users |
-| feed item `X.05qw.A0A()` | Native media accessor after item initialization |
-| `Media.A04` | Native `LiveTreeMediaDict` |
-| media dictionary `A6X()`, `A7W()`, `getId()` | Taken-at seconds, product type, stable media ID |
-| media dictionary `A33()`, `A8F()` | Author and coauthors |
-| `User.A00.C8H()` | Nullable native FriendshipStatus |
-| friendship `C66()`, `C5v()` | Following and followed-by |
-| user dictionary `C5s()`, `A1J()` | Alternative native following status and followed-by |
+| `02qb.A01` parameters 0–5 | Context, builder, native state, UserSession, request, feed dependencies |
+| `02pp.A0H`, `A0G`, `A09`, `A0L` | Request ID, cursor, reason, parameter map |
+| `02dy.A01` | Native continuation request factory |
+| `02px.unsafeParseFromJson` | Native response boundary |
+| `07do.A0S`, `A0U` | Feed wrappers and direct-media lists |
+| `07do.A0a`, `A0W`, `A0N` | More available, automatic load-more, next cursor |
+| `07do.A0O`, `A0P` | Source and request ID |
+| `Media.A04.A6X()`, `A7W()`, `getId()` | Date, product kind, stable ID |
+| `Media.A04.A33()`, `A8F()` | Author and coauthors |
+| `0ICa.A00` / `0BnY` | Account-scoped verified batch friendships |
+| `0AMQ` / `06qT` / `04a3.A0G` | Original end-of-feed model and type |
+| `06gK.bindView` | Original inline end-row binder |
 
-## Automatic mutual checks
+`native/tests/feed.py` covers filtering and snapshot behavior, including late friendship completion, cross-account isolation, global order, duplicates, empty intermediate pages, repeated cursors, failed refresh preservation and main-thread nonblocking. `verify_feed_hooks.py` checks actual signed-DEX branch destinations for the response, request, friendship and end-row hooks. Patcher guards reject changed transport constructors, codec signatures and model shapes.
 
-`NativeRelations` reads the actual account's `UserCache`. Missing properties remain unknown. `NativeRelationLookup` uses the stock `X.0BnR.A04` request for `friendships/show_many/`, requesting `include_followed_by`. It reuses Instagram's authentication and native parser without extracting credentials.
-
-The stock batch parser can leave a user's FriendshipStatus null or have no cached User at all. Calma therefore captures the verified account/user row from `X.0ICa` itself: `X.0BnY.A0H` is following and `A02` is followed-by. This small memory cache is account-scoped and expires after 15 minutes. It never turns an absent followed-by value into a cached negative.
-
-DM callers use `resolveMutual` asynchronously, recheck the result, and resume the original action only after confirmation. Duplicate requests are coalesced. A request has a 15-second deadline and cancellation; failed, incomplete or timed-out attempts pause subsequent account queries for five minutes. The native network request remains outside the UI thread.
-
-The optional mutual-feed mode may wait up to 2.5 seconds off the UI thread for missing metadata. If that request is still unresolved, or a cached feed is parsed on the UI thread, unverified posts remain excluded until the next native feed refresh. Automatic replay of such posts into an already delivered response is not established; guessing a refresh/adapter call could reorder or duplicate content. This is a known limitation of the optional mutual mode, not a false negative stored as relationship data. The default Following feed has no dependency on this lookup.
-
-## Verification
-
-- `python native/tests/feed.py`: 31 regression assertions cover more than 100 recent posts, the exact time boundary, dates, page sorting, duplicates, multiple list representations, request-source fallback, controls, coauthors, account isolation and incomplete friendship facts.
-- `python native/tests/verify_feed_hooks.py APK --morphe TOOL.jar`: disassembles the built APK and checks actual branch destinations for response filtering, Following selection and batch relationship capture.
-- Hook insertion must preserve branch labels. Inserting code *before* a branch-targeted return left the old return as the destination in an initial build. The final patch replaces the original instruction with the hook and adds the original operation afterwards; the bytecode check detects regressions of this failure.
-
-These checks establish policy behavior and patch control flow. They do not replace a signed APK test on a device with a real logged-in Instagram account.
+These checks do not replace testing a logged-in Instagram account on a physical device. First-sync latency, media-cache behavior and native list rendering with real account data remain unmeasured here.

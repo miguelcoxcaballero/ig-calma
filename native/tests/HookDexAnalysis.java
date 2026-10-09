@@ -54,7 +54,8 @@ public final class HookDexAnalysis {
             for (Method method : type.getMethods()) {
                 if (method.getImplementation() == null) continue;
                 if (BLOCKED.equals(type.getType())
-                        || (SETTINGS.equals(type.getType()) && "newSection".equals(method.getName()))) {
+                        || (SETTINGS.equals(type.getType()) && "newSection".equals(method.getName()))
+                        || ((OWN + "NativeFeedEnd;").equals(type.getType()) && "newModel".equals(method.getName()))) {
                     selected.add(method);
                     generatedMethods++;
                 }
@@ -85,7 +86,7 @@ public final class HookDexAnalysis {
         Set<String> expected = Set.of(OWN + "NativeFeed;", OWN + "NativeRelations;",
                 OWN + "NativeDiscover;", OWN + "CalmaReels;", SETTINGS);
         check(helpers.containsAll(expected), "Missing hook families: " + expected + "; found " + helpers);
-        check(generatedMethods == 5, "Missing generated fragment/factory methods: " + generatedMethods);
+        check(generatedMethods == 6, "Missing generated fragment/factory methods: " + generatedMethods);
         // ART-style field layout for dexlib; this does not select an Android device runtime.
         var classPath = new ClassPath(providers, false, 87);
         var failures = new ArrayList<String>();
