@@ -3,9 +3,10 @@ set -euo pipefail
 cd "$(dirname "$0")"
 bt="$PWD/tools/android-15"
 platform="$PWD/tools/android-35/android.jar"
+rm -rf build/classes build/dex
 mkdir -p build/classes build/dex dist
 "$bt/aapt" package -f -M app/AndroidManifest.xml -S app/res -A app/assets -I "$platform" -F build/resources.apk
-java -jar tools/ecj.jar -source 1.8 -target 1.8 -proc:none -classpath "$platform" -d build/classes app/src/es/calma/instagram/MainActivity.java
+java -jar tools/ecj.jar -source 1.8 -target 1.8 -proc:none -classpath "$platform" -d build/classes app/src/es/calma/instagram/*.java
 python3 - <<'PY'
 import pathlib,zipfile
 with zipfile.ZipFile('build/classes.jar','w') as archive:
@@ -23,7 +24,7 @@ PY
 if [ ! -f build/local-signing.p12 ]; then
  keytool -genkeypair -keystore build/local-signing.p12 -storepass localbuild -keypass localbuild -alias calma -keyalg RSA -keysize 2048 -validity 3650 -dname "CN=IG Calma local build" -storetype PKCS12
 fi
-"$bt/apksigner" sign --ks build/local-signing.p12 --ks-pass pass:localbuild --key-pass pass:localbuild --out dist/IG-Calma-0.1.0.apk build/aligned.apk
-"$bt/apksigner" verify --verbose dist/IG-Calma-0.1.0.apk
-"$bt/aapt" dump badging dist/IG-Calma-0.1.0.apk
-sha256sum dist/IG-Calma-0.1.0.apk > dist/SHA256SUMS.txt
+"$bt/apksigner" sign --ks build/local-signing.p12 --ks-pass pass:localbuild --key-pass pass:localbuild --out dist/IG-Calma-0.2.0.apk build/aligned.apk
+"$bt/apksigner" verify --verbose dist/IG-Calma-0.2.0.apk
+"$bt/aapt" dump badging dist/IG-Calma-0.2.0.apk
+(cd dist && sha256sum IG-Calma-0.2.0.apk > SHA256SUMS.txt)

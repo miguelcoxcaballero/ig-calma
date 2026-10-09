@@ -14,6 +14,7 @@ def install(page, html, config):
     page.route('https://www.instagram.com/**', lambda route: route.fulfill(status=200, content_type='text/html', body=html))
     page.goto('https://www.instagram.com/')
     page.evaluate('(config) => window.CALMA_CONFIG=config', config)
+    page.evaluate('(config) => window.__calmaRelations={owner:"1",phase:"ready",following:config.following,friends:config.friends,followingReady:true,friendsReady:true}', config)
     page.evaluate(SCRIPT)
 
 def visible(page, selector):
@@ -46,9 +47,10 @@ with sync_playwright() as p:
     assert visible(page,'#b1') and not visible(page,'#a1'), 'Friends mode must use friends list'
     page.evaluate('window.__calma.destroy()')
     config['friends']=[]
+    page.evaluate('window.__calmaRelations.friends=[]')
     page.evaluate('(config) => window.CALMA_CONFIG=config', config)
     page.evaluate(SCRIPT)
-    assert not visible(page,'#b1') and 'elige tus cuentas' in page.locator('#calma-end').inner_text()
+    assert not visible(page,'#b1') and 'Sin seguimiento mutuo' in page.locator('#calma-end').inner_text()
     page.evaluate('window.__calma.destroy()')
     page.set_content('<main><form><input type="password"><button>Log in</button></form></main>')
     page.evaluate(SCRIPT)
