@@ -17,7 +17,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        api: [30, 33, 34, 35, 36]
+        # These official x86_64 images can execute this ARM64 APK. API 33
+        # lacks ARM64 translation; API 30 also crashes unmodified Instagram
+        # inside its native Lacrima initializer (see validation evidence).
+        api: [34, 35, 36]
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:

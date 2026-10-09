@@ -1,0 +1,58 @@
+{
+  "ciUrl": "https://github.com/miguelcoxcaballero/ig-calma/actions/runs/37981082329",
+  "scope": "Emulator compatibility diagnostics before the final 0.4.1 build; these results are not runtime verification of the release binary.",
+  "reports": [
+    {
+      "api": 30,
+      "abiList": "x86_64,x86,arm64-v8a,armeabi-v7a,armeabi",
+      "stockSha256": "1f20e342cc878225c141c83125ea46773ee8ea9491b8bd0469907de496097c0e",
+      "baselineSha256": "95c512040be4709fb3dc36ddcadf1ec8f69d59aa303711a62057c75cd6c24112",
+      "diagnosticCandidateSha256": "833610bc86864698135b2b59bbd9a227a403bd696575f7bd0e71bb78717decd9",
+      "candidateIsFinalRelease": false,
+      "stock": {
+        "attempted": true,
+        "installed": true,
+        "survived": false,
+        "passed": false
+      },
+      "baseline": {
+        "attempted": true,
+        "installed": true,
+        "survived": false,
+        "passed": false
+      },
+      "candidate": {
+        "attempted": true,
+        "installed": true,
+        "survived": false,
+        "passed": false
+      },
+      "candidateClean": {
+        "attempted": true,
+        "installed": true,
+        "survived": false,
+        "passed": false
+      },
+      "interpretation": "The original Meta-signed Instagram splits, published Calma 0.4.0, and diagnostic candidate all crash with SIGSEGV in Lacrima_startup on this x86_64 emulator. This is not evidence of a Calma-specific crash or of incompatibility on a physical Android 11 ARM64 phone."
+    },
+    {
+      "api": 33,
+      "abiList": "x86_64",
+      "stockSha256": "1f20e342cc878225c141c83125ea46773ee8ea9491b8bd0469907de496097c0e",
+      "baselineSha256": "95c512040be4709fb3dc36ddcadf1ec8f69d59aa303711a62057c75cd6c24112",
+      "diagnosticCandidateSha256": "833610bc86864698135b2b59bbd9a227a403bd696575f7bd0e71bb78717decd9",
+      "candidateIsFinalRelease": false,
+      "environmentError": "Official image does not expose ARM64 translation; native APK test is unsupported",
+      "stock": {
+        "attempted": false
+      },
+      "baseline": {
+        "attempted": false
+      },
+      "candidate": {
+        "attempted": false
+      },
+      "interpretation": "This official x86_64 image does not translate ARM64. No APK was installed or executed; Android 13 physical-device support was not tested."
+    }
+  ]
+}

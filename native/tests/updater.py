@@ -143,6 +143,7 @@ fixtures = {
       public final android.content.Context context;public UpdateAssetClient(android.content.Context value){context=value;}
     }''',
     'com/instagram/mainactivity/InstagramMainActivity.java': 'package com.instagram.mainactivity; public final class InstagramMainActivity extends android.app.Activity {}',
+    'com/instagram/process/asyncinit/IgSplashScreenActivity.java': 'package com.instagram.process.asyncinit; public final class IgSplashScreenActivity extends android.app.Activity {}',
     PACKAGE+'/CalmaConfig.java': 'package es.calma.instagram.nativeapp; public final class CalmaConfig {public static int calls;public static void init(android.content.Context context){calls++;}}',
     PACKAGE+'/CalmaReels.java': 'package es.calma.instagram.nativeapp; public final class CalmaReels {public static int calls;public static void decorate(android.app.Activity value){calls++;}}',
     PACKAGE+'/UpdaterHostTest.java': '''package es.calma.instagram.nativeapp;
@@ -194,10 +195,18 @@ fixtures = {
           provider.context=app;check(provider.onCreate()&&provider.onCreate(),"provider starts successfully");
           check(app.callbacks.size()==1&&app.memory.size()==1,"initialization registers callbacks exactly once");
           Application.ActivityLifecycleCallbacks lifecycle=app.callbacks.get(0);int before=WebView.instances.size();
+          int configBefore=CalmaConfig.calls,reelsBefore=CalmaReels.calls;
+          Activity splash=new com.instagram.process.asyncinit.IgSplashScreenActivity();
+          lifecycle.onActivityResumed(splash);
+          check(WebView.instances.size()==before&&CalmaConfig.calls==configBefore&&CalmaReels.calls==reelsBefore,"async bootstrap does not start Calma work before Instagram initializes its WebView provider");
           lifecycle.onActivityResumed(new es.calma.instagram.UpdateActivity());lifecycle.onActivityResumed(new Activity());
           check(WebView.instances.size()==before,"popup and unrelated Activities do not become checker hosts");
           Activity instagram=new com.instagram.mainactivity.InstagramMainActivity();lifecycle.onActivityResumed(instagram);
           check(WebView.instances.size()==before+1&&CalmaReels.calls==1,"Instagram lifecycle starts checker and native Reel decoration");
+          WebView mainChecker=last();
+          check(mainChecker.loads.size()==1&&mainChecker.loads.get(0).endsWith("quiet=1"),"first real Instagram screen checks for updates immediately after bootstrap");
+          lifecycle.onActivityPaused(splash);lifecycle.onActivityDestroyed(splash);
+          check(!mainChecker.paused&&!mainChecker.closed&&mainChecker.getParent()==instagram.window.decor,"late bootstrap callbacks cannot pause or destroy the real host checker");
           lifecycle.onActivityPaused(instagram);app.memory.get(0).onTrimMemory(40);check(last().closed,"lifecycle forwards background memory pressure");
           lifecycle.onActivityDestroyed(instagram);
           System.out.println("PASS: native startup, focus/pause, Activity transfer, stale callback, cleanup, renderer recovery and provider lifecycle fixtures");

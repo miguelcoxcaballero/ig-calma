@@ -16,6 +16,8 @@ final class NativeLifecycle implements Application.ActivityLifecycleCallbacks, C
     }
 
     @Override public void onActivityResumed(Activity activity) {
+        // This screen can resume while Instagram is still installing its WebView provider.
+        if (activity.getClass().getName().equals("com.instagram.process.asyncinit.IgSplashScreenActivity")) return;
         if (!(activity instanceof UpdateActivity)
                 && activity.getClass().getName().startsWith("com.instagram.")) {
             CalmaConfig.init(activity.getApplicationContext());

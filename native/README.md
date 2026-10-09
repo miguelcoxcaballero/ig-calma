@@ -249,7 +249,23 @@ optimización originales, ligados a checksums e índices que ya no corresponden.
 modificados sobre todos los DEX del APK firmado. Ambas comprobaciones forman
 parte del build y siguen siendo pruebas estáticas.
 
-**No se ha probado este APK en un dispositivo Android ni con una sesión real de
-Instagram.** Compilar y verificar el APK no demuestra que el inicio de sesión,
-la navegación, las notificaciones DM, la fluidez o la instalación de una actualización
-funcionen en un teléfono. Esas comprobaciones siguen requiriendo una prueba real.
+El actualizador omite `IgSplashScreenActivity`: esa pantalla provisional puede
+reanudarse mientras Instagram sigue preparando su proveedor WebView. La primera
+pantalla real inicia la comprobación de Inhouse sin añadir un temporizador.
+
+El workflow `native-startup.yml` instala la APK publicada y actualiza a la candidata
+con la misma firma en emuladores oficiales de Android 14, 15 y 16. Comprueba el
+proceso durante 45 segundos, los errores y la pantalla alcanzada sin iniciar sesión.
+Los informes en `validation/` vinculan cada resultado al SHA-256 del APK probado.
+`record-runtime-check.py` rechaza resultados de otro APK antes de incorporarlos a
+los archivos de verificación de una publicación.
+
+La imagen disponible de Android 13 no traduce ARM64. En la de Android 11, también
+el APK original firmado por Meta se cierra en el inicializador nativo Lacrima;
+se conserva esa comparación en `validation/emulator-compatibility.json`. Esos dos
+entornos no permiten afirmar que la aplicación funcione o falle en un teléfono
+ARM64 de esas versiones.
+
+**No se han probado teléfonos físicos ni una sesión real de Instagram.** Las
+pruebas de arranque sin sesión no verifican la navegación, las notificaciones DM,
+la reproducción, la fluidez ni la instalación desde el popup en un teléfono.

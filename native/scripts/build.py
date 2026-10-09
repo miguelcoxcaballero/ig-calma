@@ -52,7 +52,7 @@ def finalize(apk: Path, build_tools: Path, morphe: Path) -> None:
         'version': version, 'versionCode': version_code, 'required': True,
         'apkUrl': f'https://github.com/miguelcoxcaballero/ig-calma/releases/download/v{version}/{apk.name}',
         'apkSha256': digest(apk), 'apkSizeBytes': apk.stat().st_size,
-        'releaseNotes': 'Corrige el empaquetado de arranque y sincroniza los archivos que usa el cargador de Instagram.',
+        'releaseNotes': 'Corrige el empaquetado de arranque y evita iniciar el actualizador durante la pantalla provisional de Instagram.',
     }
     payload = json.dumps(manifest, indent=2, ensure_ascii=False) + '\n'
     for destination in (ROOT / 'android-update.json', NATIVE / 'android-update.json'):
@@ -62,7 +62,7 @@ def finalize(apk: Path, build_tools: Path, morphe: Path) -> None:
         'calmaVersion': version, 'calmaVersionCode': version_code,
         'stock': stock, 'patchBundleSha256': digest(bundle),
         'extensionSha256': digest(build / 'classes.dex'), 'apkSha256': manifest['apkSha256'],
-        'deviceTesting': 'Not performed: no Android device or Instagram session available',
+        'deviceTesting': 'Physical device and signed-in account not tested. Emulator results, when recorded, appear separately in runtimeTesting.',
     }, indent=2) + '\n')
     print(f'Verified signed APK: {apk}')
     print(f'Update manifest: {NATIVE / "android-update.json"}')
