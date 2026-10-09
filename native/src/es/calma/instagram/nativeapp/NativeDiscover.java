@@ -150,6 +150,7 @@ public final class NativeDiscover {
     private static void resolveAuthors(Object session, List<?> media) {
         LinkedHashSet<String> pending = new LinkedHashSet<>();
         for (Object value : media) try {
+            if (NativeAds.media(value)) continue;
             Object dictionary = StockAccess.get(value, "A04");
             unresolved(StockAccess.call(dictionary, "A33"), session, pending);
             for (Object author : list(StockAccess.call(dictionary, "A8F"))) unresolved(author, session, pending);
@@ -170,6 +171,7 @@ public final class NativeDiscover {
         catch (ReflectiveOperationException | RuntimeException unavailable) { return false; }
     }
     private static boolean permittedMedia(Object media, Object session) throws ReflectiveOperationException {
+        if (NativeAds.media(media)) return false;
         Object dictionary = StockAccess.get(media, "A04");
         if (CalmaConfig.reels() && "clips".equals(StockAccess.call(dictionary, "A7W"))) return false;
         if (permittedUser(StockAccess.call(dictionary, "A33"), session)) return true;
@@ -191,8 +193,9 @@ public final class NativeDiscover {
     private static Object media(Object tile) {
         if (tile == null) return null;
         try {
-            Object media = StockAccess.get(tile, "A08");
-            return media != null ? media : StockAccess.get(tile, "A09");
+            // A09 is the dedicated AD tile payload, even when its advertiser
+            // is followed or its Media has no injected subtree yet.
+            return StockAccess.get(tile, "A08");
         } catch (ReflectiveOperationException | RuntimeException unknownTile) { return null; }
     }
 
@@ -200,9 +203,8 @@ public final class NativeDiscover {
     private static Object cleanTile(Object original, Object media) throws ReflectiveOperationException {
         for (Constructor<?> constructor : type("X.032D").getConstructors()) {
             if (constructor.getParameterTypes().length == 8) {
-                boolean primary = StockAccess.get(original, "A08") != null;
                 Object result = constructor.newInstance(StockAccess.get(original, "A00"), null,
-                        primary ? media : null, primary ? null : media, null, false, false, false);
+                        media, null, null, false, false, false);
                 StockAccess.call(result, "A01");
                 return result;
             }

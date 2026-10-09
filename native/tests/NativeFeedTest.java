@@ -41,13 +41,20 @@ public final class NativeFeedTest {
     }
     public static final class Media {
         public MediaDictionary A04;
+        public boolean sponsored;
         Media(String id, Long timestamp, String kind, User user) { A04 = new MediaDictionary(id, timestamp, kind, user); }
+        public boolean EKS() { return sponsored; }
     }
     public static final class Wrapper {
         public Object A0s, A03, A0N, A0O, A0P, A0Q, A0R, A0S, A0T, A0U, A0K, A0W, A04, A0J;
-        public Object A0L, A0V, A0e, A0d, A0H, A0M, A0j, A0b, A0h, A0Z, A0a, A0c, A0g, A0i, A0Y, A09;
+        public Object A0L, A0V, A0e, A0d, A0H, A0M, A0j, A0b, A0h, A0Z, A0a, A0c, A0g, A0i, A0Y, A09, A0x, A0y;
         Wrapper(Object media) { A0s = media; }
         public Object A0A() { return A0s; }
+    }
+    public static final class Story {
+        final boolean sponsored;
+        Story(boolean sponsored) { this.sponsored = sponsored; }
+        public boolean EKS() { return sponsored; }
     }
     public static final class Request {
         public String A0H = "request", A0G;
@@ -56,6 +63,7 @@ public final class NativeFeedTest {
     public static final class Response {
         public Object A08;
         public Boolean A0E;
+        public Integer A0J = 4;
         public List<Object> A0S;
         public List<Object> A0U;
         public String A0N = "next-page", A0O = "following", A0P = "request";
@@ -94,6 +102,28 @@ public final class NativeFeedTest {
         Response mixed = response(recent, older, newest, newest); apply(mixed);
         check(mixed.A0U.equals(Arrays.asList(newest, recent)), "newest-first ordering, age filtering, deduplication");
         check(mixed.A0a && "next-page".equals(mixed.A0N), "partly filtered page retains native next cursor");
+        Media sponsored = post("followed-ad", now - 5); sponsored.sponsored = true;
+        Media oldSponsored = post("old-ad", now - 900000); oldSponsored.sponsored = true;
+        for (int mode : new int[]{0, 1, 2}) {
+            CalmaConfig.testMode = mode;
+            Response ads = response(sponsored, newest); apply(ads);
+            check(ads.A0U.equals(Arrays.asList(newest)), "sponsored mutual-follow media excluded in mode " + mode);
+            check(Boolean.TRUE.equals(ads.A0E) && Integer.valueOf(0).equals(ads.A0J), "native client ad insertion disabled in mode " + mode);
+        }
+        CalmaConfig.testMode = 1;
+        Response onlyAds = response(oldSponsored); apply(onlyAds);
+        check(onlyAds.A0U.isEmpty() && onlyAds.A0a && onlyAds.A0W && "next-page".equals(onlyAds.A0N), "old ad-only page must not terminate organic pagination");
+        Response interleaved = response(newest, oldSponsored, recent); apply(interleaved);
+        check(interleaved.A0U.equals(Arrays.asList(newest, recent)) && interleaved.A0a, "ad timestamps do not affect organic chronology");
+        Wrapper ad4ad = new Wrapper(null), prebuiltAd = new Wrapper(null);
+        ad4ad.A0x = new Object(); prebuiltAd.A0y = new Object();
+        Response wrappedAds = new Response();
+        Wrapper cleanPost = new Wrapper(newest);
+        wrappedAds.A0S = Arrays.asList(ad4ad, new Wrapper(sponsored), prebuiltAd, cleanPost); apply(wrappedAds);
+        check(wrappedAds.A0S.equals(Arrays.asList(cleanPost)) && wrappedAds.A0a, "promotion cards and prebuilt sponsored wrappers are removed");
+        check(NativeAds.story(new Story(true)), "native ADS_REEL insertion is rejected");
+        check(!NativeAds.story(new Story(false)), "ordinary Story and non-sponsored native modules remain unchanged");
+        check(!NativeAds.story(null) && !NativeAds.story(new Object()), "unexpected optional Story object does not crash the player");
         Response end = response(post("old1", now - 172900), post("old2", now - 173000)); apply(end);
         check(end.A0U.isEmpty() && !end.A0a && !end.A0W && end.A0N == null, "ordered old following page ends 48-hour feed");
         Response ranked = response(older); ranked.A0O = "feed_recs"; apply(ranked);

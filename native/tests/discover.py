@@ -11,7 +11,7 @@ fixtures={
    public final String id; public final Boolean follows; public User(String id,Boolean follows){this.id=id;this.follows=follows;} public String getId(){return id;}
  }''',
  'com/instagram/feed/media/Media.java': '''package com.instagram.feed.media; import com.instagram.user.model.User;
- public final class Media { public final Dictionary A04; public Media(String id,User user,String kind,User... coauthors){ A04=new Dictionary(id,user,kind,java.util.Arrays.asList(coauthors)); }
+ public final class Media { public boolean sponsored; public boolean EKS(){return sponsored;} public final Dictionary A04; public Media(String id,User user,String kind,User... coauthors){ A04=new Dictionary(id,user,kind,java.util.Arrays.asList(coauthors)); }
  public static final class Dictionary { final String id,kind; final User user; final java.util.List<User> coauthors;
    Dictionary(String id,User user,String kind,java.util.List<User> coauthors){this.id=id;this.user=user;this.kind=kind;this.coauthors=coauthors;}
    public User A33(){return user;} public String A7W(){return kind;} public java.util.List<User> A8F(){return coauthors;} public String getId(){return id;}
@@ -79,6 +79,12 @@ fixtures={
      check(NativeRelationLookup.last.contains("77"),"resolves unknown relationships through bounded native lookup");
      Response empty=response(section(new _32B(Arrays.asList(outsider)))); NativeDiscover.explore(empty,parser);
      check(empty.A06.isEmpty() && empty.A09 && "cursor".equals(empty.A03),"empty filtered page is not false exhaustion");
+     Media ad=new Media("followed-ad",followed,"feed");ad.sponsored=true;
+     _32D dedicatedAd=new _32D("AD",null,null,new Media("ad-slot",followed,"feed"),null,false,false,false);
+     Response ads=response(section(new _32B(Arrays.asList(tile(ad),dedicatedAd))));NativeDiscover.explore(ads,parser);
+     check(ads.A06.isEmpty() && ads.A09 && "cursor".equals(ads.A03),"sponsored followed media and dedicated AD slots excluded without ending pagination");
+     Grid adSearch=new Grid();adSearch.A05=new ArrayList<>(Arrays.asList(section(new _32B(Arrays.asList(tile(ad),dedicatedAd)))));NativeDiscover.searchGrid(adSearch,parser);
+     check(adSearch.A05.isEmpty() && adSearch.A06 && "next".equals(adSearch.A02),"search media ad-only page preserves native continuation");
      CalmaConfig.hide=false; Response reel=response(section(new _32B(Arrays.asList(clip)))); NativeDiscover.explore(reel,parser);
      check(tiles(reel).size()==1,"Reels switch controls clips while authors still must be followed"); CalmaConfig.hide=true;
      _C9d good=new _C9d(followed), bad=new _C9d(stranger), pending=new _C9d(unknown); _I7G wrapped=new _I7G(good);
@@ -115,7 +121,7 @@ with tempfile.TemporaryDirectory(prefix='calma-discover-tests-') as temporary:
  work=Path(temporary)
  for name,source in fixtures.items():
   file=work/'src'/name;file.parent.mkdir(parents=True,exist_ok=True);file.write_text(source)
- for name in ('NativeDiscover.java','StockAccess.java'):
+ for name in ('NativeDiscover.java','NativeAds.java','StockAccess.java'):
   (work/'src'/PACKAGE/name).write_text((ROOT/'native/src'/PACKAGE/name).read_text())
  classes=work/'classes';classes.mkdir()
  subprocess.run(['java','-jar',str(ROOT/'tools/ecj.jar'),'-1.8','-proc:none','-d',str(classes),*map(str,(work/'src').rglob('*.java'))],check=True)

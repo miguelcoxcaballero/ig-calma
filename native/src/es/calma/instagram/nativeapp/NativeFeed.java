@@ -54,10 +54,13 @@ public final class NativeFeed {
             String owner = NativeRelations.owner(session);
             if (owner.length() == 0) return;
             long now = System.currentTimeMillis() / 1000L;
+            // Ads stay disabled in every feed mode, including native/default.
+            // These are the stock response's client-insertion controls.
+            StockAccess.set(response, "A0E", Boolean.TRUE);
+            StockAccess.set(response, "A0J", Integer.valueOf(0));
             if (CalmaConfig.mode() != 0) {
                 // Native response keys disable_client_insertions and suggested_users:
                 // prevent a second client-side suggestion source after response filtering.
-                StockAccess.set(response, "A0E", Boolean.TRUE);
                 StockAccess.set(response, "A08", null);
             }
             String responseId = (String) StockAccess.get(response, "A0P");
@@ -130,11 +133,15 @@ public final class NativeFeed {
         long previous = Long.MAX_VALUE, newest = Long.MIN_VALUE, oldest = Long.MAX_VALUE;
         for (Object item : original) {
             if (item == null) continue;
+            if (wrapped && NativeAds.feedWrapper(item)) continue;
             Object media = wrapped ? StockAccess.call(item, "A0A") : item;
             if (media == null) {
                 if (!suggestion(item)) { controls.add(item); controlSlots.add(posts.size()); }
                 continue;
             }
+            // An old sponsored creative says nothing about organic chronology.
+            // Exclude it before observing timestamps or the end of the feed.
+            if (NativeAds.media(media)) continue;
             sawPost = true;
             Object dictionary = StockAccess.get(media, "A04");
             Long time = (Long) StockAccess.call(dictionary, "A6X");
@@ -174,8 +181,9 @@ public final class NativeFeed {
         List<String> ids = new ArrayList<>();
         for (Object item : items) {
             try {
+                if (item == null || (wrapped && NativeAds.feedWrapper(item))) continue;
                 Object media = wrapped ? StockAccess.call(item, "A0A") : item;
-                if (media == null) continue;
+                if (media == null || NativeAds.media(media)) continue;
                 Object dictionary = StockAccess.get(media, "A04");
                 Object author = StockAccess.call(dictionary, "A33");
                 if (author != null && !NativeRelations.known(session, author, CalmaConfig.mode())) {

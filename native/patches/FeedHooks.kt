@@ -26,12 +26,12 @@ val calmaNativeFeed = bytecodePatch(
     dependsOn(calmaExtensionPatch)
     execute {
         val responseClass = mutableClassDefBy("LX/07do;")
-        for ((name, type) in mapOf("A0S" to "Ljava/util/List;", "A0E" to "Ljava/lang/Boolean;", "A08" to "LX/012Y;", "A0U" to "Ljava/util/List;", "A0a" to "Z", "A0W" to "Z", "A0N" to "Ljava/lang/String;", "A0O" to "Ljava/lang/String;", "A0P" to "Ljava/lang/String;")) {
+        for ((name, type) in mapOf("A0S" to "Ljava/util/List;", "A0E" to "Ljava/lang/Boolean;", "A0J" to "Ljava/lang/Integer;", "A08" to "LX/012Y;", "A0U" to "Ljava/util/List;", "A0a" to "Z", "A0W" to "Z", "A0N" to "Ljava/lang/String;", "A0O" to "Ljava/lang/String;", "A0P" to "Ljava/lang/String;")) {
             check(responseClass.fields.any { it.name == name && it.type == type }) { "Stock feed response changed: $name" }
         }
         val parser = mutableClassDefBy("LX/02px;").methods.single { it.name == "unsafeParseFromJson" }
         val text = parser.implementation!!.instructions.mapNotNull { ((it as? ReferenceInstruction)?.reference as? StringReference)?.string }.toSet()
-        check(text.containsAll(listOf("feed_items", "pagination_source", "more_available", "next_max_id")))
+        check(text.containsAll(listOf("feed_items", "pagination_source", "more_available", "next_max_id", "disable_client_insertions", "max_num_possible_ad_insertions")))
         // All return paths are checked. Null responses are deliberately left alone by the extension.
         parser.implementation!!.instructions.withIndex().filter { it.value.opcode == Opcode.RETURN_OBJECT }.toList().reversed().forEach {
             val result = (it.value as OneRegisterInstruction).registerA
@@ -55,7 +55,15 @@ val calmaNativeFeed = bytecodePatch(
             invoke-static/range {v$register .. v$register}, $FEED->parameters(Ljava/util/Map;)Ljava/util/Map;
             move-result-object v$register
         """.trimIndent())
-        check(mutableClassDefBy("LX/05qw;").methods.any { it.name == "A0A" && it.returnType == "Lcom/instagram/feed/media/Media;" })
+        val wrapper = mutableClassDefBy("LX/05qw;")
+        check(wrapper.methods.any { it.name == "A0A" && it.returnType == "Lcom/instagram/feed/media/Media;" })
+        check(wrapper.fields.any { it.name == "A0x" && it.type == "Lcom/instagram/model/reels/netego/Ad4adDictImpl;" })
+        check(wrapper.fields.any { it.name == "A0y" && it.type == "LX/02lY;" })
+        val sponsored = mutableClassDefBy("Lcom/instagram/feed/media/Media;").methods.single { it.name == "EKS" && it.parameterTypes.isEmpty() && it.returnType == "Z" }
+        check(sponsored.implementation!!.instructions.any {
+            val ref = (it as? ReferenceInstruction)?.reference as? MethodReference
+            ref?.definingClass == "LX/05ul;" && ref.name == "A00"
+        }) { "Stock sponsored-media predicate changed" }
         val media = mutableClassDefBy("Lcom/instagram/feed/media/LiveTreeMediaDict;")
         check(media.methods.any { it.name == "A33" && it.returnType == "Lcom/instagram/user/model/User;" })
         check(media.methods.any { it.name == "A6X" && it.returnType == "Ljava/lang/Long;" })

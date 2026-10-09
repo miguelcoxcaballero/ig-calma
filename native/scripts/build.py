@@ -44,7 +44,7 @@ def finalize(apk: Path, build_tools: Path, morphe: Path) -> None:
     assert apk.name == f'IG-Calma-{version}.apk'
     run('python3', NATIVE / 'scripts/verify-apk.py', '--apk', apk,
         '--stock', split_dir / 'base.apk', '--build-tools', build_tools)
-    for check in ('verify_feed_hooks.py', 'reels_dex.py', 'discover_dex.py', 'hook_dex_analysis.py'):
+    for check in ('verify_feed_hooks.py', 'reels_dex.py', 'discover_dex.py', 'ads_dex.py', 'hook_dex_analysis.py'):
         run('python3', NATIVE / 'tests' / check, apk, '--morphe', morphe)
     run('python3', NATIVE / 'tests/updater.py', '--apk', apk)
     manifest = {
@@ -52,7 +52,7 @@ def finalize(apk: Path, build_tools: Path, morphe: Path) -> None:
         'version': version, 'versionCode': version_code, 'required': True,
         'apkUrl': f'https://github.com/miguelcoxcaballero/ig-calma/releases/download/v{version}/{apk.name}',
         'apkSha256': digest(apk), 'apkSizeBytes': apk.stat().st_size,
-        'releaseNotes': 'Corrige el empaquetado de arranque y evita iniciar el actualizador durante la pantalla provisional de Instagram.',
+        'releaseNotes': 'Corrige el empaquetado y el inicio del actualizador; bloquea anuncios en el feed, Explorar e historias.',
     }
     payload = json.dumps(manifest, indent=2, ensure_ascii=False) + '\n'
     for destination in (ROOT / 'android-update.json', NATIVE / 'android-update.json'):

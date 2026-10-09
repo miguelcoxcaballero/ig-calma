@@ -32,6 +32,7 @@ val calmaNativeDiscover = bytecodePatch(
         fields("LX/024Z;", mapOf("A01" to "LX/032B;", "A00" to "LX/031Y;", "A02" to "LX/02P5;"))
         fields("LX/032B;", mapOf("A0C" to "Ljava/util/List;", "A0D" to "Ljava/util/List;", "A0E" to "Ljava/util/List;", "A0F" to "Ljava/util/List;", "A09" to "LX/024Z;"))
         fields("LX/032D;", mapOf("A08" to "Lcom/instagram/feed/media/Media;", "A09" to "Lcom/instagram/feed/media/Media;", "A00" to "LX/031N;"))
+        check("AD" in mutableClassDefBy("LX/031N;").methods.single { it.name == "<clinit>" }.discoverStrings())
         check(mutableClassDefBy("LX/032B;").methods.any { it.name == "<init>" && it.parameterTypes == listOf("Ljava/util/List;") })
         check(mutableClassDefBy("LX/031Y;").methods.any { it.name == "<init>" && it.parameterTypes == listOf("Ljava/lang/Boolean;", "Ljava/lang/Double;", "Ljava/lang/Integer;", "Ljava/lang/Integer;") })
         check(mutableClassDefBy("LX/024Z;").methods.any { it.name == "<init>" && it.parameterTypes == listOf("LX/031Y;", "LX/032B;", "LX/02P5;") })
