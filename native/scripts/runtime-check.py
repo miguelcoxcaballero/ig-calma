@@ -4,6 +4,8 @@
 Transport metadata in native/runtime-input/transport.json contains sourceCommit,
 version, apkSizeBytes, apkSha256 and parts [{name, bytes, sha256}]. No credentials,
 signing keys, releases or update-channel manifests are modified by this check.
+Optional stock-transport.json carries the original APKM with the same hash/size
+and part fields, checked against stock.lock.json before installing its signed splits.
 """
 from __future__ import annotations
 
@@ -19,6 +21,7 @@ import time
 import traceback
 import urllib.request
 import xml.etree.ElementTree as ET
+import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = 'es.calma.instagram'
@@ -73,15 +76,60 @@ def candidate_apk(work: Path) -> tuple[Path, dict]:
     return apk, metadata
 
 
+def stock_apks(work: Path) -> tuple[list[Path], dict] | None:
+    """Optional unmodified, original-signature control for emulator compatibility."""
+    source = ROOT / 'native/runtime-input'
+    path = source / 'stock-transport.json'
+    if not path.is_file():
+        return None
+    metadata = json.loads(path.read_text())
+    lock = json.loads((ROOT / 'native/stock.lock.json').read_text())
+    if metadata['apkSha256'] != lock['apkmSha256']:
+        raise RuntimeError('Stock transport does not match the pinned original APKM')
+    apkm = work / 'instagram-stock.apkm'
+    parts = metadata['parts']
+    if not parts or len(parts) > 20:
+        raise RuntimeError('Unexpected stock transport part count')
+    with apkm.open('wb') as output:
+        for index, part in enumerate(parts):
+            if part['name'] != f'instagram-stock.apkm.part{index:03d}':
+                raise RuntimeError('Stock transport part name/order differs')
+            chunk = source / part['name']
+            if chunk.stat().st_size != part['bytes'] or sha(chunk) != part['sha256']:
+                raise RuntimeError('Corrupt stock transport part: ' + part['name'])
+            with chunk.open('rb') as stream:
+                shutil.copyfileobj(stream, output)
+    if apkm.stat().st_size != metadata['apkSizeBytes'] or sha(apkm) != lock['apkmSha256']:
+        raise RuntimeError('Reconstructed stock APKM hash/size differs')
+    names = ['base.apk', 'split_config.xxhdpi.apk']
+    if set(lock['splits']) != set(names):
+        raise RuntimeError('The pinned stock split set changed')
+    splits = []
+    destination = work / 'stock-splits'
+    destination.mkdir(exist_ok=True)
+    with zipfile.ZipFile(apkm) as archive:
+        for name in names:
+            if archive.namelist().count(name) != 1:
+                raise RuntimeError('Missing or duplicate stock split: ' + name)
+            split = destination / name
+            with archive.open(name) as stream, split.open('wb') as output:
+                shutil.copyfileobj(stream, output)
+            if sha(split) != lock['splits'][name]:
+                raise RuntimeError('Original stock split hash differs: ' + name)
+            splits.append(split)
+    return splits, lock
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--api', type=int, choices=[30, 36], required=True)
+    parser.add_argument('--api', type=int, choices=[30, 33, 34, 35, 36], required=True)
     args = parser.parse_args()
     evidence = ROOT / 'native/build/runtime-evidence'
     evidence.mkdir(parents=True, exist_ok=True)
     work = ROOT / 'native/build/runtime-apks'
     work.mkdir(parents=True, exist_ok=True)
-    report = {'api': args.api, 'baseline': {'attempted': False}, 'candidate': {'attempted': False}}
+    report = {'api': args.api, 'stock': {'attempted': False},
+              'baseline': {'attempted': False}, 'candidate': {'attempted': False}}
     emulator = None
     emulator_log = None
     adb = None
@@ -115,20 +163,22 @@ def main() -> int:
         except subprocess.TimeoutExpired as error:
             (directory / f'{name}-ui-dump.txt').write_text(str(error))
 
-    def launch(apk: Path, label: str, updating: bool) -> dict:
+    def launch(apk: Path | list[Path], label: str, updating: bool, package: str = PACKAGE) -> dict:
         directory = evidence / label
         directory.mkdir(exist_ok=True)
-        result = {'attempted': True, 'updatingExistingInstall': updating, 'samples': []}
+        result = {'attempted': True, 'package': package, 'updatingExistingInstall': updating, 'samples': []}
         try:
-            device('shell', 'am', 'force-stop', PACKAGE)
+            device('shell', 'am', 'force-stop', package)
             device('logcat', '-b', 'all', '-c')
-            installation = device('install', '--no-incremental', '-r', str(apk), timeout=90)
+            installation = (device('install-multiple', '--no-incremental', '-r', *map(str, apk), timeout=90)
+                            if isinstance(apk, list)
+                            else device('install', '--no-incremental', '-r', str(apk), timeout=90))
             save_result(directory / 'install.txt', installation)
             result['installed'] = installation.returncode == 0 and 'Success' in installation.stdout
             if not result['installed']:
                 return result
             resolved = device('shell', 'cmd', 'package', 'resolve-activity', '--brief',
-                              '-a', 'android.intent.action.MAIN', '-c', 'android.intent.category.LAUNCHER', PACKAGE)
+                              '-a', 'android.intent.action.MAIN', '-c', 'android.intent.category.LAUNCHER', package)
             save_result(directory / 'resolve-activity.txt', resolved)
             components = [line.strip() for line in resolved.stdout.splitlines()
                           if re.fullmatch(r'[A-Za-z0-9_.$]+/[A-Za-z0-9_.$]+', line.strip())]
@@ -144,7 +194,7 @@ def main() -> int:
                 remaining = elapsed - (time.monotonic() - started)
                 if remaining > 0:
                     time.sleep(remaining)
-                pid = device('shell', 'pidof', PACKAGE, timeout=10)
+                pid = device('shell', 'pidof', package, timeout=10)
                 result['samples'].append({'seconds': round(time.monotonic() - started, 1),
                                           'pids': pid.stdout.strip(), 'alive': pid.returncode == 0 and bool(pid.stdout.strip())})
             snapshot(directory, 'after-launch')
@@ -154,10 +204,11 @@ def main() -> int:
                     node.get('text', '') or node.get('content-desc', '')
                     for node in ET.parse(ui).iter('node')
                     if node.get('text') or node.get('content-desc')))
-            final_pid = device('shell', 'pidof', PACKAGE, timeout=10)
+            final_pid = device('shell', 'pidof', package, timeout=10)
             result['finalPid'] = final_pid.stdout.strip()
-            result['survived'] = bool(result['finalPid']) and all(sample['alive'] for sample in result['samples'])
-            save_result(directory / 'package.txt', device('shell', 'dumpsys', 'package', PACKAGE))
+            result['survived'] = bool(result['finalPid']) and all(
+                sample['alive'] and sample['pids'] == result['finalPid'] for sample in result['samples'])
+            save_result(directory / 'package.txt', device('shell', 'dumpsys', 'package', package))
         except Exception as error:
             result['error'] = str(error)
             (directory / 'error.txt').write_text(traceback.format_exc())
@@ -167,18 +218,25 @@ def main() -> int:
             try:
                 logs = device('logcat', '-b', 'all', '-d', '-v', 'threadtime', timeout=30)
                 save_result(directory / 'logcat.txt', logs)
+                package_pattern = re.escape(package)
                 result['appCrashLogged'] = bool(re.search(
-                    r'Process: es\.calma\.instagram(?:[,\s:]|$)|>>> es\.calma\.instagram(?:\s|:)|'
-                    r'am_crash.*es\.calma\.instagram|ANR in es\.calma\.instagram(?:\s|:|$)', logs.stdout))
+                    rf'Process: {package_pattern}(?:[,\s:]|$)|>>> {package_pattern}(?:\s|:)|'
+                    rf'am_crash.*{package_pattern}|ANR in {package_pattern}(?:\s|:|$)', logs.stdout))
                 fatal_lines = [line for line in logs.stdout.splitlines()
                                if re.search(r'FATAL EXCEPTION|Fatal signal|Abort message|am_crash|ANR in', line)]
                 (directory / 'fatal-lines.txt').write_text('\n'.join(fatal_lines))
                 lines = logs.stdout.splitlines()
                 excerpts = []
                 for index, line in enumerate(lines):
-                    if 'FATAL EXCEPTION' in line or 'Abort message:' in line:
+                    if 'FATAL EXCEPTION' in line or 'Abort message:' in line or 'ANR in ' + package in line:
                         excerpts.extend(lines[max(0, index - 2):index + 45])
                 result['crashExcerpt'] = '\n'.join(excerpts)[-18000:]
+                # Native signals do not necessarily include an AndroidRuntime
+                # exception or an abort message. Keep the dedicated crash buffer.
+                result['crashBuffer'] = device('logcat', '-b', 'crash', '-d', '-v', 'threadtime', timeout=30).stdout[-50000:]
+                result['appErrors'] = '\n'.join(line for line in lines
+                    if re.search(r' [EW] ', line) and re.search(
+                        rf'ACRA|AndroidRuntime|{package_pattern}|ClassNotFound|VerifyError|NoSuch|Exception|SoLoader|DexLibLoader|dextricks', line))[-25000:]
             except Exception as error:
                 result['logcatError'] = str(error)
             result['passed'] = bool(result.get('installed') and result.get('launchAccepted')
@@ -190,6 +248,9 @@ def main() -> int:
     try:
         candidate, transport = candidate_apk(work)
         report['candidateTransport'] = transport
+        stock = stock_apks(work)
+        if stock is not None:
+            report['stockSha256'] = stock[1]['apkmSha256']
         baseline = work / 'IG-Calma-0.4.0.apk'
         with urllib.request.urlopen(BASELINE_URL, timeout=60) as response, baseline.open('wb') as output:
             shutil.copyfileobj(response, output)
@@ -218,6 +279,19 @@ def main() -> int:
             if 'Signer #1 certificate SHA-256 digest: ' + SIGNER_SHA not in verified.stdout:
                 raise RuntimeError('Unexpected APK signing certificate: ' + label)
             save_result(evidence / f'{label}-badging.txt', run([build_tools / 'aapt', 'dump', 'badging', apk]))
+        if stock is not None:
+            stock_signer = stock[1]['signerSha256']['24-32' if args.api <= 32 else '33+']
+            for split in stock[0]:
+                verified = run([build_tools / 'apksigner', 'verify', '--verbose', '--print-certs',
+                                '--min-sdk-version', str(args.api), '--max-sdk-version', str(args.api), split])
+                save_result(evidence / f'stock-{split.stem}-signature.txt', verified)
+                require(verified, 'Original stock signature: ' + split.name)
+                # Rotated v3.1 signers use a minSdkVersion/maxSdkVersion label,
+                # while the older signer is printed as "Signer #1".
+                if 'certificate SHA-256 digest: ' + stock_signer not in verified.stdout:
+                    raise RuntimeError('Original stock certificate differs: ' + split.name)
+                save_result(evidence / f'stock-{split.stem}-badging.txt',
+                            run([build_tools / 'aapt', 'dump', 'badging', split]))
         name = f'calma-api-{args.api}'
         # New command-line tools and emulator releases can otherwise choose
         # different XDG/default directories for the same generated AVD.
@@ -260,11 +334,20 @@ def main() -> int:
             raise RuntimeError('Official image does not expose ARM64 translation; native APK test is unsupported')
         device('shell', 'input', 'keyevent', '82')
         device('shell', 'wm', 'dismiss-keyguard')
+        if stock is not None:
+            report['stock'] = launch(stock[0], 'stock-original', updating=False,
+                                     package=stock[1]['package'])
+            device('shell', 'am', 'force-stop', stock[1]['package'])
         report['baseline'] = launch(baseline, 'baseline-0.4.0', updating=False)
         # Always try the candidate, including when baseline startup or installation fails.
         device('shell', 'am', 'force-stop', PACKAGE)
         report['candidate'] = launch(candidate, 'candidate-0.4.1',
                                      updating=bool(report['baseline'].get('installed')))
+        if not report['candidate'].get('passed'):
+            # This is an empty test device. Distinguish a failed upgrade from a
+            # failure that also happens on a fresh install, without changing users' data.
+            require(device('uninstall', PACKAGE), 'Remove failed test installation')
+            report['candidateClean'] = launch(candidate, 'candidate-clean-0.4.1', updating=False)
         return 0 if report['candidate'].get('passed') else 1
     except Exception as error:
         report['environmentError'] = str(error)
