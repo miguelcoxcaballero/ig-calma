@@ -26,3 +26,8 @@ with concurrent.futures.ThreadPoolExecutor() as pool:
         print('Descargado:', name)
 for name in ['aapt', 'aapt2', 'd8', 'zipalign', 'apksigner']:
     (ROOT / 'android-15' / name).chmod(0o755)
+
+import urllib.request,zipfile
+archive=ROOT / "androidx-core.aar"
+urllib.request.urlretrieve("https://dl.google.com/dl/android/maven2/androidx/core/core/1.13.1/core-1.13.1.aar",archive)
+with zipfile.ZipFile(archive) as z:(ROOT/"androidx-core.jar").write_bytes(z.read("classes.jar"))

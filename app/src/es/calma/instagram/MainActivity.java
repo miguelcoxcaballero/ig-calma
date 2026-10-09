@@ -17,6 +17,8 @@ import java.io.*;
 
 public class MainActivity extends Activity {
     private WebView web;
+    private WebView updateChecker;
+    private boolean updateOffered=false;
     private FrameLayout root;
     private SharedPreferences prefs;
     private String filters, relations, settingsPage, appearance, reelGate;
@@ -131,6 +133,7 @@ public class MainActivity extends Activity {
         String current=web.getUrl();
         if(current==null || !trusted(Uri.parse(current)) || !settingsPath(Uri.parse(current).getPath()))return true;
         String action=uri.getQueryParameter("calma_action");
+        if("update".equals(action)){startActivity(new Intent(this,UpdateActivity.class));return true;}
         if("new_session".equals(action)) { web.loadUrl("https://www.instagram.com/"); return true; }
         if(!"save".equals(action) && !"permissions".equals(action))return true;
         try {
@@ -175,9 +178,23 @@ public class MainActivity extends Activity {
         try {
             JSONObject config=new JSONObject(); config.put("mode",prefs.getInt("mode",1)); config.put("limit",prefs.getInt("limit",20)); config.put("reels",prefs.getBoolean("reels",true)); config.put("owner",owner()); config.put("dmMirror",prefs.getBoolean("dm_mirror",false)); config.put("allowedReelPath",allowedReelPath);
             config.put("notificationsEnabled",((NotificationManager)getSystemService(NOTIFICATION_SERVICE)).areNotificationsEnabled()); config.put("listenerEnabled",listenerEnabled());
-            web.evaluateJavascript("window.CALMA_APPEARANCE={dark:"+systemDark()+",reduceMotion:"+reduceMotion()+"};\n"+appearance+"\nwindow.CALMA_CONFIG="+config+";\n"+relations+"\n"+reelGate+"\n"+filters+"\n"+settingsPage,value -> web.setAlpha(1f));
+            web.evaluateJavascript("window.CALMA_APPEARANCE={dark:"+systemDark()+",reduceMotion:"+reduceMotion()+"};\n"+appearance+"\nwindow.CALMA_CONFIG="+config+";\n"+relations+"\n"+reelGate+"\n"+filters+"\n"+settingsPage,value -> {web.setAlpha(1f);if(updateChecker==null)handler.postDelayed(() -> startUpdateChecks(),12000);});
         }catch(JSONException e){toast("No se pudo aplicar la configuración");}
     }
+    private void startUpdateChecks(){
+        if(isFinishing() || isDestroyed() || updateChecker!=null)return;
+        updateChecker=new WebView(this);
+        updateChecker.getSettings().setJavaScriptEnabled(true);updateChecker.getSettings().setDomStorageEnabled(true);
+        updateChecker.getSettings().setAllowFileAccess(false);updateChecker.getSettings().setAllowContentAccess(false);
+        updateChecker.getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        updateChecker.getSettings().setUserAgentString(updateChecker.getSettings().getUserAgentString()+" InhouseReadApp/0.3.2");
+        updateChecker.addJavascriptInterface(new UpdateCheckBridge(),"InhouseNative");
+        updateChecker.addJavascriptInterface(new UpdateOfferBridge(),"InhouseUpdateHost");
+        updateChecker.setWebViewClient(new UpdateAssetClient(this));
+        updateChecker.loadUrl("https://appassets.androidplatform.net/updates/index.html?inhouse_app=1&quiet=1");
+    }
+    public class UpdateCheckBridge {@JavascriptInterface public String getAppVersion(){return "0.3.2";}}
+    public class UpdateOfferBridge {@JavascriptInterface public void offer(){runOnUiThread(() -> {if(!updateOffered && !isFinishing() && hasWindowFocus()){updateOffered=true;startActivity(new Intent(MainActivity.this,UpdateActivity.class));}});}}
     private String read(String name)throws IOException {
         try(InputStream in=getAssets().open(name);ByteArrayOutputStream out=new ByteArrayOutputStream()) {
             byte[] buffer=new byte[8192]; int n;while((n=in.read(buffer))!=-1)out.write(buffer,0,n);return out.toString("UTF-8");
@@ -197,5 +214,5 @@ public class MainActivity extends Activity {
             handler.removeCallbacks(identityWatcher);handler.post(identityWatcher);
         }
     }
-    @Override protected void onDestroy() { handler.removeCallbacksAndMessages(null);if(web!=null)web.destroy();super.onDestroy(); }
+    @Override protected void onDestroy() { handler.removeCallbacksAndMessages(null);if(updateChecker!=null){updateChecker.removeJavascriptInterface("InhouseNative");updateChecker.removeJavascriptInterface("InhouseUpdateHost");updateChecker.destroy();}if(web!=null)web.destroy();super.onDestroy(); }
 }
