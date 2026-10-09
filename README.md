@@ -1,8 +1,8 @@
-# Instagram Calma 0.2.1 — experimental
+# Instagram Calma 0.3.1 — experimental
 
 Cliente Android independiente basado en **Instagram web**, con detección automática de seguidos, amigos por seguimiento mutuo, feed finito y bloqueo de Reels. No es una modificación del APK oficial ni está afiliado a Meta. Requiere Android 8 o posterior y Android System WebView actualizado.
 
-**[Descargar APK 0.2.1](https://github.com/miguelcoxcaballero/ig-calma/raw/refs/heads/main/downloads/IG-Calma-0.2.1.apk)** · [Archivos y SHA-256](downloads/)
+**[Descargar APK 0.3.1](https://github.com/miguelcoxcaballero/ig-calma/raw/refs/heads/main/downloads/IG-Calma-0.3.1.apk)** · [Archivos y SHA-256](downloads/)
 
 ## Instalación y uso
 
@@ -11,6 +11,16 @@ Cliente Android independiente basado en **Instagram web**, con detección autom�
 3. En los ajustes de Instagram web, entra en **Editar perfil → Ajustes adicionales** para elegir «Solo cuentas que sigo», «Solo amigos (seguimiento mutuo)» o «Todas las cuentas», desactivar Reels y fijar entre 1 y 100 publicaciones por sesión.
 4. Se conserva la interfaz de Instagram web, sin la barra verde ni el panel de estado anterior. Los controles adicionales se insertan en el contenido de la página de ajustes, sin botones flotantes, barras ni superposiciones. La apariencia y funciones siguen siendo las de la web, no las de la app nativa.
 5. «Inicio / Nueva sesión» empieza otra tanda. Guardar ajustes, recargar o abrir un nuevo documento también reinician el límite; no es un límite diario ni un historial permanente de publicaciones vistas.
+
+## Tema, movimiento y carga
+
+El modo claro/oscuro sigue la configuración del dispositivo. Cambia el fondo de la ventana, las barras del sistema y la paleta de Instagram web y de los controles adicionales. Se actualiza sin recargar la página al cambiar `uiMode`; volver a la app también actualiza el tema. No se invierten fotos ni vídeos.
+
+Se añaden transiciones de navegación de 170 ms y respuesta táctil a botones y enlaces, sin superposiciones. Se respetan las animaciones desactivadas en Android y `prefers-reduced-motion`. Se ocultan las barras de desplazamiento de WebView. La apariencia y el motor siguen siendo web; no se reproduce la app nativa.
+
+Los filtros se instalan al estar disponible el primer documento visible, antes del evento de carga completa. WebView se mantiene con el fondo del tema hasta terminar esa instalación. Las cuentas seguidas verificadas pueden mostrarse desde la primera página de resultados; la sincronización completa continúa y solo se guardan cachés completas. Esto reduce la espera del filtrado, pero no acelera los servidores o la conexión de Instagram.
+
+El inicio mantiene oculto el contenido no aprobado mediante CSS antes de clasificarlo. La protección se activa de forma síncrona al navegar a Inicio dentro de la web. Con Reels desactivados, los vídeos del feed se ocultan incluso si llegan después de una foto. Para evitar clips que la web no identifica como Reel, se ocultan también publicaciones del inicio que contengan vídeos, no solo las etiquetadas como Reels.
 
 ## Ubicación de los controles
 
@@ -40,10 +50,16 @@ Si una consulta se rechaza, se informa en los ajustes y no se reintenta automát
 
 La integración depende de que Android permita el servicio y de que la app oficial reciba el aviso. Dispositivos con restricciones de notificaciones o perfiles de trabajo pueden impedirlo. Los filtros de feed y Reels afectan solo a Instagram Calma.
 
+## Reels compartidos por amigos
+
+Con «Desactivar Reels» activado, se pueden abrir enlaces a un Reel concreto desde un hilo de DM (`/direct/t/`) cuando la app puede verificar al remitente o identificar una conversación individual con una cuenta de seguimiento mutuo. La lista de amigos debe haberse sincronizado. Si el remitente o el contexto son ambiguos, se bloquea la apertura; no se presume que sea un amigo. Esto puede limitar los grupos o mensajes cuyo marcado no permite reconocer al autor.
+
+La autorización es de un solo uso y caduca en 30 segundos. El visor queda limitado al identificador de ese Reel: se bloquean desplazamiento táctil, rueda y teclas de paginación, se pausan otros vídeos cargados y no se autoriza abrir el Reel siguiente. Los controles de reproducción permanecen disponibles. Volver a los DM permite abrir otro enlace compartido verificado. La identificación del vídeo inicial y los controles dependen de la estructura web de Instagram.
+
 ## Otros límites
 
 - El filtro de cuentas se aplica al **inicio**, donde también se ocultan historias y paneles de descubrimiento. Perfiles, mensajes y búsqueda siguen accesibles; no se filtran todas las pantallas.
-- Reels: se bloquean rutas `/reel/` y `/reels/` y publicaciones reconocidas por enlaces o etiquetas. Cambios del marcado pueden impedir la detección. No se eliminan todos los vídeos normales.
+- Reels: se bloquean rutas `/reel/` y `/reels/` y publicaciones reconocidas por enlaces o etiquetas. Cambios del marcado pueden impedir la detección. Para evitar fotogramas de clips no identificados, también se ocultan las publicaciones con vídeo en el feed de inicio cuando este bloqueo está activo; los DM verificados tienen la excepción descrita arriba.
 - Los filtros dependen de los elementos y enlaces de la web. Durante cargas o cambios de pantalla podría aparecer contenido brevemente. Instagram podría seguir solicitando contenido en segundo plano aunque el feed esté cortado.
 - Instagram puede bloquear el acceso desde WebView. Se bloquean enlaces externos, incluido el acceso mediante Facebook. No se implementan carga de archivos, cámara ni micrófono.
 - El nombre de instalación es Instagram Calma; el icono incorpora cámara y pausa. Los ajustes identifican el cliente como independiente. No se presenta como una aplicación oficial.
@@ -51,9 +67,9 @@ La integración depende de que Android permita el servicio y de que la app ofici
 
 ## Verificación realizada
 
-APK para API 35, mínimo 26, versión de paquete 3. Firma v2/v3 verificada; mismo certificado que 0.1.0. Permisos: Internet y mostrar notificaciones. El servicio está protegido por `BIND_NOTIFICATION_LISTENER_SERVICE` y requiere activación del usuario.
+APK para API 35, mínimo 26, versión de paquete 5. Firma v2/v3 verificada; mismo certificado que 0.1.0. Permisos: Internet y mostrar notificaciones. El servicio está protegido por `BIND_NOTIFICATION_LISTENER_SERVICE` y requiere activación del usuario.
 
-Pruebas de integración en la página de ajustes: se conserva el formulario original, controles en el flujo del documento sin superposición, guardado mediante navegación validada, sustitución dinámica del panel y ausencia de controles sobre inicio, DM y acceso. Pruebas en Chromium con respuestas simuladas: paginación, intersección por identificadores, integración con filtros, separación por cuenta, reinicio de sesión al cambiar de cuenta, cierre de sesión, caché, detención ante limitación de consultas y rechazo de listas mutuas incompletas. Pruebas de filtros: autores desconocidos, Reels, límite, carga dinámica, navegación y acceso. Pruebas de clasificación de avisos: DM, exclusión de actividad general, otras apps y avisos de la propia app.
+Pruebas de tema y movimiento: cambio claro/oscuro en el mismo documento, colores heredados por los controles, conservación de campos y fotos, respuesta táctil, transiciones y movimiento reducido, ausencia de superposiciones y de bucles de cambios del tema. Pruebas de Reels: enlaces de DM accesibles, amigos mutuos verificados, rechazo de cuentas no mutuas, un único vídeo, bloqueo de desplazamiento, ocultación inmediata de fotogramas al volver a Inicio y de vídeos añadidos tarde a una publicación ya aprobada. Prueba de carga: las primeras cuentas seguidas están disponibles antes de terminar la paginación. Pruebas de integración en la página de ajustes: se conserva el formulario original, controles en el flujo del documento sin superposición, guardado mediante navegación validada, sustitución dinámica del panel y ausencia de controles sobre inicio, DM y acceso. Pruebas en Chromium con respuestas simuladas: paginación, intersección por identificadores, integración con filtros, separación por cuenta, reinicio de sesión al cambiar de cuenta, cierre de sesión, caché, detención ante limitación de consultas y rechazo de listas mutuas incompletas. Pruebas de filtros: autores desconocidos, Reels, límite, carga dinámica, navegación y acceso. Pruebas de clasificación de avisos: DM, exclusión de actividad general, otras apps y avisos de la propia app.
 
 **No se ha instalado el APK en Android ni probado con una cuenta real. La sincronización y la entrega real de avisos necesitan esa validación; las pruebas simuladas no garantizan que los endpoints internos sigan disponibles.**
 
@@ -66,7 +82,7 @@ python3 setup-tools.py
 bash build.sh
 ```
 
-Salida: `dist/IG-Calma-0.2.1.apk`. Conserva `build/local-signing.p12` para firmar actualizaciones con la misma clave. Su contraseña `localbuild` es solo para compilación local, no una credencial de Instagram. La clave no se incluye en el repositorio.
+Salida: `dist/IG-Calma-0.3.1.apk`. Conserva `build/local-signing.p12` para firmar actualizaciones con la misma clave. Su contraseña `localbuild` es solo para compilación local, no una credencial de Instagram. La clave no se incluye en el repositorio.
 
 Con Playwright para Python y Chromium en `/usr/bin/chromium`:
 
@@ -74,6 +90,8 @@ Con Playwright para Python y Chromium en `/usr/bin/chromium`:
 python3 tests/filters.py
 python3 tests/relations.py
 python3 tests/settings.py
+python3 tests/appearance.py
+python3 tests/reels.py
 mkdir -p build/rules-test
 java -jar tools/ecj.jar -source 1.8 -target 1.8 -proc:none -d build/rules-test app/src/es/calma/instagram/DmRules.java tests/DmRulesTest.java
 java -cp build/rules-test DmRulesTest

@@ -4,6 +4,7 @@ import android.app.*;
 import android.os.*;
 import android.content.*;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.net.Uri;
 import android.provider.Settings;
@@ -16,8 +17,10 @@ import java.io.*;
 
 public class MainActivity extends Activity {
     private WebView web;
+    private FrameLayout root;
     private SharedPreferences prefs;
-    private String filters, relations, settingsPage;
+    private String filters, relations, settingsPage, appearance, reelGate;
+    private String allowedReelPath="";
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable identityWatcher = new Runnable() {
         @Override public void run() {
@@ -29,15 +32,12 @@ public class MainActivity extends Activity {
     };
 
     @Override public void onCreate(Bundle saved) {
+        setTheme(getResources().getIdentifier("AppTheme","style",getPackageName()));
         super.onCreate(saved);
         prefs = getSharedPreferences("calma", MODE_PRIVATE);
-        try { filters = read("filter.js"); relations = read("relations.js"); settingsPage = read("settings.js"); }
+        try { filters = read("filter.js"); relations = read("relations.js"); settingsPage = read("settings.js"); appearance = read("appearance.js"); reelGate = read("reel-gate.js"); }
         catch (IOException e) { throw new IllegalStateException(e); }
-        getWindow().setStatusBarColor(Color.WHITE);
-        getWindow().setNavigationBarColor(Color.WHITE);
-        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
-        FrameLayout root = new FrameLayout(this);
-        root.setBackgroundColor(Color.WHITE);
+        root = new FrameLayout(this);
         root.setOnApplyWindowInsetsListener((v, insets) -> {
             if (Build.VERSION.SDK_INT >= 30) {
                 android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
@@ -46,11 +46,15 @@ public class MainActivity extends Activity {
             return insets;
         });
         web = new WebView(this);
+        web.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        web.setVerticalScrollBarEnabled(false); web.setHorizontalScrollBarEnabled(false);
         root.addView(web, new FrameLayout.LayoutParams(-1, -1));
         WebSettings ws=web.getSettings(); ws.setJavaScriptEnabled(true); ws.setDomStorageEnabled(true);
         ws.setAllowFileAccess(false); ws.setAllowContentAccess(false);
         ws.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         ws.setMediaPlaybackRequiresUserGesture(true); ws.setSupportMultipleWindows(false);
+        if(Build.VERSION.SDK_INT>=29)ws.setForceDark(WebSettings.FORCE_DARK_OFF);
+        if(Build.VERSION.SDK_INT>=33)ws.setAlgorithmicDarkeningAllowed(false);
         ws.setUserAgentString("Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36");
         CookieManager.getInstance().setAcceptCookie(true); CookieManager.getInstance().setAcceptThirdPartyCookies(web,false);
         web.setWebViewClient(new WebViewClient() {
@@ -58,21 +62,55 @@ public class MainActivity extends Activity {
                 Uri uri=request.getUrl();
                 if(request.isForMainFrame() && handleSettingsAction(uri))return true;
                 if(!trusted(uri)) { toast("Abre este enlace externo desde tu navegador."); return true; }
-                if(prefs.getBoolean("reels",true) && reelPath(uri.getPath())) { toast("Reels desactivados"); return true; }
+                if(prefs.getBoolean("reels",true) && reelPath(uri.getPath())) {
+                    String target=normalizeReel(uri.getPath()); String current=web.getUrl();
+                    if(current!=null && target.equals(allowedReelPath) && reelPath(Uri.parse(current).getPath()))return false;
+                    web.evaluateJavascript("!!(window.__calmaReelGate && window.__calmaReelGate.consume("+JSONObject.quote(target)+"))",value -> {
+                        if("true".equals(value)) { allowedReelPath=target; web.loadUrl(uri.toString()); }
+                        else toast("Solo se permiten Reels enviados por amigos con seguimiento mutuo desde los DM.");
+                    });
+                    return true;
+                }
                 return false;
             }
-            @Override public void onPageFinished(WebView v,String url) { inject(); }
+            @Override public void onPageStarted(WebView v,String url,android.graphics.Bitmap favicon) {
+                applySystemTheme(false); if(!reelPath(Uri.parse(url).getPath()))allowedReelPath="";
+                web.setAlpha(0f);
+            }
+            @Override public void onPageCommitVisible(WebView v,String url) { inject(); }
+            @Override public void onPageFinished(WebView v,String url) {
+                web.evaluateJavascript("!!window.__calma",value -> { if(!"true".equals(value))inject();else web.setAlpha(1f); });
+            }
             @Override public void onReceivedError(WebView v,WebResourceRequest r,WebResourceError e) {
-                if(r.isForMainFrame())toast("No se pudo cargar Instagram. Comprueba tu conexión y vuelve a abrir la app.");
+                if(r.isForMainFrame()){web.setAlpha(1f);toast("No se pudo cargar Instagram. Comprueba tu conexión y vuelve a abrir la app.");}
             }
         });
-        web.setWebChromeClient(new WebChromeClient()); setContentView(root);
+        web.setWebChromeClient(new WebChromeClient()); setContentView(root); applySystemTheme(false);
         openInitial();
+    }
+    private boolean systemDark() { return (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)==Configuration.UI_MODE_NIGHT_YES; }
+    private boolean reduceMotion() { return Settings.Global.getFloat(getContentResolver(),Settings.Global.ANIMATOR_DURATION_SCALE,1f)==0f; }
+    private void applySystemTheme(boolean updatePage) {
+        boolean dark=systemDark(); int bg=dark?Color.BLACK:Color.WHITE;
+        getTheme().applyStyle(getResources().getIdentifier("AppTheme","style",getPackageName()),true);
+        getWindow().setStatusBarColor(bg); getWindow().setNavigationBarColor(bg);
+        getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(bg));
+        int flags=getWindow().getDecorView().getSystemUiVisibility();
+        int light=View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+        getWindow().getDecorView().setSystemUiVisibility(dark?flags & ~light:flags | light);
+        if(root!=null)root.setBackgroundColor(bg); if(web!=null)web.setBackgroundColor(bg);
+        if(updatePage)injectAppearance();
+    }
+    @Override public void onConfigurationChanged(Configuration configuration) { super.onConfigurationChanged(configuration); applySystemTheme(true); }
+    private void injectAppearance() {
+        if(web==null || web.getUrl()==null || !trusted(Uri.parse(web.getUrl())))return;
+        web.evaluateJavascript("window.CALMA_APPEARANCE={dark:"+systemDark()+",reduceMotion:"+reduceMotion()+"};\n"+appearance,null);
     }
     private void openInitial() { web.loadUrl(getIntent().getBooleanExtra("open_dm",false)?"https://www.instagram.com/direct/inbox/":"https://www.instagram.com/"); }
     @Override protected void onNewIntent(Intent intent) { super.onNewIntent(intent); setIntent(intent); if(intent.getBooleanExtra("open_dm",false))web.loadUrl("https://www.instagram.com/direct/inbox/"); }
     private boolean trusted(Uri uri) { String host=uri.getHost(); return "https".equalsIgnoreCase(uri.getScheme()) && host!=null && (host.equals("instagram.com") || host.endsWith(".instagram.com")); }
     private boolean reelPath(String path) { return path!=null && path.matches("^/reels?(/.*)?$"); }
+    private String normalizeReel(String path) { return path==null?"":path.endsWith("/")?path:path+"/"; }
     private String owner() {
         String cookies=CookieManager.getInstance().getCookie("https://www.instagram.com/");
         String found=""; boolean session=false;
@@ -135,9 +173,9 @@ public class MainActivity extends Activity {
     private void inject() {
         if(web.getUrl()==null || !trusted(Uri.parse(web.getUrl())))return;
         try {
-            JSONObject config=new JSONObject(); config.put("mode",prefs.getInt("mode",1)); config.put("limit",prefs.getInt("limit",20)); config.put("reels",prefs.getBoolean("reels",true)); config.put("owner",owner()); config.put("dmMirror",prefs.getBoolean("dm_mirror",false));
+            JSONObject config=new JSONObject(); config.put("mode",prefs.getInt("mode",1)); config.put("limit",prefs.getInt("limit",20)); config.put("reels",prefs.getBoolean("reels",true)); config.put("owner",owner()); config.put("dmMirror",prefs.getBoolean("dm_mirror",false)); config.put("allowedReelPath",allowedReelPath);
             config.put("notificationsEnabled",((NotificationManager)getSystemService(NOTIFICATION_SERVICE)).areNotificationsEnabled()); config.put("listenerEnabled",listenerEnabled());
-            web.evaluateJavascript("window.CALMA_CONFIG="+config+";\n"+relations+"\n"+filters+"\n"+settingsPage,null);
+            web.evaluateJavascript("window.CALMA_APPEARANCE={dark:"+systemDark()+",reduceMotion:"+reduceMotion()+"};\n"+appearance+"\nwindow.CALMA_CONFIG="+config+";\n"+relations+"\n"+reelGate+"\n"+filters+"\n"+settingsPage,value -> web.setAlpha(1f));
         }catch(JSONException e){toast("No se pudo aplicar la configuración");}
     }
     private String read(String name)throws IOException {
@@ -148,6 +186,16 @@ public class MainActivity extends Activity {
     private void toast(String message) { Toast.makeText(this,message,Toast.LENGTH_LONG).show(); }
     @Override public void onBackPressed() { if(web.canGoBack())web.goBack();else super.onBackPressed(); }
     @Override protected void onPause() { handler.removeCallbacks(identityWatcher);super.onPause();web.onPause();CookieManager.getInstance().flush(); }
-    @Override protected void onResume() { super.onResume();if(web!=null){web.onResume();if(web.getUrl()!=null && settingsPath(Uri.parse(web.getUrl()).getPath()))inject();handler.removeCallbacks(identityWatcher);handler.post(identityWatcher);} }
+    @Override protected void onResume() {
+        super.onResume();
+        if(web!=null) {
+            web.onResume();applySystemTheme(true);
+            if(web.getUrl()!=null && trusted(Uri.parse(web.getUrl())) && settingsPath(Uri.parse(web.getUrl()).getPath())) {
+                boolean notices=((NotificationManager)getSystemService(NOTIFICATION_SERVICE)).areNotificationsEnabled();
+                web.evaluateJavascript("if(window.CALMA_CONFIG){window.CALMA_CONFIG.notificationsEnabled="+notices+";window.CALMA_CONFIG.listenerEnabled="+listenerEnabled()+";}if(window.__calmaSettings)window.__calmaSettings.updateStatus();",null);
+            }
+            handler.removeCallbacks(identityWatcher);handler.post(identityWatcher);
+        }
+    }
     @Override protected void onDestroy() { handler.removeCallbacksAndMessages(null);if(web!=null)web.destroy();super.onDestroy(); }
 }

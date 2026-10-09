@@ -25,7 +25,7 @@
       return data;
     } finally { clearTimeout(timeout); }
   }
-  async function list(kind, token) {
+  async function list(kind, token, onPage) {
     const users = new Map(), cursors = new Set();
     let cursor = '';
     for (let page = 0; page < 100; page++) {
@@ -34,6 +34,7 @@
       const data = await request(url, token);
       if (!Array.isArray(data.users) || !data.users.every(validUser)) throw new Error('unexpected_response');
       data.users.forEach(user => users.set(String(user.pk), user.username.toLowerCase()));
+      if(onPage && generation===token.generation)onPage(users);
       const next = data.next_max_id == null ? '' : String(data.next_max_id);
       if (!next) {
         if (data.big_list === true && data.users.length === 100) throw new Error('incomplete_list');
@@ -53,7 +54,10 @@
     const token = {owner, generation, controller: new AbortController()};
     active = token; state.phase = 'syncing'; state.error = ''; notify();
     try {
-      const following = await list('following', token);
+      const hadFollowing = state.followingReady;
+      const following = await list('following', token, users => {
+        if(!hadFollowing) { state.following=[...users.values()]; state.followingReady=true; notify(); }
+      });
       if (generation !== token.generation) return;
       state.following = [...following.values()]; state.followingReady = true;
       // A fresh following snapshot invalidates the old mutual snapshot until both finish.

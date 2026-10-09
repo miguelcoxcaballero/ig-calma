@@ -35,6 +35,8 @@ with sync_playwright() as p:
     page.evaluate('window.CALMA_CONFIG={owner:"1",mode:2,reels:true,limit:20}')
     page.evaluate(SCRIPT)
     page.evaluate(FILTER)
+    page.wait_for_function('window.__calmaRelations.followingReady')
+    assert page.evaluate('window.__calmaRelations.phase')=='syncing', 'Following should become available before all pagination/followers finish'
     page.wait_for_function('window.__calmaRelations.phase==="ready"')
     state=page.evaluate('window.__calmaRelations')
     assert state['following']==['alice','charlie'] and state['friends']==['alice']

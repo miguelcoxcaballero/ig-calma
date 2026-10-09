@@ -12,6 +12,13 @@
   css.id = 'calma-style';
   css.textContent = '.calma-hidden,.calma-extra{display:none!important}#calma-end{display:block!important;box-sizing:border-box;margin:24px auto;padding:24px 20px;width:min(92%,480px);border:1px solid #dbdbdb;border-radius:8px;background:Canvas;color:CanvasText;text-align:center;font:14px/1.6 system-ui,sans-serif}#calma-end strong{display:block;font-size:18px}';
   (document.head || document.documentElement).appendChild(css);
+  css.textContent += 'html[data-calma-home="true"] main,html[data-calma-home="true"] [role="main"],html[data-calma-home="true"] video{visibility:hidden!important}html[data-calma-home="true"] article.calma-approved,html[data-calma-home="true"] article.calma-approved video,html[data-calma-home="true"] #calma-end{visibility:visible!important}';
+  css.textContent += 'html[data-calma-home="true"][data-calma-reels="true"] video,html[data-calma-home="true"][data-calma-reels="true"] article.calma-approved video{visibility:hidden!important}html[data-calma-home="true"][data-calma-reels="true"] a[href*="/reel/"]{display:none!important}';
+  function routeGuard() { const id=window.__calmaRelations?window.__calmaRelations.owner:config.owner;document.documentElement.dataset.calmaHome = location.pathname === '/' && !!id && !document.querySelector('input[type="password"]') ? 'true' : 'false';document.documentElement.dataset.calmaReels=String(!!config.reels); }
+  const originalPush = history.pushState, originalReplace = history.replaceState;
+  function push(...args) { const result=originalPush.apply(history,args); routeGuard(); scan(); return result; }
+  function replace(...args) { const result=originalReplace.apply(history,args); routeGuard(); scan(); return result; }
+  history.pushState=push;history.replaceState=replace;
   const marker = document.createElement('div'); marker.id = 'calma-end'; marker.setAttribute('role', 'status');
   function path(link) { try { const url = new URL(link.getAttribute('href'), location.href); return /(^|\.)instagram\.com$/.test(url.hostname) ? url.pathname : ''; } catch (_) { return ''; } }
   function reelPath(p) { return /^\/reels?(\/|$)/.test(p); }
@@ -40,6 +47,7 @@
     if (dead || running) return;
     running = true;
     try {
+      routeGuard();
       const relations = window.__calmaRelations || {};
       if (lastOwner !== relations.owner) { accepted.clear(); lastOwner = relations.owner; }
       allow = new Set(config.mode === 1 ? relations.following || [] : relations.friends || []);
@@ -49,9 +57,9 @@
         marker.remove();
       }
       if (config.reels) {
-        if (reelPath(location.pathname)) { location.replace('https://www.instagram.com/'); return; }
+        if (reelPath(location.pathname) && !(window.__calmaReelGate && window.__calmaReelGate.locked())) { location.replace('https://www.instagram.com'+(config.allowedReelPath||'/')); return; }
         document.querySelectorAll('a[href]').forEach(a => {
-          if (reelPath(path(a))) a.classList.add('calma-hidden');
+          if (reelPath(path(a)) && !location.pathname.startsWith('/direct/')) a.classList.add('calma-hidden');
         });
       }
       // Account allowlists apply only to the home feed, never to login forms or messages.
@@ -70,13 +78,14 @@
       for (const article of articles) {
         const info = postInfo(article);
         const ready = config.mode === 1 ? relations.followingReady : relations.friendsReady;
-        const eligible = info && (!config.reels || !info.reel) && (config.mode === 0 || (ready && info.author && allow.has(info.author)));
+        const eligible = info && (!config.reels || (!info.reel && !article.querySelector('video'))) && (config.mode === 0 || (ready && info.author && allow.has(info.author)));
         let show = false;
         if (eligible) {
           if (accepted.has(info.id)) show = true;
           else if (accepted.size < config.limit) { accepted.add(info.id); show = true; }
         }
         article.classList.toggle('calma-hidden', !show);
+        article.classList.toggle('calma-approved', show);
         if (!show) article.querySelectorAll('video').forEach(video => { video.pause(); video.removeAttribute('autoplay'); });
         else visible.push(article);
       }
@@ -95,7 +104,7 @@
     const subtitle = document.createElement('span');
     const relations = window.__calmaRelations || {};
     const ready = config.mode === 1 ? relations.followingReady : relations.friendsReady;
-    if (config.mode !== 0 && !ready) {
+    if (config.mode !== 0 && (!ready || (!allow.size && relations.phase === 'syncing'))) {
       title.textContent = relations.phase === 'error' ? 'No se pudo sincronizar' : 'Sincronizando tu cuenta';
       subtitle.textContent = relations.error || (relations.owner ? 'Consultando seguidos y seguidores para filtrar tu feed.' : 'Inicia sesión para detectar automáticamente a quién sigues.');
     } else if (config.mode !== 0 && !allow.size) {
@@ -112,16 +121,16 @@
   }
   function clickBlock(event) {
     const anchor = event.target.closest && event.target.closest('a[href]');
-    if (config.reels && anchor && reelPath(path(anchor))) { event.preventDefault(); event.stopImmediatePropagation(); }
+    if (config.reels && anchor && reelPath(path(anchor)) && !location.pathname.startsWith('/direct/')) { event.preventDefault(); event.stopImmediatePropagation(); }
   }
   function pauseReel(event) {
     if (!config.reels || !(event.target instanceof HTMLVideoElement)) return;
-    if (reelPath(location.pathname) || event.target.closest('.calma-hidden,.calma-extra')) event.target.pause();
+    if ((reelPath(location.pathname) && !(window.__calmaReelGate && window.__calmaReelGate.locked())) || event.target.closest('.calma-hidden,.calma-extra') || (location.pathname==='/' && !event.target.closest('.calma-approved'))) event.target.pause();
   }
   // Observe structure only: own class changes must not cause an observer loop.
   const observer = new MutationObserver(records => {
     if (records.every(record => record.target === marker || marker.contains(record.target))) return;
-    clearTimeout(timer); timer = setTimeout(scan, 120);
+    cancelAnimationFrame(timer); timer = requestAnimationFrame(scan);
   });
   observer.observe(document.documentElement, {childList: true, subtree: true});
   document.addEventListener('click', clickBlock, true);
@@ -130,10 +139,14 @@
   const interval = setInterval(scan, 1600);
   window.__calma = {
     destroy() {
-      dead = true; observer.disconnect(); clearTimeout(timer); clearInterval(interval);
+      dead = true; observer.disconnect(); cancelAnimationFrame(timer); clearInterval(interval);
       document.removeEventListener('click', clickBlock, true); document.removeEventListener('play', pauseReel, true);
       document.removeEventListener('calma-relations', scan);
       css.remove(); marker.remove();
+      if(history.pushState===push)history.pushState=originalPush;if(history.replaceState===replace)history.replaceState=originalReplace;
+      delete document.documentElement.dataset.calmaHome;
+      delete document.documentElement.dataset.calmaReels;
+      document.querySelectorAll('.calma-approved').forEach(el=>el.classList.remove('calma-approved'));
       document.querySelectorAll('.calma-hidden,.calma-extra').forEach(el => el.classList.remove('calma-hidden', 'calma-extra'));
       delete window.__calma;
     },
