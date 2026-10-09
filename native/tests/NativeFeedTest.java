@@ -90,7 +90,7 @@ public final class NativeFeedTest {
 
         Media pendingAuthor = new Media("pending-following", now - 20, "feed", new User(null, null));
         Response missingSource = response(pendingAuthor); missingSource.A0O = null;
-        NativeFeed.request(new Session(), new Request()); apply(missingSource);
+        NativeFeed.request(new Session(), new Request()); NativeFeed.response(missingSource, new Parser());
         check(missingSource.A0U.contains(pendingAuthor), "known native following request covers an absent response source without extra lookups");
         check(!NativeRelations.permitted(null, 1, true), "missing author is not assumed to be a followed account");
         List<Object> many = new ArrayList<>();
@@ -175,6 +175,16 @@ public final class NativeFeedTest {
         Status unfollowed = new Status(false, true);
         NativeRelations.beginStatus(session, "200", unfollowed); NativeRelations.endStatus(unfollowed);
         check(!NativeRelations.isMutual(session, "200"), "new verified unfollow overrides older mutual result");
+        CalmaConfig.testMode = 0;
+        Media algorithmReel = new Media("algorithm-reel", now - 10, "clips", new User(false, false));
+        Media algorithmOld = new Media("algorithm-old", now - 300000, "feed", new User(false, false));
+        Response algorithm = response(algorithmOld, sponsored, algorithmReel, newest);
+        algorithm.A0O = "feed_recs";
+        apply(algorithm);
+        check(algorithm.A0U.equals(Arrays.asList(algorithmOld, algorithmReel, newest)), "For you keeps algorithm order, old posts, unknown accounts and Reels while removing ads");
+        check(algorithm.A0a && algorithm.A0N != null, "stock algorithm pagination remains available");
+        Response favorites = response(algorithmOld, algorithmReel); favorites.A0O = "favorites"; apply(favorites);
+        check(favorites.A0U.equals(Arrays.asList(algorithmOld, algorithmReel)), "Favorites does not inherit the friends window or Reels filter");
         System.out.println("Native feed: " + checks + " assertions passed");
     }
 }

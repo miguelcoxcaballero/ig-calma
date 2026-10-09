@@ -146,6 +146,7 @@ fixtures = {
     'com/instagram/process/asyncinit/IgSplashScreenActivity.java': 'package com.instagram.process.asyncinit; public final class IgSplashScreenActivity extends android.app.Activity {}',
     PACKAGE+'/CalmaConfig.java': 'package es.calma.instagram.nativeapp; public final class CalmaConfig {public static int calls;public static void init(android.content.Context context){calls++;}}',
     PACKAGE+'/CalmaReels.java': 'package es.calma.instagram.nativeapp; public final class CalmaReels {public static int calls;public static void decorate(android.app.Activity value){calls++;}}',
+    PACKAGE+'/NativeFeedBudget.java': 'package es.calma.instagram.nativeapp; public final class NativeFeedBudget {public static void init(){} public static void resumed(android.app.Activity a){} public static void paused(android.app.Activity a){}}',
     PACKAGE+'/UpdaterHostTest.java': '''package es.calma.instagram.nativeapp;
       import android.app.*;import android.content.*;import android.os.Handler;import android.webkit.*;
       public final class UpdaterHostTest {

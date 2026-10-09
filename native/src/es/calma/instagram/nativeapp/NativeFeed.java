@@ -14,6 +14,8 @@ public final class NativeFeed {
     private static final Map<String, ChronologyState> CHRONOLOGY = new ConcurrentHashMap<>();
     private static final class Request {
         final boolean head, following;
+        final int mode = CalmaConfig.mode();
+        final long epoch = CalmaConfig.sessionId();
         NativeTimeline.Context context;
         Request(boolean head, boolean following) { this.head = head; this.following = following; }
     }
@@ -49,6 +51,16 @@ public final class NativeFeed {
 
     /** Called only for the stock main-feed request's parameter map. */
     public static Map<?, ?> parameters(Map<?, ?> original) {
+        if ("BLENDED_FOR_YOU".equals(CalmaConfig.feed()) && !NativeTimeline.internal()) {
+            Object source = original == null ? null : original.get("pagination_source");
+            if ("following".equals(source) || "favorites".equals(source)) {
+                Map<Object,Object> result = new HashMap<>(original); result.put("pagination_source", "feed_recs"); return result;
+            }
+        }
+        if ("FAVORITES".equals(CalmaConfig.feed()) && !NativeTimeline.internal()) {
+            Map<Object, Object> result = original == null ? new HashMap<>() : new HashMap<>(original);
+            result.put("pagination_source", "favorites"); return result;
+        }
         if (CalmaConfig.mode() == 0) return original;
         Object source = original == null ? null : original.get("pagination_source");
         // Respect other explicitly selected native feeds (for example Favorites).
@@ -67,6 +79,9 @@ public final class NativeFeed {
             if (owner.length() == 0) return;
             if (NativeTimeline.capture(response, owner)) return;
             long now = System.currentTimeMillis() / 1000L;
+            String responseId = (String) StockAccess.get(response, "A0P");
+            Request request = responseId == null ? null : REQUESTS.remove(owner + ':' + responseId);
+            if (request != null) CalmaConfig.scope(request.mode);
             // Ads stay disabled in every feed mode, including native/default.
             // These are the stock response's client-insertion controls.
             StockAccess.set(response, "A0E", Boolean.TRUE);
@@ -76,11 +91,16 @@ public final class NativeFeed {
                 // prevent a second client-side suggestion source after response filtering.
                 StockAccess.set(response, "A08", null);
             }
-            String responseId = (String) StockAccess.get(response, "A0P");
-            Request request = responseId == null ? null : REQUESTS.remove(owner + ':' + responseId);
+            if (request != null && request.epoch != CalmaConfig.sessionId()) {
+                StockAccess.set(response, "A0S", new ArrayList<>()); StockAccess.set(response, "A0U", new ArrayList<>());
+                NativeTimeline.finish(response); return;
+            }
+            if (CalmaConfig.mode() == 0) {
+                adsOnly(response, "A0S", true); adsOnly(response, "A0U", false); return;
+            }
             Object source = StockAccess.get(response, "A0O");
             boolean following = "following".equals(source) || (source == null && request != null && request.following);
-            if (following && request != null && request.head && request.context != null && CalmaConfig.mode() == 2) {
+            if (following && request != null && request.head && request.context != null && CalmaConfig.mode() != 0) {
                 try {
                     NativeTimeline.Snapshot snapshot = NativeTimeline.load(response, request.context, now);
                     snapshot.apply(response);
@@ -148,7 +168,19 @@ public final class NativeFeed {
                     NativeTimeline.finish(response);
                 } catch (ReflectiveOperationException ignored) {}
             }
+        } finally { CalmaConfig.scope(null); }
+    }
+
+    /** Keep original ranking, suggestions, pagination, dates and Reels in the two stock modes. */
+    static void adsOnly(Object response, String field, boolean wrapped) throws ReflectiveOperationException {
+        Object value = StockAccess.get(response, field); if (!(value instanceof List)) return;
+        List<Object> clean = new ArrayList<>();
+        for (Object item : (List<?>) value) {
+            if (item == null || (wrapped && NativeAds.feedWrapper(item))) continue;
+            Object media = wrapped ? StockAccess.call(item, "A0A") : item;
+            if (!NativeAds.media(media)) clean.add(item);
         }
+        StockAccess.set(response, field, clean);
     }
 
     private static final class DatedItem {

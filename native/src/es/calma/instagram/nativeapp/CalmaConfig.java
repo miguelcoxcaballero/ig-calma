@@ -9,6 +9,9 @@ public final class CalmaConfig {
     private static volatile SharedPreferences preferences;
     private static volatile Context application;
     private static final AtomicLong session = new AtomicLong(1);
+    private static final AtomicLong content = new AtomicLong(1);
+    private static volatile String feed = "RECENTS";
+    private static final ThreadLocal<Integer> responseMode = new ThreadLocal<>();
 
     private CalmaConfig() {}
 
@@ -24,8 +27,18 @@ public final class CalmaConfig {
     }
 
     public static Context context() { return application; }
-    /** The Home feed always requires mutual follow, including before preferences load. */
-    public static int mode() { return 2; }
+    /** RECENTS is the stock chronological feed enum used by our Friends option. */
+    public static int mode() {
+        Integer scoped = responseMode.get();
+        return scoped != null ? scoped : modeFor(feed);
+    }
+    static int modeFor(String name) { return "RECENTS".equals(name) ? 2 : "FOLLOWING".equals(name) ? 1 : 0; }
+    static void scope(Integer mode) { if (mode == null) responseMode.remove(); else responseMode.set(mode); }
+    public static String feed() { return feed; }
+    static synchronized void select(String name) {
+        if (!feed.equals(name)) { feed = name; newSession(); }
+    }
+    static SharedPreferences preferences() { return preferences; }
 
     public static boolean reels() {
         SharedPreferences p = preferences;
@@ -33,9 +46,10 @@ public final class CalmaConfig {
     }
     public static void setReels(boolean value) {
         SharedPreferences p = preferences;
-        if (p != null && reels() != value) { p.edit().putBoolean("reels", value).apply(); newSession(); }
+        if (p != null && reels() != value) { p.edit().putBoolean("reels", value).apply(); content.incrementAndGet(); newSession(); }
     }
     public static long sessionId() { return session.get(); }
+    public static long contentId() { return content.get(); }
     public static long feedWindowSeconds() { return 48L * 60L * 60L; }
     public static void newSession() { session.incrementAndGet(); }
 }

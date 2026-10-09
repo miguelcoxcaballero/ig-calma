@@ -22,10 +22,11 @@ final class NativeLifecycle implements Application.ActivityLifecycleCallbacks, C
                 && activity.getClass().getName().startsWith("com.instagram.")) {
             CalmaConfig.init(activity.getApplicationContext());
             CalmaReels.decorate(activity);
+            NativeFeedBudget.resumed(activity);
             updates.onResumed(activity);
         }
     }
-    @Override public void onActivityPaused(Activity activity) { updates.onPaused(activity); }
+    @Override public void onActivityPaused(Activity activity) { NativeFeedBudget.paused(activity); updates.onPaused(activity); }
     @Override public void onActivityDestroyed(Activity activity) { updates.onDestroyed(activity); }
     @Override public void onActivityCreated(Activity activity, Bundle state) {}
     @Override public void onActivityStarted(Activity activity) {}

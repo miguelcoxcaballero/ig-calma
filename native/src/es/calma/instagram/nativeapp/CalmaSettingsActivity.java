@@ -23,6 +23,7 @@ import android.widget.TextView;
 public final class CalmaSettingsActivity extends Activity {
     private int foreground, background, muted, line;
     private Mark reels;
+    private TextView hourly;
 
     @Override public void onCreate(Bundle state) {
         boolean dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
@@ -65,8 +66,22 @@ public final class CalmaSettingsActivity extends Activity {
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
 
         heading(content, "Feed");
-        content.addView(text("Amigos · Os seguís mutuamente", 16, foreground));
+        content.addView(text("Friends · Os seguís mutuamente", 16, foreground));
         content.addView(text("Últimas 48 horas · Más recientes primero", 13, muted));
+        separator(content);
+        heading(content, "For you");
+        LinearLayout allowance = row();
+        hourly = text("", 16, foreground);
+        allowance.addView(hourly, new LinearLayout.LayoutParams(0, dp(54), 1));
+        TextView less = text("−", 26, foreground), more = text("+", 26, foreground);
+        less.setGravity(Gravity.CENTER); more.setGravity(Gravity.CENTER);
+        less.setContentDescription("Reducir minutos por hora"); more.setContentDescription("Aumentar minutos por hora");
+        allowance.addView(less, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        allowance.addView(more, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        press(less, () -> { NativeFeedBudget.rate(NativeFeedBudget.rate() - 1); refresh(); });
+        press(more, () -> { NativeFeedBudget.rate(NativeFeedBudget.rate() + 1); refresh(); });
+        content.addView(allowance);
+        content.addView(text("Caducan a las 24 horas", 13, muted));
         separator(content);
         LinearLayout reelRow = row();
         reelRow.addView(text("Ocultar Reels", 16, foreground), new LinearLayout.LayoutParams(0, dp(54), 1));
@@ -94,6 +109,7 @@ public final class CalmaSettingsActivity extends Activity {
     }
 
     private void refresh() {
+        if (hourly != null) hourly.setText(NativeFeedBudget.rate() + " min por hora");
         reels.setChecked(CalmaConfig.reels());
         ((View) reels.getParent()).setSelected(CalmaConfig.reels());
     }

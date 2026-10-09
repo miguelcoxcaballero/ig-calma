@@ -84,7 +84,7 @@ public final class HookDexAnalysis {
             }
         }
         Set<String> expected = Set.of(OWN + "NativeFeed;", OWN + "NativeRelations;",
-                OWN + "NativeDiscover;", OWN + "CalmaReels;", SETTINGS);
+                OWN + "NativeDiscover;", OWN + "CalmaReels;", OWN + "NativeFeedSelector;", OWN + "NativeFeedBudget;", SETTINGS);
         check(helpers.containsAll(expected), "Missing hook families: " + expected + "; found " + helpers);
         check(generatedMethods == 6, "Missing generated fragment/factory methods: " + generatedMethods);
         // ART-style field layout for dexlib; this does not select an Android device runtime.

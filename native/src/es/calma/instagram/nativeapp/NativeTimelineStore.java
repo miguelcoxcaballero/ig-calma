@@ -17,7 +17,7 @@ final class NativeTimelineStore {
         if (!owner.matches("[0-9]+")) throw new IOException("Invalid account");
         File directory = new File(root, "calma-timeline");
         if (!directory.isDirectory() && !directory.mkdirs()) throw new IOException("No cache directory");
-        return new File(directory, owner + ".snapshot");
+        return new File(directory, owner + "-" + context.mode + ".snapshot");
     }
     static void write(NativeTimeline.Context context, NativeTimeline.Snapshot snapshot) {
         File temporary = null;

@@ -1,9 +1,9 @@
 {
-  "version": "0.4.3",
-  "versionCode": 384510831,
+  "version": "0.4.4",
+  "versionCode": 384510832,
   "required": true,
-  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.3/IG-Calma-0.4.3.apk",
-  "apkSha256": "f97029712084d911fe15e17394d66ef1b1fe982f4e2369e5f5cd2a5e32c12539",
-  "apkSizeBytes": 146252461,
-  "releaseNotes": "Timeline de amigos guardado y ordenado, comprobación de amistades corregida y final That's it."
+  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.4/IG-Calma-0.4.4.apk",
+  "apkSha256": "7a7aa439b09a16ba069022393b54e059c75a74dc0e2a23691a138ad21cc209be",
+  "apkSizeBytes": 146260653,
+  "releaseNotes": "Cuatro modos nativos: For you, Favourites, Friends y Following. For you con minutos por hora y caducidad de 24 horas."
 }

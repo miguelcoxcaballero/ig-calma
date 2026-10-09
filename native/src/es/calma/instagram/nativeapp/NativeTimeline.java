@@ -28,6 +28,7 @@ final class NativeTimeline {
     private static final String[] COPY_FIELDS = {"A06", "A07", "A09", "A08", "A0A", "A0B", "A0C", "A0I", "A0G", "A0K", "A0J", "A0H", "A0D", "A0E", "A0F", "A01", "A00", "A0M", "A0L", "A0N", "A02", "A05", "A03", "A0O", "A04"};
     static final class Context {
         final Object androidContext, session, request, parameters;
+        final int mode = CalmaConfig.mode();
         Context(Object context, Object session, Object request, Object parameters) {
             this.androidContext = context; this.session = session; this.request = request; this.parameters = parameters;
         }
@@ -42,7 +43,7 @@ final class NativeTimeline {
         Snapshot(List<Object> wrappers, List<Object> media, long anchor) {
             this.wrappers = wrappers == null ? null : Collections.unmodifiableList(new ArrayList<>(wrappers));
             this.media = media == null ? null : Collections.unmodifiableList(new ArrayList<>(media));
-            this.anchor = anchor; this.epoch = CalmaConfig.sessionId();
+            this.anchor = anchor; this.epoch = CalmaConfig.contentId();
         }
         void apply(Object response) throws ReflectiveOperationException {
             StockAccess.set(response, "A0S", wrappers == null ? null : new ArrayList<>(wrappers));
@@ -61,8 +62,8 @@ final class NativeTimeline {
         return true;
     }
     static Snapshot saved(Object session) {
-        Snapshot snapshot = SAVED.get(NativeRelations.owner(session));
-        return snapshot != null && snapshot.epoch == CalmaConfig.sessionId() ? snapshot : null;
+        Snapshot snapshot = SAVED.get(NativeRelations.owner(session) + ':' + CalmaConfig.mode());
+        return snapshot != null && snapshot.epoch == CalmaConfig.contentId() ? snapshot : null;
     }
     static boolean internal() { return EXECUTING.get() != null; }
     static void finish(Object response) throws ReflectiveOperationException {
@@ -76,10 +77,10 @@ final class NativeTimeline {
         return load(first, context, anchor, NativeTimeline::fetch);
     }
     static Snapshot load(Object first, Context context, long anchor, PageSource source) throws Exception {
-        String owner = NativeRelations.owner(context.session);
+        String owner = NativeRelations.owner(context.session) + ':' + context.mode;
         if (NativeRelationLookup.mainThread()) {
             Snapshot cached = SAVED.get(owner);
-            if (cached != null && cached.epoch == CalmaConfig.sessionId()) return cached;
+            if (cached != null && cached.epoch == CalmaConfig.contentId()) return cached;
             throw new IllegalStateException("Timeline needs a network worker");
         }
         synchronized (LOCKS.computeIfAbsent(owner, ignored -> new Object())) {
@@ -87,7 +88,7 @@ final class NativeTimeline {
             String reason = String.valueOf(StockAccess.get(context.request, "A09"));
             boolean refresh = reason.equals("pull_to_refresh") || reason.equals("pill_refresh")
                     || reason.equals("new_follow") || reason.equals("content_refresh");
-            if (!refresh && previous != null && previous.epoch == CalmaConfig.sessionId()) return previous;
+            if (!refresh && previous != null && previous.epoch == CalmaConfig.contentId()) return previous;
             if (!refresh && previous == null) {
                 Snapshot disk = NativeTimelineStore.read(context, first, anchor);
                 if (disk != null) { SAVED.put(owner, disk); return disk; }
@@ -152,7 +153,8 @@ final class NativeTimeline {
                 Class<?> reason = Class.forName("X.02pk", false, loader);
                 args[2] = reason.getField("A0R").get(null); // PAGINATION
                 args[8] = cursor; args[11] = id;
-                args[18] = new HashMap<>((Map<?, ?>) parametersMap(args[18]));
+                Map<Object,Object> params = args[18] == null ? new HashMap<>() : new HashMap<>((Map<?, ?>) args[18]);
+                params.put("pagination_source", "following"); args[18] = params;
                 Constructor<?> constructor = null;
                 for (Constructor<?> candidate : context.request.getClass().getConstructors())
                     if (candidate.getParameterCount() == 25) constructor = candidate;
@@ -189,5 +191,4 @@ final class NativeTimeline {
             }
         }
     }
-    private static Map<?, ?> parametersMap(Object value) { return NativeFeed.parameters((Map<?, ?>) value); }
 }

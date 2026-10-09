@@ -26,11 +26,11 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = 'es.calma.instagram'
 BASELINE_URL = ('https://github.com/miguelcoxcaballero/ig-calma/releases/download/'
-                'v0.4.2/IG-Calma-0.4.2.apk')
-BASELINE_SHA = 'e204620481f53c88c2f6f1413db1475d6853de12c451e13ed2bfde7a68ff8221'
-BASELINE_SIZE = 146244269
+                'v0.4.3/IG-Calma-0.4.3.apk')
+BASELINE_SHA = 'f97029712084d911fe15e17394d66ef1b1fe982f4e2369e5f5cd2a5e32c12539'
+BASELINE_SIZE = 146252461
 SIGNER_SHA = '7133a4b3e4b9f9c4d2fbbd38b7dd2d44c7b8d0d7d16568bfe3da74a09e7887b6'
-CANDIDATE_VERSION = '0.4.3'
+CANDIDATE_VERSION = '0.4.4'
 
 
 def sha(path: Path) -> str:
@@ -251,11 +251,11 @@ def main() -> int:
         stock = stock_apks(work)
         if stock is not None:
             report['stockSha256'] = stock[1]['apkmSha256']
-        baseline = work / 'IG-Calma-0.4.2.apk'
+        baseline = work / 'IG-Calma-0.4.3.apk'
         with urllib.request.urlopen(BASELINE_URL, timeout=60) as response, baseline.open('wb') as output:
             shutil.copyfileobj(response, output)
         if baseline.stat().st_size != BASELINE_SIZE or sha(baseline) != BASELINE_SHA:
-            raise RuntimeError('Public 0.4.2 download differs from pinned release')
+            raise RuntimeError('Public 0.4.3 download differs from pinned release')
         report['baselineSha256'] = BASELINE_SHA
         sdk = Path(os.environ.get('ANDROID_SDK_ROOT') or os.environ.get('ANDROID_HOME', ''))
         if not str(sdk) or not (sdk / 'cmdline-tools/latest/bin/sdkmanager').is_file():
@@ -338,16 +338,16 @@ def main() -> int:
             report['stock'] = launch(stock[0], 'stock-original', updating=False,
                                      package=stock[1]['package'])
             device('shell', 'am', 'force-stop', stock[1]['package'])
-        report['baseline'] = launch(baseline, 'baseline-0.4.2', updating=False)
+        report['baseline'] = launch(baseline, 'baseline-0.4.3', updating=False)
         # Always try the candidate, including when baseline startup or installation fails.
         device('shell', 'am', 'force-stop', PACKAGE)
-        report['candidate'] = launch(candidate, 'candidate-0.4.3',
+        report['candidate'] = launch(candidate, 'candidate-0.4.4',
                                      updating=bool(report['baseline'].get('installed')))
         if not report['candidate'].get('passed'):
             # This is an empty test device. Distinguish a failed upgrade from a
             # failure that also happens on a fresh install, without changing users' data.
             require(device('uninstall', PACKAGE), 'Remove failed test installation')
-            report['candidateClean'] = launch(candidate, 'candidate-clean-0.4.3', updating=False)
+            report['candidateClean'] = launch(candidate, 'candidate-clean-0.4.4', updating=False)
         smoke = ROOT / 'native/runtime-input/Calma-Native-Smoke.apk'
         smoke_metadata = json.loads((ROOT / 'native/runtime-input/transport.json').read_text())
         if smoke_metadata.get('modelSmokeSha256') and not smoke.is_file():

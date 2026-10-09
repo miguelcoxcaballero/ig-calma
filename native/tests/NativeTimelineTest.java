@@ -84,6 +84,17 @@ public class NativeTimelineTest {
         check(System.nanoTime()-start<TimeUnit.MILLISECONDS.toNanos(100),"main thread is never held by another loading request");release.countDown();work.get();loading.shutdownNow();
         CalmaConfig.epoch++;
         check(NativeTimeline.saved(c.session)==null,"changed feed settings invalidate prior snapshot");
+        CalmaConfig.testMode=1;
+        NativeTimeline.Context following=context("9010",new TimelineRequest());
+        NativeFeedTest.Media oneWay=new NativeFeedTest.Media("one-way",now-5,"feed",new NativeFeedTest.User(true,false));
+        NativeTimeline.Snapshot all=worker(()->NativeTimeline.load(page(null,oneWay),following,now,(a,b,d)->null));
+        check(all.wrappers.stream().anyMatch(row -> ((NativeFeedTest.Wrapper) row).A0A() == oneWay),"Following includes non-mutual followed accounts");
+        CalmaConfig.testMode=2;
+        check(NativeTimeline.saved(following.session)==null,"Friends never reuses the Following snapshot");
+        NativeTimeline.Context friends=context("9010",new TimelineRequest());
+        NativeTimeline.Snapshot mutualOnly=worker(()->NativeTimeline.load(page(null,oneWay),friends,now,(a,b,d)->null));
+        check(mutualOnly.wrappers.isEmpty(),"Friends excludes non-mutual followed accounts");
+        CalmaConfig.testMode=1;check(NativeTimeline.saved(following.session)==all,"Returning to Following reuses its complete timeline");
         System.out.println("Native timeline: "+checks+" assertions passed");
     }
 }

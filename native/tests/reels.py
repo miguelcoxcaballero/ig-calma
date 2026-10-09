@@ -67,6 +67,7 @@ with tempfile.TemporaryDirectory(prefix='calma-reels-tests-') as temporary:
     source = work / PACKAGE
     source.mkdir(parents=True)
     (source / 'ReelsTest.java').write_text(fixture)
+    (source / 'NativeFeedBudget.java').write_text('package es.calma.instagram.nativeapp; public final class NativeFeedBudget { public static boolean reelsAllowed(){return false;} public static void reelsLaunched(){} }')
     (source / 'CalmaConfig.java').write_text('package es.calma.instagram.nativeapp; public final class CalmaConfig { static boolean enabled=true; public static boolean reels(){return enabled;} public static long sessionId(){return 1;} }')
     (source / 'NativeRelations.java').write_text('package es.calma.instagram.nativeapp; public final class NativeRelations { static boolean mutual; static Object session; static String id; public static String owner(Object session){return "owner";} public static void resolveMutual(Object session,String sender,Runnable completion){completion.run();} public static boolean isMutual(Object account,String sender){session=account;id=sender;return mutual;} }')
     classes = work / 'classes'

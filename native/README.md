@@ -20,12 +20,12 @@ La entrada aceptada está fijada en [`stock.lock.json`](stock.lock.json):
 | Android mínimo | Android 9, API 28 |
 | Formato de entrada | APKM con `base.apk` y `split_config.xxhdpi.apk` |
 | Procedencia | [Variante de APKMirror](https://www.apkmirror.com/apk/instagram/instagram-instagram/instagram-439-0-0-37-89-release/instagram-439-0-0-37-89-4-android-apk-download/) |
-| Versión propia de Calma | `0.4.3`, definida en [`CalmaBuild.java`](src/es/calma/instagram/nativeapp/CalmaBuild.java) |
+| Versión propia de Calma | `0.4.4`, definida en [`CalmaBuild.java`](src/es/calma/instagram/nativeapp/CalmaBuild.java) |
 | Paquete resultante | `es.calma.instagram` |
-| versionCode resultante | `384510831` |
+| versionCode resultante | `384510832` |
 
 El manifiesto del APK conserva `versionName=439.0.0.37.89` para Instagram. La
-comparación de actualizaciones utiliza `CalmaBuild.VERSION`, actualmente `0.4.3`.
+comparación de actualizaciones utiliza `CalmaBuild.VERSION`, actualmente `0.4.4`.
 Son versiones distintas con funciones distintas.
 
 El build verifica el SHA-256 del APKM y de cada split, además de la cadena de firma
@@ -146,13 +146,13 @@ regenera los metadatos del cargador, alinea a **16 KB**, firma y verifica el res
 
 Los resultados quedan en:
 
-- `native/build/dist/IG-Calma-0.4.3.apk`.
+- `native/build/dist/IG-Calma-0.4.4.apk`.
 - `native/build/dist/SHA256SUMS.txt`, `build-info.json` y `verification.json`.
 - `native/build/patch-result.json` y `native/build/extension/build-report.json`.
 - `android-update.json` y `native/android-update.json`, idénticos y generados a partir del APK firmado.
 
 El build genera los archivos locales; no publica una release. El manifiesto de
-actualización apunta al APK de la release `v0.4.3` del repositorio configurado en el
+actualización apunta al APK de la release `v0.4.4` del repositorio configurado en el
 script. La publicación debe adjuntar exactamente ese APK y mantener su versión,
 tamaño y SHA-256 sincronizados con el manifiesto. Los dos manifiestos usan
 `required: true`; con `false`, Inhouse Read no ofrece la actualización. Publicar
@@ -257,10 +257,10 @@ Para verificar otra vez el APK firmado:
 
 ```sh
 python3 native/scripts/verify-apk.py \
-  --apk native/build/dist/IG-Calma-0.4.3.apk \
+  --apk native/build/dist/IG-Calma-0.4.4.apk \
   --stock /ruta/al/base.apk \
   --build-tools "$CALMA_SDK/build-tools/36.0.0"
-python3 native/tests/updater.py --apk native/build/dist/IG-Calma-0.4.3.apk
+python3 native/tests/updater.py --apk native/build/dist/IG-Calma-0.4.4.apk
 ```
 
 La verificación del artefacto comprueba firma, alineación de 16 KB, versiones,
@@ -298,8 +298,16 @@ ARM64 de esas versiones.
 pruebas de arranque sin sesión no verifican la navegación, las notificaciones DM,
 la reproducción, la fluidez ni la instalación desde el popup en un teléfono.
 
-## Timeline completo (0.4.3)
+## Timeline completo (0.4.4)
 
 El feed nativo reúne las páginas de 48 horas antes de cerrar su snapshot, verifica todas las amistades pendientes, ordena globalmente y conserva los datos por cuenta. Una caché privada de metadatos permite reutilizar un snapshot reciente. El final es una fila nativa con `That's it` y una cara sonriente. Los fallos y cursores repetidos dan una opción de reintento y no un bucle de carga. La sincronización inicial necesita red; las imágenes siguen usando la caché nativa. [Mapeos, pruebas y límites actuales](feed.md).
 
-La instrumentación independiente `tests/android/NativeModelSmoke.java` ejecuta el constructor DEX del modelo final y su dibujo real en Android, sin una cuenta. El APK de prueba se compila con `python3 native/scripts/build-smoke-test.py --build-tools /ruta/al/sdk/build-tools/36.0.0`, se firma con la clave existente y sólo se incluye en el transporte de CI, nunca en la release. La 0.4.3 supera esta comprobación y la actualización/arranque sobre la 0.4.2 en API 34, 35 y 36: [evidencia del APK](validation/0.4.3.json), [ejecución](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/37988421107).
+La instrumentación independiente `tests/android/NativeModelSmoke.java` ejecuta el constructor DEX del modelo final y su dibujo real en Android, sin una cuenta. El APK de prueba se compila con `python3 native/scripts/build-smoke-test.py --build-tools /ruta/al/sdk/build-tools/36.0.0`, se firma con la clave existente y sólo se incluye en el transporte de CI, nunca en la release. La 0.4.4 supera esta comprobación y la actualización/arranque sobre la 0.4.2 en API 34, 35 y 36: [evidencia del APK](validation/0.4.4.json), [ejecución](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/37988421107).
+
+## Selector y saldo de For you (0.4.4)
+
+`FeedSelectorPatch.kt` adapta los modelos `06yQ/06yP`, el popup IGDS `0E4c/0VTM` y el refresco nativo `06yW/06yS`. Se reutiliza RECENTS para Friends, y se mantienen las rutas `favorites`, `following` y `feed_recs` originales. Los dos diseños del encabezado abren el mismo selector.
+
+`HourlyCredits` guarda hasta 24 créditos horarios, consume primero los más antiguos y caduca cada uno a las 24 horas. La primera apertura registra la hora actual sin conceder créditos anteriores. El cambio de tarifa afecta a las siguientes horas. El saldo se comparte entre cuentas para evitar duplicarlo, y la selección y los timelines se separan por cuenta y modo. `NativeFeedBudget` usa tiempo monotónico para el consumo y comprueba la visibilidad nativa de Home/Clips y el foco de la actividad. No modifica el código del actualizador Inhouse.
+
+Pruebas adicionales: `python3 native/tests/credits.py`, `config.py` y `feed.py`. La instrumentación comprueba los modelos del selector del APK final; no demuestra el comportamiento de una cuenta autenticada.

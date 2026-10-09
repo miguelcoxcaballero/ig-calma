@@ -15,16 +15,20 @@ classpath = str(ROOT / 'native/build/tools') + ':' + str(args.morphe)
 with tempfile.TemporaryDirectory(prefix='calma-ads-dex-') as temporary:
     dex = Path(temporary) / 'ads.dex'
     subprocess.run(['java', '-Xmx1g', '-cp', classpath, 'es.calma.tools.DexSubset',
-                    str(args.apk), str(dex), 'LX/08S0;',
+                    str(args.apk), str(dex), 'LX/08S0;', 'LX/0Es9;',
                     'Les/calma/instagram/nativeapp/NativeAds;',
                     'Les/calma/instagram/nativeapp/NativeFeed;',
                     'Les/calma/instagram/nativeapp/NativeDiscover;'],
                    check=True, stdout=subprocess.DEVNULL)
     dump = subprocess.check_output(['java', '-Xmx512m', '-cp', classpath,
                                     'es.calma.tools.DexInspect', str(dex),
-                                    'E1e|story|filter|resolveMissing|permittedMedia|resolveAuthors'], text=True)
+                                    'Bd0|E1e|story|filter|resolveMissing|permittedMedia|resolveAuthors'], text=True)
     blocks = re.split(r'(?=^METHOD )', dump, flags=re.M)
     body = next(block for block in blocks if block.startswith('METHOD LX/08S0;->E1e('))
+    clips = next(block for block in blocks if block.startswith('METHOD LX/0Es9;->Bd0('))
+    clip_ops = [match[1] for line in clips.splitlines() if (match := re.match(r'\s*\d+ @[0-9a-f]+ (.*)', line))]
+    assert 'Ljava/util/Collections;->emptyList()Ljava/util/List;' in clip_ops[0]
+    assert clip_ops[1] == 'move-result-object v0' and clip_ops[2] == 'return-object v0', 'Dedicated Reels ad source must be empty'
     instructions = [(int(match[1], 16), match[2]) for line in body.splitlines()
                     if (match := re.match(r'\s*\d+ @([0-9a-f]+) (.*)', line))]
     hooks = [i for i, (_, instruction) in enumerate(instructions) if 'NativeAds;->story(' in instruction]

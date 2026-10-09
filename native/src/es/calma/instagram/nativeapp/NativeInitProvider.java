@@ -19,6 +19,7 @@ public final class NativeInitProvider extends ContentProvider {
         if (!(application instanceof Application)) return false;
         if (installed.compareAndSet(false, true)) {
             CalmaConfig.init(application);
+            NativeFeedBudget.init();
             NativeLifecycle lifecycle = new NativeLifecycle((Application) application);
             ((Application) application).registerActivityLifecycleCallbacks(lifecycle);
             application.registerComponentCallbacks(lifecycle);

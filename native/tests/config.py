@@ -13,7 +13,7 @@ fixtures = {
     }''',
     'android/content/SharedPreferences.java': '''package android.content; public final class SharedPreferences {
         public final java.util.Map<String,Object> values=new java.util.HashMap<>();
-        public boolean getBoolean(String key,boolean fallback){Object v=values.get(key);return v instanceof Boolean?(Boolean)v:fallback;}
+        public String getString(String key,String fallback){Object v=values.get(key);return v instanceof String?(String)v:fallback;} public boolean getBoolean(String key,boolean fallback){Object v=values.get(key);return v instanceof Boolean?(Boolean)v:fallback;}
         public Editor edit(){return new Editor();}
         public final class Editor {
             public Editor putInt(String key,int value){values.put(key,value);return this;}
@@ -39,6 +39,15 @@ fixtures = {
                 check(CalmaConfig.reels()==upgrading && CalmaConfig.sessionId()>before,"Reels control still updates session");
                 app.prefs.values.put("mode",1);CalmaConfig.init(app);
                 check(CalmaConfig.mode()==2,"legacy preferences cannot reenable one-way follows");
+                long generation=CalmaConfig.sessionId(), cache=CalmaConfig.contentId();
+                CalmaConfig.select("FOLLOWING");
+                check(CalmaConfig.mode()==1 && CalmaConfig.sessionId()>generation,"Following selects one-way follows and cancels stale requests");
+                check(CalmaConfig.contentId()==cache,"Switching modes preserves each timeline cache");
+                CalmaConfig.select("FAVORITES"); check(CalmaConfig.mode()==0,"Favorites retains stock filtering");
+                CalmaConfig.select("BLENDED_FOR_YOU"); check(CalmaConfig.mode()==0,"For you retains algorithm");
+                CalmaConfig.scope(2); check(CalmaConfig.mode()==2,"Concurrent Friends responses keep their original policy");
+                CalmaConfig.scope(null);check(CalmaConfig.mode()==0,"Request scope cannot leak into next response");
+                CalmaConfig.select("RECENTS");check(CalmaConfig.mode()==2,"Friends is the safe default");
                 System.out.println("PASS: "+args[0]+" mutual-feed policy and preference migration");
             }
         }'''

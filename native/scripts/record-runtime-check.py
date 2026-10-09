@@ -97,7 +97,7 @@ def summarize_report(report: dict, manifest: dict, apk_sha: str, apk_size: int) 
     if smoke is not None:
         if not isinstance(smoke, dict) or not isinstance(smoke.get('passed'), bool):
             raise ValueError('Invalid native model instrumentation result')
-        result['nativeModelSmoke'] = {'passed': smoke['passed'], 'scope': 'Actual native end-model allocation, inline row, light/dark rendering, accessibility and recycling; no logged-in feed'}
+        result['nativeModelSmoke'] = {'passed': smoke['passed'], 'scope': 'Actual native end-model allocation, inline row, light/dark rendering, accessibility, recycling and four original selector models with remaining time and credit lock; no logged-in feed'}
         if smoke['passed'] and 'CALMA_NATIVE_MODELS_PASSED' not in smoke.get('output', ''):
             raise ValueError('Native model success has no instrumentation marker')
     if report.get('environmentError'):

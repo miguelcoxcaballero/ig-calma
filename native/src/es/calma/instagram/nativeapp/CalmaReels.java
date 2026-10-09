@@ -27,7 +27,7 @@ public final class CalmaReels {
 
     /** Native DM sender, not the author of the shared video, determines permission. */
     public static boolean allowLaunch(Object config, Object session) {
-        if (!CalmaConfig.reels()) return true;
+        if (!locked()) { NativeFeedBudget.reelsLaunched(); return true; }
         if (config == null || session == null) return false;
         try {
             Object direct = read(config, "A0N");
@@ -42,7 +42,7 @@ public final class CalmaReels {
 
     /** Resolve a cold native relationship cache without blocking the UI or losing the tap. */
     public static boolean launchOrDefer(final String methodName, final Object[] arguments) {
-        if (!locked()) return true;
+        if (!locked()) { NativeFeedBudget.reelsLaunched(); return true; }
         final long ticket = launchSequence.incrementAndGet();
         final int configIndex = "A09".equals(methodName) ? 2 : 1;
         if (arguments == null || arguments.length <= configIndex + 1) return false;
@@ -93,7 +93,7 @@ public final class CalmaReels {
 
     /** Keep the supplied clip as the sole source and disable Instagram's chaining. */
     public static void configure(Object config) {
-        if (CalmaConfig.reels() && config != null) configureClip(config);
+        if (locked() && config != null) configureClip(config);
     }
 
     private static boolean configureClip(Object config) {
@@ -128,7 +128,7 @@ public final class CalmaReels {
     }
 
     public static boolean allowBundle(Bundle arguments, Object session) {
-        if (!locked()) return true;
+        if (!locked()) { NativeFeedBudget.reelsLaunched(); return true; }
         if (arguments == null) return false;
         try {
             arguments.setClassLoader(session.getClass().getClassLoader());
@@ -154,7 +154,7 @@ public final class CalmaReels {
         return message;
     }
 
-    public static boolean locked() { return CalmaConfig.reels(); }
+    public static boolean locked() { return CalmaConfig.reels() && !NativeFeedBudget.reelsAllowed(); }
 
     /** Called only from Instagram's ClipsViewPagerImpl, never the DM or photo pager. */
     public static void lockPager(Object controller) {
@@ -184,7 +184,7 @@ public final class CalmaReels {
                 }
                 View tab = root.findViewById(CLIPS_TAB);
                 if (tab != null) {
-                    int visibility = CalmaConfig.reels() ? View.GONE : View.VISIBLE;
+                    int visibility = locked() ? View.GONE : View.VISIBLE;
                     if (tab.getVisibility() != visibility) tab.setVisibility(visibility);
                     if (root.getViewTreeObserver().isAlive()) root.getViewTreeObserver().removeOnGlobalLayoutListener(this);
                     decorated.remove(current);

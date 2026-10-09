@@ -5,7 +5,7 @@ PACKAGE = pathlib.Path('es/calma/instagram/nativeapp')
 with tempfile.TemporaryDirectory(prefix='calma-native-feed-') as tmp:
     root = pathlib.Path(tmp)
     stub = root / PACKAGE / 'CalmaConfig.java'; stub.parent.mkdir(parents=True)
-    stub.write_text('package es.calma.instagram.nativeapp; public final class CalmaConfig { public static int testMode=1; public static long epoch=1; public static long sessionId(){return epoch;} public static int mode(){return testMode;} public static boolean reels(){return true;} }')
+    stub.write_text('package es.calma.instagram.nativeapp; public final class CalmaConfig { public static int testMode=1; public static long epoch=1; public static long sessionId(){return epoch;} public static long contentId(){return epoch;} public static String feed(){return testMode==0?"BLENDED_FOR_YOU":"RECENTS";} public static void scope(Integer mode){} public static int mode(){return testMode;} public static boolean reels(){return true;} }')
     end = root / PACKAGE / 'NativeFeedEnd.java'
     end.write_text('package es.calma.instagram.nativeapp; final class NativeFeedEnd {static void append(Object r,Object s){} static void appendStatus(Object r,Object s,boolean complete){}}')
     source = ROOT / 'native/src' / PACKAGE

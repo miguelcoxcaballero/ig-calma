@@ -31,6 +31,26 @@ public final class NativeModelSmoke extends Instrumentation {
                 Class<?> end = Class.forName("es.calma.instagram.nativeapp.NativeFeedEnd", true, loader);
                 Object nativeModel = end.getMethod("newModel", Object.class, Object.class).invoke(null, null, null);
                 check(nativeModel != null && nativeModel.getClass().getName().equals("X.0AMQ"), "Mapped native model allocation");
+                Class<?> selector = Class.forName("es.calma.instagram.nativeapp.NativeFeedSelector", true, loader);
+                List<?> options = (List<?>) selector.getMethod("options", Object.class, List.class).invoke(null, nativeModel, null);
+                check(options != null && options.size() == 4, "Four actual stock selector models");
+                String[] names = {"BLENDED_FOR_YOU", "FAVORITES", "RECENTS", "FOLLOWING"};
+                for (int i=0;i<4;i++) check(names[i].equals(((Enum<?>)options.get(i).getClass().getField("A01").get(options.get(i))).name()), "Exact selector order");
+                Object friends = options.get(2).getClass().getField("A01").get(options.get(2));
+                Class<?> budget=Class.forName("es.calma.instagram.nativeapp.NativeFeedBudget",true,loader);
+                long balance=(Long)budget.getMethod("balance").invoke(null);
+                List<?> menu = (List<?>) selector.getMethod("menuRows", Context.class, Object.class, List.class, Object.class, Object.class)
+                    .invoke(null, context, nativeModel, options, friends, nativeModel);
+                check(menu.size()==4,"Four original IGDS popup rows");
+                String[] labels={"For you","Favourites","Friends","Following"};
+                for(int i=0;i<4;i++) {
+                    Object item=menu.get(i); Class<?> rowType=item.getClass();
+                    check(rowType.getName().equals("X.0VTM"),"Stock popup model type");
+                    check(labels[i].equals(rowType.getField("A03").get(item)),"Native option label");
+                    check((Boolean)rowType.getField("A08").get(item)==(i==2),"Friends selected");
+                    check((Boolean)rowType.getField("A05").get(item)==(i==0 && balance<=0),"For you disabled with zero credits");
+                }
+                check(budget.getMethod("label",long.class).invoke(null,balance).equals(menu.get(0).getClass().getField("A04").get(menu.get(0))),"Remaining time in native subtitle");
                 Method append = end.getDeclaredMethod("append", Object.class, Object.class); append.setAccessible(true);
                 Response response = new Response(); append.invoke(null, response, nativeModel);
                 check(response.A0S.size() == 1, "One real native end row");
@@ -67,7 +87,7 @@ public final class NativeModelSmoke extends Instrumentation {
             } catch (Throwable failure) { error[0] = failure; }
         });
         if (error[0] == null) {
-            result.putString("stream", "CALMA_NATIVE_MODELS_PASSED: allocation, native row, light/dark drawing, accessibility, recycling\n");
+            result.putString("stream", "CALMA_NATIVE_MODELS_PASSED: allocation, native row, light/dark drawing, accessibility, recycling, four stock selector models, remaining time, zero-credit lock\n");
             finish(-1,result);
         } else {
             result.putString("stream", "CALMA_NATIVE_MODELS_FAILED: " + android.util.Log.getStackTraceString(error[0]));
