@@ -251,6 +251,10 @@ def main() -> int:
         (evidence / 'error.txt').write_text(traceback.format_exc())
         return 1
     finally:
+        if emulator_log is not None:
+            emulator_log.flush()
+            emulator_text = (evidence / 'emulator.txt').read_text(errors='replace')
+            print('Emulator output:\n' + emulator_text[-12000:], flush=True)
         (evidence / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
         print(json.dumps(report, indent=2), flush=True)
         if emulator is not None and emulator.poll() is None:
