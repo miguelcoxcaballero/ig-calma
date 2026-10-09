@@ -28,7 +28,7 @@ El [manifiesto anterior](android-update.json) y el [nativo](native/android-updat
 
 ## Estado de la prueba
 
-La APK 0.4.10 se valida como actualización sobre la 0.4.9 y en el arranque sin sesión en emuladores oficiales de **Android 14, 15 y 16**. La instrumentación ejecuta el parser JSON original de amistades con usuarios sin caché, campos omitidos y estados explícitos de dejar de seguir, además de los modelos del feed y del visor de Reels. Las pruebas del planificador comprueban la precarga completa sin gestos de scroll y el reintento de un controlador ocupado. No prueba reproducción ni respuestas de una cuenta autenticada. [Resultados vinculados al SHA-256](native/validation/0.4.10.json) · [Ejecución de las pruebas](PENDING_RUNTIME_URL).
+La APK 0.4.10 se valida como actualización sobre la 0.4.9 y en el arranque sin sesión en emuladores oficiales de **Android 14, 15 y 16**. La instrumentación ejecuta el parser JSON original de amistades con usuarios sin caché, campos omitidos y estados explícitos de dejar de seguir, además de los modelos del feed y del visor de Reels. Las pruebas del planificador comprueban la precarga completa sin gestos de scroll y el reintento de un controlador ocupado. No prueba reproducción ni respuestas de una cuenta autenticada. [Resultados vinculados al SHA-256](native/validation/0.4.10.json) · [Ejecución de las pruebas](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38006543018).
 
 La instrumentación crea los cuatro modelos del selector y las filas IGDS originales, verifica el saldo y el estado bloqueado, y comprueba el final del timeline en ambos temas. Las pruebas locales cubren caducidad, persistencia, cambios de hora y separación entre Friends y Following.
 

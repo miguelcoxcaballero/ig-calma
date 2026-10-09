@@ -345,4 +345,4 @@ El parser de red conserva las publicaciones hasta la entrega nativa aunque el se
 
 Cada respuesta de amistad puede activar la entrega local antes de que finalicen los demás autores. La lectura/escritura de snapshots usa otra cola. La precarga comprueba la vista real de Home (`05qX.A0Y.A01`), conserva las comprobaciones nativas de peticiones en curso, reintenta hasta seis veces a intervalos de 250 ms tras un rechazo y después espera otro evento nativo. Ya no se detiene a los 90 segundos mientras Home siga visible. El replay de Friends se prepara también cuando Home está oculto, sin descargar nuevas páginas fuera de esa vista.
 
-Validación: `native/tests/feed.py`, `pager.py`, checks del DEX y parser JSON de amistades original en Android 14–16. [Ejecución](PENDING_RUNTIME_URL). Los datos de estas pruebas son sintéticos; no miden la latencia de una cuenta real.
+Validación: `native/tests/feed.py`, `pager.py`, checks del DEX y parser JSON de amistades original en Android 14–16. [Ejecución](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38006543018). Los datos de estas pruebas son sintéticos; no miden la latencia de una cuenta real.
