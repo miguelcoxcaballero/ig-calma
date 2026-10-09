@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "version": "0.4.9",
+  "recordedAt": "2026-10-09T23:33:08+00:00",
+  "runtimeTesting": {
+    "scope": "Logged-out startup on official Android Emulator with ARM64 translation",
+    "ciUrl": "https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38004528156",
+    "apkSha256": "f04f1ae5975e553ecb4d34180db95c4e754e94203909af86987c66f45ea482e0",
+    "apkSizeBytes": 146264749,
+    "physicalDeviceTested": false,
+    "instagramAccountTested": false,
+    "startupPassedOnApis": [
+      34,
+      35,
+      36
+    ],
+    "observations": [
+      {
+        "api": 34,
+        "sourceCommit": "c61981439ef60b1516db353012f8204687c72e85",
+        "bootCompleted": true,
+        "abiList": "x86_64,arm64-v8a",
+        "stock": {
+          "attempted": false
+        },
+        "baseline": {
+          "attempted": true,
+          "installed": true,
+          "updatingExistingInstall": false,
+          "launchAccepted": false,
+          "survived": true,
+          "appCrashLogged": false,
+          "passed": false,
+          "observedThroughSeconds": 45.0,
+          "visibleText": [
+            "English (US)",
+            "Instagram from Meta",
+            "Username, email or mobile number",
+            "Username, email or mobile number,",
+            "Password",
+            "Password,",
+            "Log in",
+            "Forgot password?",
+            "Create new account",
+            "Meta logo"
+          ]
+        },
+        "candidate": {
+          "attempted": true,
+          "installed": true,
+          "updatingExistingInstall": true,
+          "launchAccepted": true,
+          "survived": true,
+          "appCrashLogged": false,
+          "passed": true,
+          "observedThroughSeconds": 45.0,
+          "visibleText": [
+            "English (US)",
+            "Join Instagram",
+            "Share what you're into with the people who get you.",
+            "Get started",
+            "I already have a profile",
+            "Meta logo"
+          ]
+        },
+        "baselineSha256": "bb31137e1ba74518afb5cba8254d0e0af43992b5e438880c4d55a52e431f054d",
+        "nativeModelSmoke": {
+          "passed": true,
+          "scope": "Actual native end-model allocation, inline row, light/dark rendering, accessibility, recycling and four original selector models with remaining time and credit lock; no logged-in feed; actual Media, LiveTree dictionaries, User, wrapper, response and parser-context models with synthetic cached fields: cold main-thread head, cursor, cross-page deduplication and complete cache replay; no authenticated HTTP; original HTTP parameter setter/map, client request and delivery envelope, absent/different server IDs, stale native NotFollowing enum; synthetic account data, no network call; actual ClipsViewerConfig and ViewPager2 single-clip lock, patched native next-item guard and real earned-time policy restore; synthetic clip/session, no playback"
+        },
+        "outcome": "startup_passed"
+      },
+      {
+        "api": 35,
+        "sourceCommit": "c61981439ef60b1516db353012f8204687c72e85",
+        "bootCompleted": true,
+        "abiList": "x86_64,arm64-v8a",
+        "stock": {
+          "attempted": false
+        },
+        "baseline": {
+          "attempted": true,
+          "installed": true,
+          "updatingExistingInstall": false,
+          "launchAccepted": false,
+          "survived": true,
+          "appCrashLogged": true,
+          "passed": false,
+          "observedThroughSeconds": 45.0,
+          "visibleText": [
+            "Instagram Calma isn't responding",
+            "Close app",
+            "Wait"
+          ]
+        },
+        "candidate": {
+          "attempted": true,
+          "installed": true,
+          "updatingExistingInstall": true,
+          "launchAccepted": true,
+          "survived": true,
+          "appCrashLogged": false,
+          "passed": true,
+          "observedThroughSeconds": 45.0,
+          "visibleText": [
+            "English (US)",
+            "Instagram from Meta",
+            "Username, email or mobile number",
+            "Username, email or mobile number,",
+            "Password",
+            "Password,",
+            "Log in",
+            "Forgot password?",
+            "Create new account",
+            "Meta logo"
+          ]
+        },
+        "baselineSha256": "bb31137e1ba74518afb5cba8254d0e0af43992b5e438880c4d55a52e431f054d",
+        "nativeModelSmoke": {
+          "passed": true,
+          "scope": "Actual native end-model allocation, inline row, light/dark rendering, accessibility, recycling and four original selector models with remaining time and credit lock; no logged-in feed; actual Media, LiveTree dictionaries, User, wrapper, response and parser-context models with synthetic cached fields: cold main-thread head, cursor, cross-page deduplication and complete cache replay; no authenticated HTTP; original HTTP parameter setter/map, client request and delivery envelope, absent/different server IDs, stale native NotFollowing enum; synthetic account data, no network call; actual ClipsViewerConfig and ViewPager2 single-clip lock, patched native next-item guard and real earned-time policy restore; synthetic clip/session, no playback"
+        },
+        "outcome": "startup_passed"
+      },
+      {
+        "api": 36,
+        "sourceCommit": "c61981439ef60b1516db353012f8204687c72e85",
+        "bootCompleted": true,
+        "abiList": "x86_64,arm64-v8a",
+        "stock": {
+          "attempted": false
+        },
+        "baseline": {
+          "attempted": true,
+          "installed": true,
+          "updatingExistingInstall": false,
+          "launchAccepted": true,
+          "survived": true,
+          "appCrashLogged": false,
+          "passed": true,
+          "observedThroughSeconds": 45.1,
+          "visibleText": [
+            "English (United States)",
+            "Mobile number or email",
+            "Password",
+            "Log in",
+            "Forgot password?",
+            "Create new account",
+            "Meta logo"
+          ]
+        },
+        "candidate": {
+          "attempted": true,
+          "installed": true,
+          "updatingExistingInstall": true,
+          "launchAccepted": true,
+          "survived": true,
+          "appCrashLogged": false,
+          "passed": true,
+          "observedThroughSeconds": 45.0,
+          "visibleText": [
+            "English (US)",
+            "Join Instagram",
+            "Share what you're into with the people who get you.",
+            "Get started",
+            "I already have a profile",
+            "Meta logo"
+          ]
+        },
+        "baselineSha256": "bb31137e1ba74518afb5cba8254d0e0af43992b5e438880c4d55a52e431f054d",
+        "nativeModelSmoke": {
+          "passed": true,
+          "scope": "Actual native end-model allocation, inline row, light/dark rendering, accessibility, recycling and four original selector models with remaining time and credit lock; no logged-in feed; actual Media, LiveTree dictionaries, User, wrapper, response and parser-context models with synthetic cached fields: cold main-thread head, cursor, cross-page deduplication and complete cache replay; no authenticated HTTP; original HTTP parameter setter/map, client request and delivery envelope, absent/different server IDs, stale native NotFollowing enum; synthetic account data, no network call; actual ClipsViewerConfig and ViewPager2 single-clip lock, patched native next-item guard and real earned-time policy restore; synthetic clip/session, no playback"
+        },
+        "outcome": "startup_passed"
+      }
+    ]
+  }
+}

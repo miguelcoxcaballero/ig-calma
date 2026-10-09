@@ -28,7 +28,7 @@ El [manifiesto anterior](android-update.json) y el [nativo](native/android-updat
 
 ## Estado de la prueba
 
-La APK 0.4.9 se valida como actualización sobre la 0.4.8 y en el arranque sin sesión en emuladores oficiales de **Android 14, 15 y 16**. La instrumentación usa las clases originales de Instagram para comprobar la entrega del feed, el bloqueo del ViewPager2, el clip seleccionado y la recuperación de la paginación al usar minutos de For you. No prueba reproducción ni respuestas de una cuenta autenticada. [Resultados vinculados al SHA-256](native/validation/0.4.9.json) · [Ejecución de las pruebas](PENDING_RUNTIME_URL).
+La APK 0.4.9 se valida como actualización sobre la 0.4.8 y en el arranque sin sesión en emuladores oficiales de **Android 14, 15 y 16**. La instrumentación usa las clases originales de Instagram para comprobar la entrega del feed, el bloqueo del ViewPager2, el clip seleccionado y la recuperación de la paginación al usar minutos de For you. No prueba reproducción ni respuestas de una cuenta autenticada. [Resultados vinculados al SHA-256](native/validation/0.4.9.json) · [Ejecución de las pruebas](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38004528156).
 
 La instrumentación crea los cuatro modelos del selector y las filas IGDS originales, verifica el saldo y el estado bloqueado, y comprueba el final del timeline en ambos temas. Las pruebas locales cubren caducidad, persistencia, cambios de hora y separación entre Friends y Following.
 

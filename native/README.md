@@ -336,4 +336,4 @@ Validación: 108 aserciones JVM del feed/timeline/entrega, comprobación del flu
 
 Con minutos disponibles, los Reels de For you conservan sus opciones originales de paginación. La construcción y precarga no modifican la configuración; al abrir se guardan sus valores originales con referencias débiles y se restauran si vuelve a utilizarse en For you. Se invalida la caché antigua que omitía Reels. El actualizador Inhouse no cambia.
 
-Además de las pruebas JVM y del DEX final, la instrumentación comprueba `ClipsViewerConfig`, `ViewPager2`, el guard de `019Z.A03` y la política real de créditos en Android 14–16. [Ejecución](PENDING_RUNTIME_URL). Usa datos sintéticos; no prueba reproducción autenticada ni gestos físicos en el teléfono.
+Además de las pruebas JVM y del DEX final, la instrumentación comprueba `ClipsViewerConfig`, `ViewPager2`, el guard de `019Z.A03` y la política real de créditos en Android 14–16. [Ejecución](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38004528156). Usa datos sintéticos; no prueba reproducción autenticada ni gestos físicos en el teléfono.
