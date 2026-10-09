@@ -44,10 +44,12 @@ with sync_playwright() as p:
     assert page.evaluate('(()=>{try{InhouseUpdater.validateManifest({version:"1.0.0",apkUrl:"https://evil.example/app.apk"});return false}catch(e){return true}})()')
     context.add_init_script('window.requestAnimationFrame=()=>0;window.requestIdleCallback=()=>0')
     page.goto('https://appassets.androidplatform.net/updates/index.html?inhouse_app=1&quiet=1')
-    page.wait_for_function('() => window.offers>0',timeout=2000)
+    # The fixture deliberately disables frames. Playwright's default RAF polling
+    # would then evaluate only once and hang whenever a mocked fetch finishes later.
+    page.wait_for_function('() => window.offers>0',timeout=2000,polling=50)
     manifest['version']='0.3.2'
     page.goto('https://appassets.androidplatform.net/updates/index.html?inhouse_app=1')
-    page.wait_for_function('() => document.querySelector("#check-status").textContent.includes("última versión")')
+    page.wait_for_function('() => document.querySelector("#check-status").textContent.includes("última versión")',polling=50)
     assert page.locator('#android-update-gate').count()==0
     # Foregrounding checks again without waiting for Instagram or a fifteen-minute timer.
     manifest['version']='0.3.4'
@@ -62,7 +64,7 @@ with sync_playwright() as p:
     assert '0.3.4' in page.locator('[data-update-message]').inner_text()
     release=None;failure=True
     page.goto('https://appassets.androidplatform.net/updates/index.html?inhouse_app=1')
-    page.wait_for_function('() => document.querySelector("#check-status").textContent.includes("No se pudo comprobar")')
+    page.wait_for_function('() => document.querySelector("#check-status").textContent.includes("No se pudo comprobar")',polling=50)
     assert page.locator('#android-update-gate').count()==0
     # Popup receives the already checked manifest; it must never query GitHub a second time.
     popup_context=browser.new_context()

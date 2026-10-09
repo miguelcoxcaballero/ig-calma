@@ -1,0 +1,9 @@
+{
+  "version": "0.4.0",
+  "versionCode": 384510828,
+  "required": false,
+  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.0/IG-Calma-0.4.0.apk",
+  "apkSha256": "95c512040be4709fb3dc36ddcadf1ec8f69d59aa303711a62057c75cd6c24112",
+  "apkSizeBytes": 151642826,
+  "releaseNotes": "Versión nativa de prueba. Feed de cuentas seguidas, de más nuevo a más antiguo, limitado a las últimas 48 horas."
+}

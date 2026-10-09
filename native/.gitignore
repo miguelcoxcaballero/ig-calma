@@ -1,0 +1,7 @@
+/build/
+/downloads/
+/tools/*.jar
+/tools/*.zip
+*.apk
+*.apkm
+__pycache__/

@@ -1,0 +1,18 @@
+{
+  "package": "com.instagram.android",
+  "versionName": "439.0.0.37.89",
+  "versionCode": 384510827,
+  "minSdk": 28,
+  "abi": "arm64-v8a",
+  "source": "https://www.apkmirror.com/apk/instagram/instagram-instagram/instagram-439-0-0-37-89-release/instagram-439-0-0-37-89-4-android-apk-download/",
+  "apkmSha256": "1f20e342cc878225c141c83125ea46773ee8ea9491b8bd0469907de496097c0e",
+  "splits": {
+    "base.apk": "9a5cc97a8b4c1b804f37310d7f75bbb2eae2dea72066426d92d4b242f98d5961",
+    "split_config.xxhdpi.apk": "28303e016a90c642d857151245cb3cbc93b7b4b69037292c1126ed4ebd15d516"
+  },
+  "signerSha256": {
+    "24-32": "5f3e50f435583c9ae626302a71f7340044087a7e2c60adacfc254205a993e305",
+    "33+": "3a10c50c18ba937506c2875e9047be74f8fd8b86fae2ff9feaa50a81fcb4c014"
+  },
+  "verifiedMergedSha256": "c2ad7bcab775a30dcb4a73f93fa95bf38fe4e8668e03e4220888c92b2540c2d3"
+}
