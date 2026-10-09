@@ -24,7 +24,7 @@ PY
 if [ ! -f build/local-signing.p12 ]; then
  keytool -genkeypair -keystore build/local-signing.p12 -storepass localbuild -keypass localbuild -alias calma -keyalg RSA -keysize 2048 -validity 3650 -dname "CN=IG Calma local build" -storetype PKCS12
 fi
-"$bt/apksigner" sign --ks build/local-signing.p12 --ks-pass pass:localbuild --key-pass pass:localbuild --out dist/IG-Calma-0.2.0.apk build/aligned.apk
-"$bt/apksigner" verify --verbose dist/IG-Calma-0.2.0.apk
-"$bt/aapt" dump badging dist/IG-Calma-0.2.0.apk
-(cd dist && sha256sum IG-Calma-0.2.0.apk > SHA256SUMS.txt)
+"$bt/apksigner" sign --ks build/local-signing.p12 --ks-pass pass:localbuild --key-pass pass:localbuild --out dist/IG-Calma-0.2.1.apk build/aligned.apk
+"$bt/apksigner" verify --verbose dist/IG-Calma-0.2.1.apk
+"$bt/aapt" dump badging dist/IG-Calma-0.2.1.apk
+(cd dist && sha256sum IG-Calma-0.2.1.apk > SHA256SUMS.txt)
