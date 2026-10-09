@@ -116,7 +116,7 @@ val calmaNativeReels = bytecodePatch(
         val tabFactory = mutableClassDefBy("LX/01xt;").methods.single { it.name == "A0C" && it.parameterTypes.map { it.toString() } == listOf(SESSION) }
         check(tabFactory.hasText("android_purge_26_q2_ClipsFragmentFactoryImpl_newClipsTabFragment"))
         tabFactory.addInstructionsWithLabels(0, """
-            invoke-static {}, $REELS->locked()Z
+            invoke-static {}, $REELS->tabLocked()Z
             move-result v0
             if-eqz v0, :calma_original
             new-instance v1, Landroid/os/Bundle;

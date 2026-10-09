@@ -85,7 +85,11 @@ public final class NativeFeedBudget {
                     || Boolean.TRUE.equals(StockAccess.call(f, "isHidden"))
                     || !Boolean.TRUE.equals(StockAccess.call(f, "getUserVisibleHint"))) continue;
             String name = f.getClass().getName();
-            if (name.equals("X.05Cb") || name.equals("X.01Co") || name.equals("X.0AF3")) return true;
+            if (name.equals("X.05Cb") || name.equals("X.01Co") || name.equals("X.0AF3")) {
+                View view = (View) StockAccess.call(f, "getView"); Rect rect = new Rect();
+                if (Boolean.TRUE.equals(StockAccess.call(f, "isMenuVisible")) && view != null && view.isShown()
+                        && view.getGlobalVisibleRect(rect) && rect.width() >= view.getWidth() * .9f) return true;
+            }
             if (clips(StockAccess.call(f, "getChildFragmentManager"), depth + 1)) return true;
         }
         return false;
@@ -101,6 +105,7 @@ public final class NativeFeedBudget {
                 || (reelChain && ((current != null && clipVisible(current)) || SystemClock.elapsedRealtime() - launchTime < 2000)));
     }
     public static void reelsLaunched() { if (reelsAllowed()) { reelChain = true; launchTime = SystemClock.elapsedRealtime(); } }
+    public static void directLaunched() { settle(); reelChain = false; launchTime = 0; changed(); }
     static void changed() {
         Activity current = activity.get();
         boolean forYou = "BLENDED_FOR_YOU".equals(CalmaConfig.feed());

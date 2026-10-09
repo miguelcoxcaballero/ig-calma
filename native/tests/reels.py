@@ -52,6 +52,16 @@ public class ReelsTest {
         check("es.calma.instagram.nativeapp.BlockedReelsFragment".equals(CalmaReels.restoredClass("X.01Co")), "restored clips tabs cannot bypass gate");
         check("es.calma.instagram.nativeapp.BlockedReelsFragment".equals(CalmaReels.restoredClass("X.0AF3")), "restored homecoming clips cannot bypass gate");
         check("other.fragment".equals(CalmaReels.restoredClass("other.fragment")), "restoration preserves DM and story fragments");
+        NativeFeedBudget.allowed=true;
+        check(!CalmaReels.tabLocked() && NativeFeedBudget.tabLaunches==1,"For you native Reels tab starts its usage chain");
+        config.A0N=null; config.A1k="shared-clip";
+        check(CalmaReels.allowLaunch(config,session),"For you allows its ordinary algorithm viewer");
+        config.A0N=new Direct(); NativeRelations.mutual=false;
+        check(!CalmaReels.allowLaunch(config,session),"Unlocked For you cannot bypass the DM sender rule");
+        NativeRelations.mutual=true;
+        check(CalmaReels.launchOrDefer("A09",new Object[]{null,null,config,session}) && config.A2u
+            && NativeFeedBudget.directLaunches==1 && NativeFeedBudget.tabLaunches==1,"DM clip stays pinned and does not start the algorithm usage chain");
+        NativeFeedBudget.allowed=false;
         CalmaConfig.enabled=false;
         check("X.05Cb".equals(CalmaReels.restoredClass("X.05Cb")), "setting off restores normal fragment creation");
         check(CalmaReels.allowLaunch(null,null) && CalmaReels.maySelect(4), "setting off restores native behavior");
@@ -67,7 +77,7 @@ with tempfile.TemporaryDirectory(prefix='calma-reels-tests-') as temporary:
     source = work / PACKAGE
     source.mkdir(parents=True)
     (source / 'ReelsTest.java').write_text(fixture)
-    (source / 'NativeFeedBudget.java').write_text('package es.calma.instagram.nativeapp; public final class NativeFeedBudget { public static boolean reelsAllowed(){return false;} public static void reelsLaunched(){} }')
+    (source / 'NativeFeedBudget.java').write_text('package es.calma.instagram.nativeapp; public final class NativeFeedBudget { public static boolean allowed=false; public static int tabLaunches, directLaunches; public static boolean reelsAllowed(){return allowed;} public static void reelsLaunched(){tabLaunches++;} public static void directLaunched(){directLaunches++;} }')
     (source / 'CalmaConfig.java').write_text('package es.calma.instagram.nativeapp; public final class CalmaConfig { static boolean enabled=true; public static boolean reels(){return enabled;} public static long sessionId(){return 1;} }')
     (source / 'NativeRelations.java').write_text('package es.calma.instagram.nativeapp; public final class NativeRelations { static boolean mutual; static Object session; static String id; public static String owner(Object session){return "owner";} public static void resolveMutual(Object session,String sender,Runnable completion){completion.run();} public static boolean isMutual(Object account,String sender){session=account;id=sender;return mutual;} }')
     classes = work / 'classes'

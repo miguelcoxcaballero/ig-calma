@@ -27,11 +27,11 @@ public final class CalmaReels {
 
     /** Native DM sender, not the author of the shared video, determines permission. */
     public static boolean allowLaunch(Object config, Object session) {
-        if (!locked()) { NativeFeedBudget.reelsLaunched(); return true; }
+        if (!CalmaConfig.reels()) return true;
         if (config == null || session == null) return false;
         try {
             Object direct = read(config, "A0N");
-            if (direct == null) return false;
+            if (direct == null) return !locked();
             String sender = (String) read(direct, "A02");
             if (sender == null || sender.isEmpty() || !NativeRelations.isMutual(session, sender)) return false;
             return configureClip(config);
@@ -42,12 +42,11 @@ public final class CalmaReels {
 
     /** Resolve a cold native relationship cache without blocking the UI or losing the tap. */
     public static boolean launchOrDefer(final String methodName, final Object[] arguments) {
-        if (!locked()) { NativeFeedBudget.reelsLaunched(); return true; }
         final long ticket = launchSequence.incrementAndGet();
         final int configIndex = "A09".equals(methodName) ? 2 : 1;
         if (arguments == null || arguments.length <= configIndex + 1) return false;
         final Object config = arguments[configIndex], session = arguments[configIndex + 1];
-        if (allowLaunch(config, session)) return true;
+        if (allowLaunch(config, session)) { noteLaunch(config); return true; }
         final String sender;
         try {
             Object direct = read(config, "A0N");
@@ -128,11 +127,13 @@ public final class CalmaReels {
     }
 
     public static boolean allowBundle(Bundle arguments, Object session) {
-        if (!locked()) { NativeFeedBudget.reelsLaunched(); return true; }
-        if (arguments == null) return false;
+        if (arguments == null) return !locked();
         try {
             arguments.setClassLoader(session.getClass().getClassLoader());
-            return allowLaunch(arguments.getParcelable("ClipsViewerLauncher.KEY_CONFIG"), session);
+            Object config = arguments.getParcelable("ClipsViewerLauncher.KEY_CONFIG");
+            boolean allowed = allowLaunch(config, session);
+            if (allowed) noteLaunch(config);
+            return allowed;
         } catch (RuntimeException unavailable) { return false; }
     }
 
@@ -155,6 +156,17 @@ public final class CalmaReels {
     }
 
     public static boolean locked() { return CalmaConfig.reels() && !NativeFeedBudget.reelsAllowed(); }
+    public static boolean tabLocked() {
+        boolean blocked = locked();
+        if (!blocked) NativeFeedBudget.reelsLaunched();
+        return blocked;
+    }
+    private static void noteLaunch(Object config) {
+        try {
+            if (config != null && read(config, "A0N") != null) NativeFeedBudget.directLaunched();
+            else NativeFeedBudget.reelsLaunched();
+        } catch (ReflectiveOperationException | RuntimeException ignored) {}
+    }
 
     /** Called only from Instagram's ClipsViewPagerImpl, never the DM or photo pager. */
     public static void lockPager(Object controller) {

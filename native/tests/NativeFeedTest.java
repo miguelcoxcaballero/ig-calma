@@ -175,6 +175,10 @@ public final class NativeFeedTest {
         Status unfollowed = new Status(false, true);
         NativeRelations.beginStatus(session, "200", unfollowed); NativeRelations.endStatus(unfollowed);
         check(!NativeRelations.isMutual(session, "200"), "new verified unfollow overrides older mutual result");
+        Response stale = response(mutual);
+        NativeFeed.request(new Session(), new Request());
+        apply(stale);
+        check(stale.A0U.isEmpty() && !stale.A0a, "Late responses from a previous selection cannot populate the new mode");
         CalmaConfig.testMode = 0;
         Media algorithmReel = new Media("algorithm-reel", now - 10, "clips", new User(false, false));
         Media algorithmOld = new Media("algorithm-old", now - 300000, "feed", new User(false, false));

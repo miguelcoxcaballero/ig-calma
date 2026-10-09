@@ -3,7 +3,7 @@
   "versionCode": 384510832,
   "required": true,
   "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.4/IG-Calma-0.4.4.apk",
-  "apkSha256": "3627b27de4f57476c55102bc9893b6bc6672e07dafb04e13ecbfebc7d71f2cd8",
+  "apkSha256": "176cbf7713b3cd393278066914095e6fb917358b88f10946d318ececa41bbfaa",
   "apkSizeBytes": 146260653,
   "releaseNotes": "Cuatro modos nativos: For you, Favourites, Friends y Following. For you con minutos por hora y caducidad de 24 horas."
 }

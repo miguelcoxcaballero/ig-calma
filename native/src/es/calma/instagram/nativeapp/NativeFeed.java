@@ -103,10 +103,14 @@ public final class NativeFeed {
             if (following && request != null && request.head && request.context != null && CalmaConfig.mode() != 0) {
                 try {
                     NativeTimeline.Snapshot snapshot = NativeTimeline.load(response, request.context, now);
+                    if (request.epoch != CalmaConfig.sessionId()) { discard(response); return; }
                     snapshot.apply(response);
                     NativeFeedEnd.append(response, session);
                     return;
-                } catch (Exception failure) { throw new LoadFailure(failure); }
+                } catch (Exception failure) {
+                    if (request.epoch != CalmaConfig.sessionId()) { discard(response); return; }
+                    throw new LoadFailure(failure);
+                }
             }
             Object wrappers = StockAccess.get(response, "A0S");
             Object media = StockAccess.get(response, "A0U");
@@ -181,6 +185,10 @@ public final class NativeFeed {
             if (!NativeAds.media(media)) clean.add(item);
         }
         StockAccess.set(response, field, clean);
+    }
+    private static void discard(Object response) throws ReflectiveOperationException {
+        StockAccess.set(response, "A0S", new ArrayList<>()); StockAccess.set(response, "A0U", new ArrayList<>());
+        NativeTimeline.finish(response);
     }
 
     private static final class DatedItem {

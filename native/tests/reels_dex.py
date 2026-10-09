@@ -61,6 +61,7 @@ factory = method('LX/05Bx;->A0A(')
 assert factory.index('CalmaReels;->allowBundle') < factory.index('BlockedReelsFragment;-><init>') < factory.index('return-object')
 assert 'LX/00Nv;->A03(Landroid/os/Bundle;LX/02rJ;)V' in factory
 assert 'BlockedReelsFragment;-><init>' in method('LX/01xt;->A0C(')
+assert 'CalmaReels;->tabLocked()Z' in method('LX/01xt;->A0C('), 'Tab launch must start the same For you consumption policy as a viewer launch'
 assert 'CalmaReels;->restoredClass' in method('LX/00dl;->A00(')
 assert 'CLASS Les/calma/instagram/nativeapp/BlockedReelsFragment; EXTENDS LX/03z9;' in result
 assert 'LX/03z9;-><init>()V' in method('Les/calma/instagram/nativeapp/BlockedReelsFragment;-><init>(')
