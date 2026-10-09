@@ -103,6 +103,10 @@ def main() -> None:
     spec = importlib.util.spec_from_file_location('extension', NATIVE / 'scripts/compile-extension.py')
     extension = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(extension)
+    layout_spec = importlib.util.spec_from_file_location('dex_layout', NATIVE / 'tests/dex_layout.py')
+    layout = importlib.util.module_from_spec(layout_spec)
+    layout_spec.loader.exec_module(layout)
+    layout_report = layout.verify(args.apk, args.stock)
     classes = set()
     with zipfile.ZipFile(args.apk) as built, zipfile.ZipFile(args.stock) as stock:
         for name in built.namelist():
@@ -160,7 +164,7 @@ def main() -> None:
               'stockClassesPreserved': len(stock_classes), 'totalClasses': len(classes),
               'providerAuthorities': len(authorities), 'inhouseAssetsPreserved': True,
               'nativeLibrariesPreserved': True, 'originalLazyComponents': sorted(lazy_components),
-              'alignment': '16 KB', 'deviceTested': False}
+              'alignment': '16 KB', 'deviceTested': False, 'dexLayout': layout_report}
     (args.apk.parent / 'verification.json').write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps(report, indent=2))
 

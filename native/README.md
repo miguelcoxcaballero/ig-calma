@@ -20,12 +20,12 @@ La entrada aceptada está fijada en [`stock.lock.json`](stock.lock.json):
 | Android mínimo | Android 9, API 28 |
 | Formato de entrada | APKM con `base.apk` y `split_config.xxhdpi.apk` |
 | Procedencia | [Variante de APKMirror](https://www.apkmirror.com/apk/instagram/instagram-instagram/instagram-439-0-0-37-89-release/instagram-439-0-0-37-89-4-android-apk-download/) |
-| Versión propia de Calma | `0.4.0`, definida en [`CalmaBuild.java`](src/es/calma/instagram/nativeapp/CalmaBuild.java) |
+| Versión propia de Calma | `0.4.1`, definida en [`CalmaBuild.java`](src/es/calma/instagram/nativeapp/CalmaBuild.java) |
 | Paquete resultante | `es.calma.instagram` |
-| versionCode resultante | `384510828` |
+| versionCode resultante | `384510829` |
 
 El manifiesto del APK conserva `versionName=439.0.0.37.89` para Instagram. La
-comparación de actualizaciones utiliza `CalmaBuild.VERSION`, actualmente `0.4.0`.
+comparación de actualizaciones utiliza `CalmaBuild.VERSION`, actualmente `0.4.1`.
 Son versiones distintas con funciones distintas.
 
 El build verifica el SHA-256 del APKM y de cada split, además de la cadena de firma
@@ -139,19 +139,20 @@ solo si su hash coincide con `verifiedMergedSha256`. El APKM original sigue sien
 obligatorio para comprobar sus splits y firmas.
 
 [`scripts/build.py`](scripts/build.py) verifica la entrada, une los splits, compila
-la extensión y el bundle propio, aplica los parches con Morphe en modo `FULL`,
-alinea a **16 KB**, firma y verifica el resultado. Solo carga
+la extensión y el bundle propio y aplica los parches con Morphe en modo `FULL`.
+Después restaura las 20 particiones DEX originales, añade Calma en `classes21.dex`,
+regenera los metadatos del cargador, alinea a **16 KB**, firma y verifica el resultado. Solo carga
 `native/build/calma-patches.jar`. No descarga ni aplica parches funcionales externos.
 
 Los resultados quedan en:
 
-- `native/build/dist/IG-Calma-0.4.0.apk`.
+- `native/build/dist/IG-Calma-0.4.1.apk`.
 - `native/build/dist/SHA256SUMS.txt`, `build-info.json` y `verification.json`.
 - `native/build/patch-result.json` y `native/build/extension/build-report.json`.
 - `android-update.json` y `native/android-update.json`, idénticos y generados a partir del APK firmado.
 
 El build genera los archivos locales; no publica una release. El manifiesto de
-actualización apunta al APK de la release `v0.4.0` del repositorio configurado en el
+actualización apunta al APK de la release `v0.4.1` del repositorio configurado en el
 script. La publicación debe adjuntar exactamente ese APK y mantener su versión,
 tamaño y SHA-256 sincronizados con el manifiesto. Los dos manifiestos usan
 `required: true`; con `false`, Inhouse Read no ofrece la actualización. Publicar
@@ -184,6 +185,7 @@ java -jar native/downloads/morphe-desktop-1.18.1-all.jar \
 | `patches/SettingsPatch.kt`, `src/.../CalmaSettings*.java` | Fila dentro de los ajustes de Instagram y pantalla propia; símbolos descritos en [`settings-hooks.md`](settings-hooks.md). |
 | `src/.../NativeInitProvider.java`, `NativeLifecycle.java`, `NativeUpdates.java` | Ciclo de vida y alojamiento del actualizador existente. |
 | `tools/MergeSplits.kt`, `DexSubset.java`, `DexInspect.java` | Utilidades genéricas propias para unir, extraer e inspeccionar el APK. |
+| `tools/RestoreDexLayout.java`, `scripts/repair-dex-layout.py` | Conservan la distribución de clases de Instagram y sincronizan sus índices y hashes de arranque. |
 
 Los símbolos de Instagram se identificaron sobre la entrada verificada. Los parches
 comprueban la versión y las firmas de los métodos que modifican; no se debe ampliar
@@ -227,16 +229,25 @@ Para verificar otra vez el APK firmado:
 
 ```sh
 python3 native/scripts/verify-apk.py \
-  --apk native/build/dist/IG-Calma-0.4.0.apk \
+  --apk native/build/dist/IG-Calma-0.4.1.apk \
   --stock /ruta/al/base.apk \
   --build-tools "$CALMA_SDK/build-tools/36.0.0"
-python3 native/tests/updater.py --apk native/build/dist/IG-Calma-0.4.0.apk
+python3 native/tests/updater.py --apk native/build/dist/IG-Calma-0.4.1.apk
 ```
 
 La verificación del artefacto comprueba firma, alineación de 16 KB, versiones,
 autoridades, permisos, componentes, clases nativas conservadas, bibliotecas `.so`
 sin cambios y recursos Inhouse empaquetados. También comprueba que no se ha incluido
 el `MainActivity` del cliente web anterior.
+
+Desde la 0.4.1, `tests/dex_layout.py` exige las mismas clases originales en cada
+DEX y comprueba los hashes y canarios que consulta el cargador de Instagram. La
+0.4.0 tenía 19 DEX reconstruidos, pero conservaba metadatos de 20 DEX con hashes
+antiguos; el nuevo verificador rechaza ese APK. Se eliminan los perfiles de
+optimización originales, ligados a checksums e índices que ya no corresponden.
+`tests/hook_dex_analysis.py` analiza además los registros y enlaces de los métodos
+modificados sobre todos los DEX del APK firmado. Ambas comprobaciones forman
+parte del build y siguen siendo pruebas estáticas.
 
 **No se ha probado este APK en un dispositivo Android ni con una sesión real de
 Instagram.** Compilar y verificar el APK no demuestra que el inicio de sesión,

@@ -1,9 +1,9 @@
 {
-  "version": "0.4.0",
-  "versionCode": 384510828,
+  "version": "0.4.1",
+  "versionCode": 384510829,
   "required": true,
-  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.0/IG-Calma-0.4.0.apk",
-  "apkSha256": "95c512040be4709fb3dc36ddcadf1ec8f69d59aa303711a62057c75cd6c24112",
-  "apkSizeBytes": 151642826,
-  "releaseNotes": "Versión nativa de prueba. Feed de cuentas seguidas, de más nuevo a más antiguo, limitado a las últimas 48 horas."
+  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.1/IG-Calma-0.4.1.apk",
+  "apkSha256": "833610bc86864698135b2b59bbd9a227a403bd696575f7bd0e71bb78717decd9",
+  "apkSizeBytes": 146244269,
+  "releaseNotes": "Corrige el empaquetado de arranque y sincroniza los archivos que usa el cargador de Instagram."
 }

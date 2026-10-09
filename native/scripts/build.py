@@ -44,7 +44,7 @@ def finalize(apk: Path, build_tools: Path, morphe: Path) -> None:
     assert apk.name == f'IG-Calma-{version}.apk'
     run('python3', NATIVE / 'scripts/verify-apk.py', '--apk', apk,
         '--stock', split_dir / 'base.apk', '--build-tools', build_tools)
-    for check in ('verify_feed_hooks.py', 'reels_dex.py', 'discover_dex.py'):
+    for check in ('verify_feed_hooks.py', 'reels_dex.py', 'discover_dex.py', 'hook_dex_analysis.py'):
         run('python3', NATIVE / 'tests' / check, apk, '--morphe', morphe)
     run('python3', NATIVE / 'tests/updater.py', '--apk', apk)
     manifest = {
@@ -52,7 +52,7 @@ def finalize(apk: Path, build_tools: Path, morphe: Path) -> None:
         'version': version, 'versionCode': version_code, 'required': True,
         'apkUrl': f'https://github.com/miguelcoxcaballero/ig-calma/releases/download/v{version}/{apk.name}',
         'apkSha256': digest(apk), 'apkSizeBytes': apk.stat().st_size,
-        'releaseNotes': 'Versión nativa de prueba. Feed de cuentas seguidas, de más nuevo a más antiguo, limitado a las últimas 48 horas.',
+        'releaseNotes': 'Corrige el empaquetado de arranque y sincroniza los archivos que usa el cargador de Instagram.',
     }
     payload = json.dumps(manifest, indent=2, ensure_ascii=False) + '\n'
     for destination in (ROOT / 'android-update.json', NATIVE / 'android-update.json'):
@@ -128,8 +128,11 @@ def main() -> None:
         '--out', unsigned, '--temporary-files-path', build / 'release-work', merged)
     if not unsigned.is_file():
         raise SystemExit('Patch process did not produce an APK')
+    repaired = build / 'layout-restored.apk'
+    run('python3', NATIVE / 'scripts/repair-dex-layout.py', '--stock', split_dir / 'base.apk',
+        '--input', unsigned, '--output', repaired, '--morphe', args.morphe)
     aligned = build / 'aligned.apk'
-    run(args.build_tools / 'zipalign', '-f', '-P', '16', '4', unsigned, aligned)
+    run(args.build_tools / 'zipalign', '-f', '-P', '16', '4', repaired, aligned)
     dist = NATIVE / 'build/dist'
     dist.mkdir(exist_ok=True)
     apk = dist / f'IG-Calma-{version}.apk'

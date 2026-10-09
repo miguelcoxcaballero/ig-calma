@@ -1,0 +1,38 @@
+name: Check native startup on Android
+
+on:
+  push:
+    branches: ['runtime-check-v*']
+    paths: ['native/runtime-input/**', 'native/scripts/runtime-check.py', '.github/workflows/native-startup.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  startup:
+    name: Android API ${{ matrix.api }} startup
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [30, 36]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Enable the runner's KVM device
+        run: |
+          test -c /dev/kvm
+          sudo chmod 666 /dev/kvm
+      - name: Compare published APK and candidate on an official emulator
+        run: python3 native/scripts/runtime-check.py --api '${{ matrix.api }}'
+      - name: Keep startup logs and screen captures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: native-startup-api-${{ matrix.api }}
+          path: native/build/runtime-evidence/
+          if-no-files-found: warn
+          retention-days: 7
