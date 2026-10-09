@@ -79,10 +79,10 @@ def main() -> None:
     else:
         subprocess.run(['gh', 'release', 'create', tag, '--target', transport['sourceCommit'],
                         '--title', f'Instagram Calma {version} — prueba nativa',
-                        '--notes-file', str(source / 'release-notes.txt'), '--draft', '--prerelease'], check=True)
+                        '--notes-file', str(source / 'release-notes.txt'), '--draft'], check=True)
     subprocess.run(['gh', 'release', 'upload', tag, str(apk), str(sums), str(source / 'build-info.json'),
                     str(source / 'verification.json'), str(manifest_path), '--clobber'], check=True)
-    subprocess.run(['gh', 'release', 'edit', tag, '--draft=false', '--prerelease'], check=True)
+    subprocess.run(['gh', 'release', 'edit', tag, '--draft=false', '--prerelease=false', '--latest'], check=True)
 
 
 if __name__ == '__main__':

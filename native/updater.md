@@ -19,7 +19,7 @@ y tenga foco. La oferta ya validada se pasa a `UpdateActivity`, evitando otra co
 para mostrar el popup. El puente de instalación solo existe en esa pantalla local.
 El comprobador ofrece únicamente la versión y la entrega del manifiesto.
 
-La versión de Calma procede de `CalmaBuild.VERSION`, actualmente `0.4.5`.
+La versión de Calma procede de `CalmaBuild.VERSION`, actualmente `0.4.6`.
 `compile-extension.py` adapta únicamente ese valor y el identificador de versión
 del agente de usuario en `UpdateActivity`. El instalador Kotlin de Photos se compila
 sin cambios adicionales. Sus dependencias se trasladan a `es.calma.vendor` para
@@ -34,8 +34,9 @@ Ambas rutas deben publicar el mismo manifiesto del APK firmado, también para qu
 la versión web instalada pueda ofrecer el paso a la nativa. `required: true` es
 necesario: el código original de Read interpreta `false` como desactivar el aviso,
 incluso al comprobar manualmente. La versión nativa requiere Android 9 y ARM64.
-Una publicación marcada como prerelease no aparece en el respaldo
-`releases/latest`; los manifiestos directos permiten detectarla igualmente.
+Las publicaciones Android se anuncian como latest y sin la marca prerelease para
+que el respaldo `releases/latest` funcione cuando falla el manifiesto directo.
+El estado de pruebas en emulador y con cuenta real se documenta por separado.
 
 La integración requiere el provider de inicialización no exportado, la Activity
 translúcida de actualización no exportada, el permiso `REQUEST_INSTALL_PACKAGES` y
@@ -50,7 +51,7 @@ Ejecutar desde la raíz:
 python native/tests/updater.py
 python tests/updater.py
 python tests/upstream_updater.py
-python native/tests/updater.py --apk /ruta/al/IG-Calma-0.4.5.apk
+python native/tests/updater.py --apk /ruta/al/IG-Calma-0.4.6.apk
 ```
 
 La prueba nativa compila y ejecuta las clases reales de alojamiento contra fixtures

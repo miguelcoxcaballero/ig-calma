@@ -1,9 +1,9 @@
 {
-  "version": "0.4.5",
-  "versionCode": 384510833,
+  "version": "0.4.6",
+  "versionCode": 384510834,
   "required": true,
-  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.5/IG-Calma-0.4.5.apk",
-  "apkSha256": "e1bfb705d52d3a7f5ec4c46f07ce7237f46cd48ce7888b302aee0578f5a85f5f",
+  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.6/IG-Calma-0.4.6.apk",
+  "apkSha256": "a6704ec701cdd424b3de35ebe3577602d317ee643b0cde239a232b2ccc57ab3b",
   "apkSizeBytes": 146260653,
-  "releaseNotes": "Carga inicial más rápida: primeras publicaciones visibles mientras el timeline se precarga en segundo plano. Caché sin duplicados e historias actuales."
+  "releaseNotes": "Recupera la carga del feed retirando la precarga paralela de la 0.4.5. Reinicia la caché del timeline y conserva los cuatro modos."
 }

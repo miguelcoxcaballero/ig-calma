@@ -52,7 +52,7 @@ def finalize(apk: Path, build_tools: Path, morphe: Path) -> None:
         'version': version, 'versionCode': version_code, 'required': True,
         'apkUrl': f'https://github.com/miguelcoxcaballero/ig-calma/releases/download/v{version}/{apk.name}',
         'apkSha256': digest(apk), 'apkSizeBytes': apk.stat().st_size,
-        'releaseNotes': "Carga inicial más rápida: primeras publicaciones visibles mientras el timeline se precarga en segundo plano. Caché sin duplicados e historias actuales.",
+        'releaseNotes': "Recupera la carga del feed retirando la precarga paralela de la 0.4.5. Reinicia la caché del timeline y conserva los cuatro modos.",
     }
     payload = json.dumps(manifest, indent=2, ensure_ascii=False) + '\n'
     for destination in (ROOT / 'android-update.json', NATIVE / 'android-update.json'):
