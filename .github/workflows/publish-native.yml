@@ -1,6 +1,7 @@
 name: Publish verified native APK
 
 on:
+  workflow_dispatch:
   push:
     branches: ['native-release-v*']
     paths: ['native/release-input/**', '.github/workflows/publish-native.yml']
@@ -17,7 +18,14 @@ jobs:
         with:
           persist-credentials: false
       - name: Verify and publish the signed APK
+        if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: python3 native/scripts/publish-release.py
+      - name: Synchronize metadata for an existing signed release
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: python3 native/scripts/publish-release.py --manifest-only

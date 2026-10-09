@@ -30,9 +30,12 @@ El canal nativo consulta
 `https://raw.githubusercontent.com/miguelcoxcaballero/ig-calma/native-instagram/native/android-update.json`.
 Durante el empaquetado solo cambia esa URL dentro del JavaScript generado de Read;
 los recursos de `app/assets/updates` conservan el canal anterior sin modificaciones.
-Así, publicar el APK nativo no obliga a los usuarios del cliente web a instalar una
-versión que necesita Android 9 y ARM64. El manifiesto nativo debe generarse a partir
-del APK firmado que se adjunte a la publicación de GitHub.
+Ambas rutas deben publicar el mismo manifiesto del APK firmado, también para que
+la versión web instalada pueda ofrecer el paso a la nativa. `required: true` es
+necesario: el código original de Read interpreta `false` como desactivar el aviso,
+incluso al comprobar manualmente. La versión nativa requiere Android 9 y ARM64.
+Una publicación marcada como prerelease no aparece en el respaldo
+`releases/latest`; los manifiestos directos permiten detectarla igualmente.
 
 La integración requiere el provider de inicialización no exportado, la Activity
 translúcida de actualización no exportada, el permiso `REQUEST_INSTALL_PACKAGES` y

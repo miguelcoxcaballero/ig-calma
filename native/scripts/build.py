@@ -48,12 +48,15 @@ def finalize(apk: Path, build_tools: Path, morphe: Path) -> None:
         run('python3', NATIVE / 'tests' / check, apk, '--morphe', morphe)
     run('python3', NATIVE / 'tests/updater.py', '--apk', apk)
     manifest = {
-        'version': version, 'versionCode': version_code, 'required': False,
+        # Inhouse Read treats false as "do not offer", not an optional popup.
+        'version': version, 'versionCode': version_code, 'required': True,
         'apkUrl': f'https://github.com/miguelcoxcaballero/ig-calma/releases/download/v{version}/{apk.name}',
         'apkSha256': digest(apk), 'apkSizeBytes': apk.stat().st_size,
         'releaseNotes': 'Versión nativa de prueba. Feed de cuentas seguidas, de más nuevo a más antiguo, limitado a las últimas 48 horas.',
     }
-    (NATIVE / 'android-update.json').write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + '\n')
+    payload = json.dumps(manifest, indent=2, ensure_ascii=False) + '\n'
+    for destination in (ROOT / 'android-update.json', NATIVE / 'android-update.json'):
+        destination.write_text(payload)
     (dist / 'SHA256SUMS.txt').write_text(f'{manifest["apkSha256"]}  {apk.name}\n')
     (dist / 'build-info.json').write_text(json.dumps({
         'calmaVersion': version, 'calmaVersionCode': version_code,

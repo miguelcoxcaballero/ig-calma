@@ -148,12 +148,15 @@ Los resultados quedan en:
 - `native/build/dist/IG-Calma-0.4.0.apk`.
 - `native/build/dist/SHA256SUMS.txt`, `build-info.json` y `verification.json`.
 - `native/build/patch-result.json` y `native/build/extension/build-report.json`.
-- `native/android-update.json`, generado a partir del APK firmado.
+- `android-update.json` y `native/android-update.json`, idénticos y generados a partir del APK firmado.
 
 El build genera los archivos locales; no publica una release. El manifiesto de
 actualización apunta al APK de la release `v0.4.0` del repositorio configurado en el
 script. La publicación debe adjuntar exactamente ese APK y mantener su versión,
-tamaño y SHA-256 sincronizados con el manifiesto.
+tamaño y SHA-256 sincronizados con el manifiesto. Los dos manifiestos usan
+`required: true`; con `false`, Inhouse Read no ofrece la actualización. Publicar
+el manifiesto raíz en `main` y el nativo en `native-instagram` para alcanzar las
+dos URLs que consultan las APK ya instaladas.
 
 Para depurar solo la compilación, sin firmar ni reconstruir Instagram:
 

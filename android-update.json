@@ -1,9 +1,9 @@
 {
-  "version": "0.3.7",
-  "versionCode": 11,
+  "version": "0.4.0",
+  "versionCode": 384510828,
   "required": true,
-  "apkUrl": "https://raw.githubusercontent.com/miguelcoxcaballero/ig-calma/main/downloads/IG-Calma-0.3.7.apk",
-  "apkSha256": "11a7581d4da266d8e1fc97e7ab3bcf7900ff352a2d8a075f261820362777abb5",
-  "apkSizeBytes": 1185031,
-  "releaseNotes": "Historias restauradas, menos saltos al filtrar el feed, precarga de fotos próximas y corrección de la precarga de mensajes."
+  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.0/IG-Calma-0.4.0.apk",
+  "apkSha256": "95c512040be4709fb3dc36ddcadf1ec8f69d59aa303711a62057c75cd6c24112",
+  "apkSizeBytes": 151642826,
+  "releaseNotes": "Versión nativa de prueba. Feed de cuentas seguidas, de más nuevo a más antiguo, limitado a las últimas 48 horas."
 }

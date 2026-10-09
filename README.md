@@ -18,7 +18,7 @@ Buscar y Explorar filtran cuentas no seguidas. Con Reels ocultos, los enviados p
 
 Se reutilizan el comprobador y popup de **Inhouse Read** y el instalador Kotlin de **Inhouse Photos**, con sus fuentes originales conservadas en `vendor/`. El comprobador se inicia con la primera pantalla nativa y conserva el aviso hasta que puede mostrarlo. **Tu feed → Actualizar aplicación** abre el mismo actualizador.
 
-Esta rama utiliza [su propio manifiesto](native/android-update.json), generado desde el APK firmado. El canal web estable sigue separado porque sus requisitos de Android y arquitectura son diferentes. Los cambios al actualizador original se limitan a la conexión con Android y a la configuración de marca, versión y canal; [procedencia y pruebas](native/updater.md).
+El [manifiesto anterior](android-update.json) y el [nativo](native/android-update.json) anuncian el mismo APK firmado, para que las instalaciones anteriores también reciban el aviso de la 0.4.0. Se publica con `required: true`, como exige el comprobador original de Read para mostrarlo. Los cambios al actualizador se limitan a la conexión con Android y a la configuración de marca, versión y URL; [procedencia y pruebas](native/updater.md).
 
 ## Estado de la prueba
 

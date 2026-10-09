@@ -9,6 +9,7 @@ No signing key, user token, source rebuilding or updater changes are involved.
 from __future__ import annotations
 
 import hashlib
+import argparse
 import json
 import os
 from pathlib import Path
@@ -27,16 +28,32 @@ def sha(path: Path) -> str:
 def main() -> None:
     if os.environ.get('GITHUB_ACTIONS') != 'true':
         raise SystemExit('Run this publication step in the repository workflow')
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--manifest-only', action='store_true', help='Update release metadata after verifying the existing APK digest')
+    args = parser.parse_args()
     source = ROOT / 'native/release-input'
-    transport = json.loads((source / 'transport.json').read_text())
     manifest_path = ROOT / 'native/android-update.json'
     manifest = json.loads(manifest_path.read_text())
+    assert manifest['required'] is True, 'Inhouse Read will suppress the popup when required is false'
+    assert manifest == json.loads((ROOT / 'android-update.json').read_text()), 'Installed APK update channels disagree'
     version = manifest['version']
     assert re.fullmatch(r'\d+\.\d+\.\d+', version)
-    assert re.fullmatch(r'[0-9a-f]{40}', transport['sourceCommit'])
     repository = os.environ['GH_REPO']
     filename = f'IG-Calma-{version}.apk'
     assert manifest['apkUrl'] == f'https://github.com/{repository}/releases/download/v{version}/{filename}'
+    if args.manifest_only:
+        release = json.loads(subprocess.check_output(['gh', 'api', f'repos/{repository}/releases/tags/v{version}'], text=True))
+        matches = [asset for asset in release['assets'] if asset['name'] == filename]
+        assert len(matches) == 1
+        asset = matches[0]
+        assert asset['browser_download_url'] == manifest['apkUrl']
+        assert asset['size'] == manifest['apkSizeBytes']
+        assert asset['digest'] == 'sha256:' + manifest['apkSha256']
+        subprocess.run(['gh', 'release', 'upload', 'v' + version, str(manifest_path), '--clobber'], check=True)
+        print('Release manifest synchronized; existing APK digest verified and binary preserved.')
+        return
+    transport = json.loads((source / 'transport.json').read_text())
+    assert re.fullmatch(r'[0-9a-f]{40}', transport['sourceCommit'])
     target = ROOT / 'native/build/publish'
     target.mkdir(parents=True, exist_ok=True)
     apk = target / filename

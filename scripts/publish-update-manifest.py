@@ -7,6 +7,12 @@ manifest=ET.parse(root/'app/AndroidManifest.xml').getroot()
 ns='{http://schemas.android.com/apk/res/android}'
 version=manifest.get(ns+'versionName')
 code=int(manifest.get(ns+'versionCode'))
+published=root/'android-update.json'
+if published.exists():
+    previous=json.loads(published.read_text())
+    version_tuple=lambda value:tuple(map(int,value.split('.')))
+    if version_tuple(version)<version_tuple(previous['version']) or code<int(previous['versionCode']):
+        raise SystemExit('Refusing to replace a newer published update with the legacy web build. Use native/scripts/build.py for native releases.')
 apk=root/'dist'/f'IG-Calma-{version}.apk'
 if not apk.is_file() or apk.stat().st_size<100000:
     raise SystemExit('The signed APK is missing or below the original Inhouse updater size minimum.')
