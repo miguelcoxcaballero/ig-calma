@@ -26,11 +26,11 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = 'es.calma.instagram'
 BASELINE_URL = ('https://github.com/miguelcoxcaballero/ig-calma/releases/download/'
-                'v0.4.5/IG-Calma-0.4.5.apk')
-BASELINE_SHA = 'e1bfb705d52d3a7f5ec4c46f07ce7237f46cd48ce7888b302aee0578f5a85f5f'
+                'v0.4.6/IG-Calma-0.4.6.apk')
+BASELINE_SHA = 'a6704ec701cdd424b3de35ebe3577602d317ee643b0cde239a232b2ccc57ab3b'
 BASELINE_SIZE = 146260653
 SIGNER_SHA = '7133a4b3e4b9f9c4d2fbbd38b7dd2d44c7b8d0d7d16568bfe3da74a09e7887b6'
-CANDIDATE_VERSION = '0.4.6'
+CANDIDATE_VERSION = '0.4.7'
 
 
 def sha(path: Path) -> str:

@@ -6,8 +6,8 @@ p = argparse.ArgumentParser(); p.add_argument('apk', type=pathlib.Path); p.add_a
 classpath = str(ROOT/'native/build/tools') + ':' + str(args.morphe)
 with tempfile.TemporaryDirectory(prefix='calma-feed-hooks-') as tmp:
     dex = pathlib.Path(tmp)/'feed.dex'
-    subprocess.run(['java','-Xmx1g','-cp',classpath,'es.calma.tools.DexSubset',str(args.apk),str(dex),'LX/02px;','LX/0ICa;','LX/02qb;','LX/06gK;'],check=True,stdout=subprocess.DEVNULL)
-    output = subprocess.check_output(['java','-Xmx512m','-cp',classpath,'es.calma.tools.DexInspect',str(dex),'unsafeParseFromJson|A00|A01|bindView'],text=True)
+    subprocess.run(['java','-Xmx1g','-cp',classpath,'es.calma.tools.DexSubset',str(args.apk),str(dex),'LX/02px;','LX/0ICa;','LX/02qb;','LX/06gK;','LX/05qX;'],check=True,stdout=subprocess.DEVNULL)
+    output = subprocess.check_output(['java','-Xmx512m','-cp',classpath,'es.calma.tools.DexInspect',str(dex),'unsafeParseFromJson|A00|A01|A0G|bindView'],text=True)
     blocks = re.split(r'(?=^METHOD )', output, flags=re.M)
     feed = next(block for block in blocks if block.startswith('METHOD LX/02px;->unsafeParseFromJson'))
     batch = next(block for block in blocks if block.startswith('METHOD LX/0ICa;->A00'))
@@ -46,4 +46,12 @@ with tempfile.TemporaryDirectory(prefix='calma-feed-hooks-') as tmp:
     assert end_ins[2][1].startswith('if-eqz v0')
     assert end_ins[3][1] == 'return-void'
     assert int(re.search(r'-> @([0-9a-f]+)',end_ins[2][1])[1],16) == end_ins[4][0], 'Non-Calma end rows must run original binder'
+    controller = next(block for block in blocks if block.startswith('METHOD LX/05qX;->A0G'))
+    controller_ins = instructions(controller)
+    returns = {address for address, instruction in controller_ins if instruction == 'return-void'}
+    assert returns
+    for i, (address, instruction) in enumerate(controller_ins):
+        if address in returns: assert 'NativeTimelinePager;->completed(' in controller_ins[i-1][1]
+        branch = re.search(r'-> @([0-9a-f]+)', instruction)
+        if branch: assert int(branch[1],16) not in returns, 'Completion branch bypasses preload hook'
     print('Native feed bytecode: response, request and friendship hooks are reached by actual control flow')

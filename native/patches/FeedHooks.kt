@@ -55,6 +55,15 @@ val calmaNativeFeed = bytecodePatch(
             invoke-static/range {v$register .. v$register}, $FEED->parameters(Ljava/util/Map;)Ljava/util/Map;
             move-result-object v$register
         """.trimIndent())
+        val controller = mutableClassDefBy("LX/05qX;")
+        check(controller.fields.any { it.name == "A0X" && it.type == "Lcom/instagram/common/session/UserSession;" })
+        check(controller.methods.any { it.name == "A0J" && it.parameterTypes.map { t -> t.toString() } == listOf("LX/0AHw;", "LX/02pk;", "Ljava/lang/String;", "Ljava/util/Map;") && it.returnType == "Z" })
+        val completed = controller.methods.single { it.name == "A0G" && it.parameterTypes.map { t -> t.toString() } == listOf("LX/06lY;") }
+        completed.implementation!!.instructions.withIndex().filter { it.value.opcode == Opcode.RETURN_VOID }.toList().reversed().forEach {
+            completed.replaceInstruction(it.index, "invoke-static/range {p0 .. p0}, Les/calma/instagram/nativeapp/NativeTimelinePager;->completed(Ljava/lang/Object;)V")
+            completed.addInstructions(it.index + 1, "return-void")
+        }
+        check(mutableClassDefBy("LX/08cS;").methods.any { it.name == "<init>" && it.parameterTypes == listOf("Ljava/lang/String;") })
         // Reject a changed native transport/codec rather than silently shipping a broken cache.
         check(mutableClassDefBy("LX/02pp;").methods.any { it.name == "<init>" && it.parameterTypes.size == 25 })
         check(mutableClassDefBy("LX/02dy;").methods.any { it.name == "A01" && it.parameterTypes.size == 5 && it.returnType == "LX/03Da;" })

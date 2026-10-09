@@ -40,9 +40,6 @@ public final class NativeFeed {
             if (tracked != null) tracked.context = new NativeTimeline.Context(androidContext, session, request, parameters);
         } catch (ReflectiveOperationException | RuntimeException ignored) {}
     }
-    static final class LoadFailure extends RuntimeException {
-        LoadFailure(Throwable cause) { super("Could not finish the friends timeline", cause); }
-    }
     private static final String[] SUGGESTION_FIELDS = {
         "A0N", "A0O", "A0P", "A0Q", "A0R", "A0S", "A0T", "A0U", "A0K", "A0W", "A04", "A0J",
         "A0L", "A0V", "A0e", "A0d", "A0H", "A0M", "A0j", "A0b", "A0h", "A0Z", "A0a", "A0c", "A0g", "A0i"
@@ -100,17 +97,9 @@ public final class NativeFeed {
             }
             Object source = StockAccess.get(response, "A0O");
             boolean following = "following".equals(source) || (source == null && request != null && request.following);
-            if (following && request != null && request.head && request.context != null && CalmaConfig.mode() != 0) {
-                try {
-                    NativeTimeline.Snapshot snapshot = NativeTimeline.load(response, request.context, now);
-                    if (request.epoch != CalmaConfig.sessionId()) { discard(response); return; }
-                    snapshot.apply(response);
-                    NativeFeedEnd.append(response, session);
-                    return;
-                } catch (Exception failure) {
-                    if (request.epoch != CalmaConfig.sessionId()) { discard(response); return; }
-                    throw new LoadFailure(failure);
-                }
+            if (following && request != null && request.context != null) {
+                NativeTimelineProgress.response(response, request.context, request.head, request.epoch, now);
+                return;
             }
             Object wrappers = StockAccess.get(response, "A0S");
             Object media = StockAccess.get(response, "A0U");
@@ -118,9 +107,7 @@ public final class NativeFeed {
             List<?> rawMedia = media instanceof List ? (List<?>) media : java.util.Collections.emptyList();
             List<String> missing = missing(rawWrappers, rawMedia, session, now);
             if (!missing.isEmpty()) {
-                NativeRelationLookup.awaitOffMainThread(session, missing);
-                if (!missing(rawWrappers, rawMedia, session, now).isEmpty())
-                    throw new LoadFailure(new IllegalStateException("Friendship data pending"));
+                NativeRelationLookup.refresh(session, missing);
             }
             boolean exhausted = true, sawPosts = false;
             Page wrapperPage = null, mediaPage = null;
@@ -186,11 +173,6 @@ public final class NativeFeed {
         }
         StockAccess.set(response, field, clean);
     }
-    private static void discard(Object response) throws ReflectiveOperationException {
-        StockAccess.set(response, "A0S", new ArrayList<>()); StockAccess.set(response, "A0U", new ArrayList<>());
-        NativeTimeline.finish(response);
-    }
-
     private static final class DatedItem {
         final Object item;
         final long time;
@@ -214,6 +196,7 @@ public final class NativeFeed {
         boolean sawPost = false, allOlder = true, descending = true;
         long previous = Long.MAX_VALUE, newest = Long.MIN_VALUE, oldest = Long.MAX_VALUE;
         for (Object item : original) {
+            try {
             if (item == null) continue;
             if (wrapped && NativeAds.feedWrapper(item)) continue;
             Object media = wrapped ? StockAccess.call(item, "A0A") : item;
@@ -246,6 +229,9 @@ public final class NativeFeed {
             if (!permitted) continue;
             String id = (String) StockAccess.call(dictionary, "getId");
             if (id != null && id.length() > 0 && pageIds.add(id)) posts.add(new DatedItem(item, time));
+            } catch (ReflectiveOperationException | RuntimeException malformedRow) {
+                allOlder = false; descending = false;
+            }
         }
         posts.sort((a, b) -> Long.compare(b.time, a.time));
         List<Object> items = new ArrayList<>(posts.size() + controls.size());
@@ -277,13 +263,13 @@ public final class NativeFeed {
                 Object author = StockAccess.call(dictionary, "A33");
                 if (author != null) {
                     String id = (String) StockAccess.call(author, "getId");
-                    if (id != null && !NativeRelations.verified(session, id)) ids.add(id);
+                    if (id != null && !NativeRelations.verified(session, id) && !NativeRelations.permitted(session, author, 2, true)) ids.add(id);
                 }
                 Object collaborators = StockAccess.call(dictionary, "A8F");
                 if (collaborators instanceof List) for (Object collaborator : (List<?>) collaborators)
                     if (collaborator != null) {
                         String id = (String) StockAccess.call(collaborator, "getId");
-                        if (id != null && !NativeRelations.verified(session, id)) ids.add(id);
+                        if (id != null && !NativeRelations.verified(session, id) && !NativeRelations.permitted(session, collaborator, 2, true)) ids.add(id);
                     }
             } catch (ReflectiveOperationException | RuntimeException missingOptionalAuthor) { /* Filter rejects malformed items. */ }
         }

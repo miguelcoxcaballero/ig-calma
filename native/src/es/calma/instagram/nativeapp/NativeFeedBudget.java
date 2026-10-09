@@ -64,6 +64,7 @@ public final class NativeFeedBudget {
         settle(); active = false; save(); activity.clear();
         running = false; handler.removeCallbacks(tick);
     }
+    static boolean timelineVisible() { return activity.get() != null && homeVisible(); }
     private static boolean homeVisible() {
         Object fragment = home.get();
         if (!homeResumed || fragment == null) return false;
@@ -125,7 +126,7 @@ public final class NativeFeedBudget {
                 if (video) current.onBackPressed();
                 NativeFeedSelector.expired(); save();
             }
-            changed(); NativeFeedSelector.refreshBalance();
+            changed(); NativeFeedSelector.refreshBalance(); NativeTimelinePager.visible();
             if (SystemClock.elapsedRealtime() - persisted >= 1000) save();
             handler.postDelayed(this, 500);
         }

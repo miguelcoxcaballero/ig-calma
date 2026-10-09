@@ -2,25 +2,17 @@
 
 Calma's original hooks are mapped against the stock Instagram 439.0.0.37.89 APK. No third-party feature patches are used.
 
-## Complete snapshot (0.4.3)
+## Progressive delivery (0.4.7)
 
-Friends and Following select Instagram's `following` source; For you and Favourites retain their original algorithm/favorites responses and remove only ads. Its request ID correlates the response with the actual UserSession and request context. A head response starts a snapshot on its native worker. Continuations use Instagram's own `02dy.A01` authenticated request factory, cloned `02pp` parameters, a fresh request ID and the native pagination reason. They do not extract credentials or call a separate web API.
+Friends and Following use the native following source. A cold head returns known eligible posts and native controls immediately. The original controller loads later pages: `05qX.A0G` schedules `05qX.A0J` with the server cursor and PAGINATION reason after the normal completion callback. `GRO` retains Instagram's own in-flight guards. The extension no longer calls a parallel timeline transport or waits for a complete 48-hour download inside the parser.
 
-Calma collects the entire 48-hour interval, starts batched friendship checks alongside pagination in Friends, then sorts globally and deduplicates media IDs. The time window is fixed at the start of synchronization. Native controls and stories from the head are retained once; later pages cannot inject another story/control row. Both feed-item and direct-media representations are handled. Ads, suggestions, old posts and hidden Reels are excluded.
+The account/mode accumulator retains unresolved authors and reconsiders them after the native batch friendship response. Known positive mutual models can render immediately; fresh account-scoped batch facts override stale model data. Metadata requests retain their 15-second deadline and three-second backoff. One unavailable author or malformed optional row cannot discard the rest of a page. Original organic cursors remain available when a page is empty after filtering.
 
-A response is complete only when the server reports no more pages or an entirely old organic page proves the boundary in a continuously chronological stream. Empty pages, advertisements and out-of-order pages do not prove the end. Repeated/missing continuation cursors fail instead of looping. Each continuation has a 20-second deadline and cancellation; a synchronization has a 90-second deadline. There is no fixed post-count limit. Very large or slow timelines can hit that deadline and need a retry.
+Head controls/stories are retained once, posts deduplicated across pages, and a completed snapshot sorted newest first. Completion requires server EOF or a verified continuously chronological 48-hour boundary, plus resolved friendship data. Incomplete relationship data produces a retry row rather than `That's it`. Resolved late rows are delivered on a later page, or replayed through a native head refresh when the completed cache becomes available. Cached/disk replay preserves native head refresh behavior.
 
-Only a complete generation replaces the saved snapshot. Once complete, the native RecyclerView receives the saved snapshot with no continuation cursor, so scrolling that snapshot never requests another feed page. Warm head responses reuse it. Pull-to-refresh, the new-post pill, new-follow and explicit content-refresh reasons build a fresh generation. Settings changes invalidate the old generation. Switching modes cancels stale in-flight responses but preserves the independent completed timeline caches. The main thread never waits on the account synchronization lock.
+Preload runs only while Home is visible and the selection generation is current. Each cursor is attempted once by the extension, leaving native scrolling/retries available; preload stops after 90 seconds without treating that timeout as EOF. Switching modes retains independent completed caches. Images/videos continue to use Instagram's native asset cache; the complete metadata snapshot is not a guarantee that every video byte is offline.
 
-0.4.6 restores the 0.4.4 response and synchronization implementation exactly. The parallel preload stream added in 0.4.5 is removed after a user-reported regression where no feed loaded. There is one complete synchronization before delivering Friends/Following rows; For you and Favourites continue their original native pagination with only ad filtering. The cache format marker is changed to reject metadata saved by 0.4.5, without clearing account data, settings or the native media cache. Cold synchronization may still be slow; this release restores the previously working loading path and does not claim an authenticated-device performance measurement. Full metadata loading does not download every photo/video byte: those assets use Instagram's own cache.
-
-## Friendship correctness and load failures
-
-Every recent eligible author/coauthor with a numeric ID is checked against fresh, account-scoped `friendships/show_many/` results, including users whose native model incorrectly contains an old `false`. The stock `0BnR.A04` request uses cache=false, include_followed_by=true and native-cache notification=true. Its parser hook captures `following` (`0BnY.A0H`) and nullable `followed_by` (`A02`) even without a cached User.
-
-Fresh verified facts take precedence over stale model fields. Missing fields remain unknown. Requests larger than 100 users are split into complete batches, not truncated. Active duplicate batches share a future. Failed batches have a three-second retry backoff; they do not disable all checks for an account for five minutes. Requests have a 15-second deadline. A snapshot waits for its friendship results before filtering; a slow result no longer permanently discards its posts after 2.5 seconds.
-
-Network failures, unresolved relationships and pagination cycles do not become a successful empty page with more loading enabled. The previous complete timeline is retained when available, pagination is stopped, and an inline native end-row says `No se pudo cargar` / `Desliza hacia abajo para reintentar`. Exceptions cannot escape the extension into UI-thread cache parsing. A failed/incomplete generation never displays `That's it`.
+Tests cover cold parsing on the main thread without a pre-seeded cache, blocked friendship results, late resolution, duplicates, stories, malformed rows and stock algorithm/favorites pagination. APK instrumentation additionally uses actual Media, LiveTreeMediaDict, User, LiveTreeUserDict, native wrappers, response and parser-context classes initialized with synthetic cached data. It checks cold delivery, native cursor, duplicate removal and complete replay. It does not make authenticated HTTP requests or prove performance on the user's device.
 
 ## Local storage and end row
 
@@ -34,7 +26,7 @@ A completed snapshot appends Instagram's own `06qT` end-of-feed model in a `05qw
 | --- | --- |
 | `02qb.A01` parameters 0–5 | Context, builder, native state, UserSession, request, feed dependencies |
 | `02pp.A0H`, `A0G`, `A09`, `A0L` | Request ID, cursor, reason, parameter map |
-| `02dy.A01` | Native continuation request factory |
+| `05qX.A0G` / `A0J` | Original completion callback and guarded pagination |
 | `02px.unsafeParseFromJson` | Native response boundary |
 | `07do.A0S`, `A0U` | Feed wrappers and direct-media lists |
 | `07do.A0a`, `A0W`, `A0N` | More available, automatic load-more, next cursor |
