@@ -5,6 +5,7 @@
     return;
   }
   let owner = '', generation = 0, active = null;
+  const freshness = 15 * 60 * 1000;
   const empty = () => ({owner, following: [], friends: [], followingReady: false, friendsReady: false, phase: 'waiting', error: '', updated: 0});
   window.__calmaRelations = empty();
   const notify = () => {
@@ -50,7 +51,7 @@
   async function sync(force = false) {
     if (!owner || active) return;
     const state = window.__calmaRelations;
-    if (!force && state.friendsReady && Date.now() - state.updated < 24 * 60 * 60 * 1000) return;
+    if (!force && state.friendsReady && Date.now() - state.updated < freshness) return;
     const token = {owner, generation, controller: new AbortController()};
     active = token; state.phase = 'syncing'; state.error = ''; notify();
     try {
@@ -60,8 +61,9 @@
       });
       if (generation !== token.generation) return;
       state.following = [...following.values()]; state.followingReady = true;
-      // A fresh following snapshot invalidates the old mutual snapshot until both finish.
-      state.friends = []; state.friendsReady = false; notify();
+      // Keep the last complete mutual snapshot visible while refreshing.
+      // Replace it atomically only after both paginated requests succeed.
+      notify();
       const followers = await list('followers', token);
       if (generation !== token.generation) return;
       state.friends = [...following].filter(([id]) => followers.has(id)).map(([, username]) => username);
@@ -83,7 +85,7 @@
     id = /^\d+$/.test(String(id)) ? String(id) : '';
     if (id === owner) {
       const state = window.__calmaRelations;
-      if (owner && state.phase === 'ready' && Date.now() - state.updated >= 24 * 60 * 60 * 1000) sync();
+      if (owner && state.phase === 'ready' && Date.now() - state.updated >= freshness) sync();
       return;
     }
     generation++; if (active) active.controller.abort(); active = null; owner = id;

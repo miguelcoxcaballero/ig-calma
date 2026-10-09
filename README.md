@@ -1,8 +1,8 @@
-# Instagram Calma 0.3.2 — experimental
+# Instagram Calma 0.3.3 — experimental
 
 Cliente Android independiente basado en **Instagram web**, con detección automática de seguidos, amigos por seguimiento mutuo, feed finito y bloqueo de Reels. No es una modificación del APK oficial ni está afiliado a Meta. Requiere Android 8 o posterior y Android System WebView actualizado.
 
-**[Descargar APK 0.3.2](https://github.com/miguelcoxcaballero/ig-calma/raw/refs/heads/main/downloads/IG-Calma-0.3.2.apk)** · [Archivos y SHA-256](downloads/)
+**[Descargar APK 0.3.3](https://github.com/miguelcoxcaballero/ig-calma/raw/refs/heads/main/downloads/IG-Calma-0.3.3.apk)** · [Archivos y SHA-256](downloads/)
 
 ## Instalación y uso
 
@@ -12,13 +12,21 @@ Cliente Android independiente basado en **Instagram web**, con detección autom�
 4. Se conserva la interfaz de Instagram web, sin la barra verde ni el panel de estado anterior. Los controles adicionales se insertan en el contenido de la página de ajustes, sin botones flotantes, barras ni superposiciones. La apariencia y funciones siguen siendo las de la web, no las de la app nativa.
 5. «Inicio / Nueva sesión» empieza otra tanda. Guardar ajustes, recargar o abrir un nuevo documento también reinician el límite; no es un límite diario ni un historial permanente de publicaciones vistas.
 
+## Correcciones del feed en 0.3.3
+
+El filtro conserva los elementos de paginación y los espaciadores que utiliza Instagram para cargar y reciclar publicaciones. El estado de la tanda se coloca fuera de su lista de posts; solo indica que la tanda ha terminado cuando se alcanza el límite configurado. Se reconocen autores en enlaces con nombre de usuario, publicaciones colaborativas y cambios de autor en nodos reutilizados. Los duplicados del mismo post, incluidos sus distintos formatos de enlace, aparecen una sola vez.
+
+La sincronización conserva la lista mutua completa anterior mientras consulta una nueva y si la consulta falla. Su caché se revisa cada 15 minutos al usar la app. No se realizan peticiones en bucle si Instagram las rechaza. Los carruseles mixtos conservan las fotos aunque Reels esté desactivado; sus vídeos siguen ocultos.
+
+Estas correcciones permiten continuar cargando los posts que Instagram entrega al inicio. El filtro no construye un archivo de todas las publicaciones de cada amigo ni puede garantizar que Instagram incluya todas ellas en el feed. Se mantiene el límite por sesión elegido en ajustes.
+
 ## Actualización dentro de la app
 
 En **Ajustes → Editar perfil → Ajustes adicionales → Actualizar aplicación**, puedes buscar y descargar una versión nueva sin abrir el navegador. El actualizador consulta `android-update.json`, compara la versión instalada y muestra el aviso, botón Instalar y barra de progreso originales de **Inhouse Read**. La descarga y la verificación SHA-256 también son su código reutilizado, no una implementación nueva. [Procedencia y adaptaciones mínimas](vendor/UPSTREAM.md). Se revisó el adaptador de Inhouse Photos; esta app usa el de Read por ser Java/WebView.
 
 La comprobación automática comienza 12 segundos después de preparar el documento principal, sin añadir una vista al feed; el código original vuelve a consultar cada 15 minutos mientras su WebView siga ejecutándose. Cuando detecta una versión nueva con `required: true`, abre la pantalla interna de actualización. No se ofrece como un servicio de actualización mientras Android haya cerrado la app.
 
-Android exige habilitar «Permitir desde esta fuente» para Instagram Calma y confirmar la instalación. No instala paquetes silenciosamente. Usa un APK con el mismo paquete y certificado para conservar datos y sesión. La versión 0.3.1 no contenía el actualizador: instala 0.3.2 manualmente una vez para disponer de esta función en futuras versiones.
+Android exige habilitar «Permitir desde esta fuente» para Instagram Calma y confirmar la instalación. No instala paquetes silenciosamente. Usa un APK con el mismo paquete y certificado para conservar datos y sesión. La versión 0.3.1 no contenía el actualizador: instala 0.3.2 o una versión posterior manualmente una vez para disponer de esta función en futuras versiones.
 
 El instalador tiene su puente nativo únicamente en una pantalla local aislada; no se añade a Instagram. AndroidX FileProvider comparte únicamente la carpeta privada de descargas de actualización. El aviso bloqueante de Inhouse Read aparece en esa pantalla interna, sin botón flotante sobre el feed.
 
@@ -32,7 +40,7 @@ Se añaden transiciones de navegación de 170 ms y respuesta táctil a botones y
 
 Los filtros se instalan al estar disponible el primer documento visible, antes del evento de carga completa. WebView se mantiene con el fondo del tema hasta terminar esa instalación. Las cuentas seguidas verificadas pueden mostrarse desde la primera página de resultados; la sincronización completa continúa y solo se guardan cachés completas. Esto reduce la espera del filtrado, pero no acelera los servidores o la conexión de Instagram.
 
-El inicio mantiene oculto el contenido no aprobado mediante CSS antes de clasificarlo. La protección se activa de forma síncrona al navegar a Inicio dentro de la web. Con Reels desactivados, los vídeos del feed se ocultan incluso si llegan después de una foto. Para evitar clips que la web no identifica como Reel, se ocultan también publicaciones del inicio que contengan vídeos, no solo las etiquetadas como Reels.
+El inicio mantiene oculto el contenido no aprobado mediante CSS antes de clasificarlo. La protección se activa de forma síncrona al navegar a Inicio dentro de la web. Con Reels desactivados, los vídeos del feed se ocultan incluso si llegan después de una foto. Para evitar clips que la web no identifica como Reel, se ocultan las publicaciones del inicio compuestas solo por vídeo; los carruseles mixtos conservan sus fotos, con los vídeos ocultos y pausados.
 
 ## Ubicación de los controles
 
@@ -44,9 +52,9 @@ Se detecta el identificador de tu cuenta mediante las cookies de sesión de WebV
 
 Se consultan mediante GET, con tu sesión en instagram.com, `/api/v1/friendships/{tu_id}/following/` y `/followers/`. Son **interfaces internas sin garantía pública de compatibilidad**: pueden exigir comprobaciones, rechazar WebView o cambiar. La consulta pagina secuencialmente, con una pausa de 650 ms entre páginas, máximo 100 páginas por lista y 15 segundos por petición. No intenta saltarse comprobaciones ni bloqueos.
 
-«Amigos» es la intersección de identificadores de cuenta: tú sigues a esa persona y ella te sigue. No equivale a Mejores amigos. La lista mutua solo se publica cuando terminan ambas consultas; no se usa una lista parcial como completa. Si solo termina la lista de seguidos, ese modo puede funcionar aunque falle el de seguidores.
+«Amigos» es la intersección de identificadores de cuenta: tú sigues a esa persona y ella te sigue. No equivale a Mejores amigos. La lista mutua solo se sustituye cuando terminan ambas consultas. Durante una actualización o si esta falla, se conserva la última lista completa verificada para evitar que desaparezcan los posts. Si solo termina la lista de seguidos, ese modo puede funcionar aunque falle el de seguidores.
 
-Las relaciones completas se guardan localmente por cuenta. Se actualizan al usar la app si tienen más de 24 horas; «Sincronizar ahora» fuerza una consulta. Un cambio de cuenta limpia el estado en memoria y separa las cachés. Cerrar sesión y borrar datos web elimina las cachés.
+Las relaciones completas se guardan localmente por cuenta. Se actualizan al usar la app si tienen más de 15 minutos; «Sincronizar ahora» fuerza una consulta. Un cambio de cuenta limpia el estado en memoria y separa las cachés. Cerrar sesión y borrar datos web elimina las cachés.
 
 Si una consulta se rechaza, se informa en los ajustes y no se reintenta automáticamente en ese documento; abrir una página nueva puede volver a intentarlo. Puede seguir disponible una caché anterior. Mientras no existe la lista necesaria, las publicaciones filtradas se ocultan. Los autores no identificados también se ocultan.
 
@@ -71,7 +79,7 @@ La autorización es de un solo uso y caduca en 30 segundos. El visor queda limit
 ## Otros límites
 
 - El filtro de cuentas se aplica al **inicio**, donde también se ocultan historias y paneles de descubrimiento. Perfiles, mensajes y búsqueda siguen accesibles; no se filtran todas las pantallas.
-- Reels: se bloquean rutas `/reel/` y `/reels/` y publicaciones reconocidas por enlaces o etiquetas. Cambios del marcado pueden impedir la detección. Para evitar fotogramas de clips no identificados, también se ocultan las publicaciones con vídeo en el feed de inicio cuando este bloqueo está activo; los DM verificados tienen la excepción descrita arriba.
+- Reels: se bloquean rutas `/reel/` y `/reels/` y publicaciones reconocidas por enlaces o etiquetas. Cambios del marcado pueden impedir la detección. Para evitar fotogramas de clips no identificados, se ocultan las publicaciones compuestas solo por vídeo en el inicio cuando este bloqueo está activo. Los carruseles que contienen fotos conservan esas fotos, con los vídeos ocultos y pausados; los DM verificados tienen la excepción descrita arriba.
 - Los filtros dependen de los elementos y enlaces de la web. Durante cargas o cambios de pantalla podría aparecer contenido brevemente. Instagram podría seguir solicitando contenido en segundo plano aunque el feed esté cortado.
 - Instagram puede bloquear el acceso desde WebView. Se bloquean enlaces externos, incluido el acceso mediante Facebook. No se implementan carga de archivos, cámara ni micrófono.
 - El nombre de instalación es Instagram Calma; el icono incorpora cámara y pausa. Los ajustes identifican el cliente como independiente. No se presenta como una aplicación oficial.
@@ -79,7 +87,7 @@ La autorización es de un solo uso y caduca en 30 segundos. El visor queda limit
 
 ## Verificación realizada
 
-APK para API 35, mínimo 26, versión de paquete 6. Firma v2/v3 verificada; mismo certificado que 0.1.0. Permisos: Internet, mostrar notificaciones e instalar paquetes con autorización del usuario. El servicio está protegido por `BIND_NOTIFICATION_LISTENER_SERVICE` y requiere activación del usuario.
+APK para API 35, mínimo 26, versión de paquete 7. Firma v2/v3 verificada; mismo certificado que 0.1.0. Permisos: Internet, mostrar notificaciones e instalar paquetes con autorización del usuario. El servicio está protegido por `BIND_NOTIFICATION_LISTENER_SERVICE` y requiere activación del usuario.
 
 Pruebas del actualizador original: detección de versión, aviso, URL y SHA-256 enviados al instalador, permiso de instalación, progreso, estados de listo/error, validación de origen y detección automática; CSS idéntico al original y bloque nativo idéntico salvo las sustituciones documentadas. Manifiesto comprobado frente al APK firmado. Pruebas de tema y movimiento: cambio claro/oscuro en el mismo documento, colores heredados por los controles, conservación de campos y fotos, respuesta táctil, transiciones y movimiento reducido, ausencia de superposiciones y de bucles de cambios del tema. Pruebas de Reels: enlaces de DM accesibles, amigos mutuos verificados, rechazo de cuentas no mutuas, un único vídeo, bloqueo de desplazamiento, ocultación inmediata de fotogramas al volver a Inicio y de vídeos añadidos tarde a una publicación ya aprobada. Prueba de carga: las primeras cuentas seguidas están disponibles antes de terminar la paginación. Pruebas de integración en la página de ajustes: se conserva el formulario original, controles en el flujo del documento sin superposición, guardado mediante navegación validada, sustitución dinámica del panel y ausencia de controles sobre inicio, DM y acceso. Pruebas en Chromium con respuestas simuladas: paginación, intersección por identificadores, integración con filtros, separación por cuenta, reinicio de sesión al cambiar de cuenta, cierre de sesión, caché, detención ante limitación de consultas y rechazo de listas mutuas incompletas. Pruebas de filtros: autores desconocidos, Reels, límite, carga dinámica, navegación y acceso. Pruebas de clasificación de avisos: DM, exclusión de actividad general, otras apps y avisos de la propia app.
 
@@ -94,12 +102,13 @@ python3 setup-tools.py
 bash build.sh
 ```
 
-Salida: `dist/IG-Calma-0.3.2.apk`. Conserva `build/local-signing.p12` para firmar actualizaciones con la misma clave. Su contraseña `localbuild` es solo para compilación local, no una credencial de Instagram. La clave no se incluye en el repositorio.
+Salida: `dist/IG-Calma-0.3.3.apk`. Conserva `build/local-signing.p12` para firmar actualizaciones con la misma clave. Su contraseña `localbuild` es solo para compilación local, no una credencial de Instagram. La clave no se incluye en el repositorio.
 
 Con Playwright para Python y Chromium en `/usr/bin/chromium`:
 
 ```sh
 python3 tests/filters.py
+python3 tests/feed_regressions.py
 python3 tests/relations.py
 python3 tests/settings.py
 python3 tests/appearance.py

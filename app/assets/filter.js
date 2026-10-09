@@ -6,7 +6,6 @@
   const accepted = new Set();
   const reserved = new Set(['accounts', 'about', 'direct', 'explore', 'reel', 'reels', 'p', 'stories', 'legal', 'privacy', 'developer', 'web', 'challenge']);
   let dead = false, timer, previousPath = location.pathname, running = false;
-  let lastRoot = null;
   let lastOwner = null;
   const css = document.createElement('style');
   css.id = 'calma-style';
@@ -24,24 +23,35 @@
   function reelPath(p) { return /^\/reels?(\/|$)/.test(p); }
   function postInfo(article) {
     const links = [...article.querySelectorAll('a[href]')];
-    const permalink = links.map(path).find(p => /^\/(p|reel)\/[^/]+/.test(p));
+    const postPattern = /^\/(?:([a-zA-Z0-9._]{1,30})\/)?(p|reel)\/([^/]+)\/?$/;
+    const permalink = links.map(path).find(p => postPattern.test(p));
     if (!permalink) return null;
+    const match = permalink.match(postPattern);
     const header = article.querySelector('header');
-    const candidateLinks = header ? [...header.querySelectorAll('a[href]')] : links.slice(0, links.findIndex(a => path(a) === permalink));
-    const authorLink = candidateLinks.find(a => {
-      const match = path(a).match(/^\/([a-zA-Z0-9._]{1,30})\/?$/);
-      return match && !reserved.has(match[1].toLowerCase());
+    // Instagram also uses a div-based heading and username-prefixed permalinks.
+    // Stop at the first media/permalink so commenters are never mistaken for authors.
+    const mediaImages = [...article.querySelectorAll('img')].filter(img => {
+      if (img.closest('header')) return false;
+      const anchor = img.closest('a[href]');
+      return !anchor || !/^\/(?:stories\/)?[a-zA-Z0-9._]{1,30}\/?$/.test(path(anchor));
     });
-    const author = authorLink ? path(authorLink).split('/')[1].toLowerCase() : null;
-    return {id: permalink.replace(/\/$/, ''), author, reel: links.some(a => reelPath(path(a))) || !!article.querySelector('[aria-label="Reel"],[aria-label="Reels"],[aria-label="Clip"]')};
-  }
-  function hideOtherBranches(node, articles) {
-    for (const child of [...node.children]) {
-      if (child === marker || articles.includes(child) || child.matches('[role="dialog"],script,style')) continue;
-      const descendants = articles.filter(article => child.contains(article));
-      if (descendants.length) hideOtherBranches(child, descendants);
-      else child.classList.add('calma-extra');
+    const boundary = mediaImages[0] || article.querySelector('video') || links.find(a => path(a) === permalink);
+    const candidateLinks = [...new Set([...(header ? header.querySelectorAll('a[href]') : []),
+      ...links.filter(a => a === boundary || !!(a.compareDocumentPosition(boundary) & Node.DOCUMENT_POSITION_FOLLOWING))])];
+    const authors = new Set(match[1] ? [match[1].toLowerCase()] : []);
+    for (const link of candidateLinks) {
+      const profile = path(link).match(/^\/(?:stories\/)?([a-zA-Z0-9._]{1,30})\/?$/);
+      if (profile && !reserved.has(profile[1].toLowerCase())) authors.add(profile[1].toLowerCase());
     }
+    return {id: '/' + match[2] + '/' + match[3], authors, photos: mediaImages.length > 0,
+      reel: match[2] === 'reel' || !!article.querySelector('[aria-label="Reel"],[aria-label="Reels"],[aria-label="Clip"]')};
+  }
+  function hideDiscovery(main) {
+    // Do not prune arbitrary branches: React keeps its pagination sentinels,
+    // loading indicators and virtual-feed spacers alongside the posts.
+    main.querySelectorAll('aside,[data-calma-discovery],#stories,#discovery').forEach(el => {
+      if (!el.querySelector('article')) el.classList.add('calma-extra');
+    });
   }
   function scan() {
     if (dead || running) return;
@@ -68,33 +78,30 @@
       if (!main) return;
       const articles = [...main.querySelectorAll('article')];
       if (!articles.length) {
-        if (lastRoot === main && marker.isConnected) setMessage();
+        if (marker.parentElement !== main) main.appendChild(marker);
+        setMessage();
         return;
       }
-      lastRoot = main;
       // Restore projected branches before recomputing when React replaces feed nodes.
       main.querySelectorAll('.calma-extra').forEach(el => el.classList.remove('calma-extra'));
-      const visible = [];
+      const rendered = new Set();
       for (const article of articles) {
         const info = postInfo(article);
         const ready = config.mode === 1 ? relations.followingReady : relations.friendsReady;
-        const eligible = info && (!config.reels || (!info.reel && !article.querySelector('video'))) && (config.mode === 0 || (ready && info.author && allow.has(info.author)));
+        const eligible = info && (!config.reels || (!info.reel && (!article.querySelector('video') || info.photos))) && (config.mode === 0 || (ready && [...info.authors].some(author => allow.has(author))));
         let show = false;
-        if (eligible) {
+        if (eligible && !rendered.has(info.id)) {
           if (accepted.has(info.id)) show = true;
           else if (accepted.size < config.limit) { accepted.add(info.id); show = true; }
         }
         article.classList.toggle('calma-hidden', !show);
         article.classList.toggle('calma-approved', show);
-        if (!show) article.querySelectorAll('video').forEach(video => { video.pause(); video.removeAttribute('autoplay'); });
-        else visible.push(article);
+        if (!show || config.reels) article.querySelectorAll('video').forEach(video => { video.pause(); video.removeAttribute('autoplay'); });
+        if (show) rendered.add(info.id);
       }
-      // Keep only post branches in home: remove stories, suggestions and trailing discovery panels.
-      hideOtherBranches(main, visible);
-      if (visible.length) {
-        const last = visible[visible.length - 1];
-        if (last.nextElementSibling !== marker) last.after(marker);
-      } else if (marker.parentElement !== main) main.appendChild(marker);
+      hideDiscovery(main);
+      // Own status lives outside React's post list, never between a post and its sentinel.
+      if (marker.parentElement !== main) main.appendChild(marker);
       setMessage();
     } finally { running = false; }
   }
@@ -111,11 +118,11 @@
       title.textContent = config.mode === 1 ? 'Todavía no sigues a ninguna cuenta' : 'Sin seguimiento mutuo';
       subtitle.textContent = 'Puedes volver a sincronizar desde los ajustes adicionales.';
     } else if (accepted.size >= config.limit) {
-      title.textContent = 'Por hoy, esta tanda está completa';
+      title.textContent = 'Esta tanda está completa';
       subtitle.textContent = 'Has llegado al límite de ' + config.limit + ' publicaciones. Puedes cerrar la app o iniciar una Nueva sesión desde Ajustes.';
     } else {
-      title.textContent = accepted.size ? 'Fin de lo cargado' : 'Sin publicaciones permitidas';
-      subtitle.textContent = accepted.size + ' de ' + config.limit + ' publicaciones en esta sesión. Instagram puede cargar más al desplazarte; si no aparecen, vuelve más tarde.';
+      title.textContent = 'Buscando más publicaciones';
+      subtitle.textContent = accepted.size + ' de ' + config.limit + ' publicaciones en esta sesión. Sigue bajando para cargar más; esta tanda termina al alcanzar el límite.';
     }
     marker.append(title, subtitle);
   }
@@ -125,14 +132,20 @@
   }
   function pauseReel(event) {
     if (!config.reels || !(event.target instanceof HTMLVideoElement)) return;
-    if ((reelPath(location.pathname) && !(window.__calmaReelGate && window.__calmaReelGate.locked())) || event.target.closest('.calma-hidden,.calma-extra') || (location.pathname==='/' && !event.target.closest('.calma-approved'))) event.target.pause();
+    if ((reelPath(location.pathname) && !(window.__calmaReelGate && window.__calmaReelGate.locked())) || event.target.closest('.calma-hidden,.calma-extra') || location.pathname==='/') event.target.pause();
   }
-  // Observe structure only: own class changes must not cause an observer loop.
+  // Observe structure and link changes; ignore our own class writes to avoid loops.
   const observer = new MutationObserver(records => {
     if (records.every(record => record.target === marker || marker.contains(record.target))) return;
+    for (const record of records) {
+      if (record.type === 'attributes') {
+        const article = record.target.closest('article');
+        if (article) article.classList.remove('calma-approved');
+      }
+    }
     cancelAnimationFrame(timer); timer = requestAnimationFrame(scan);
   });
-  observer.observe(document.documentElement, {childList: true, subtree: true});
+  observer.observe(document.documentElement, {childList: true, subtree: true, attributes: true, attributeFilter: ['href']});
   document.addEventListener('click', clickBlock, true);
   document.addEventListener('play', pauseReel, true);
   document.addEventListener('calma-relations', scan);

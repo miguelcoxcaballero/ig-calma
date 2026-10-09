@@ -187,13 +187,13 @@ public class MainActivity extends Activity {
         updateChecker.getSettings().setJavaScriptEnabled(true);updateChecker.getSettings().setDomStorageEnabled(true);
         updateChecker.getSettings().setAllowFileAccess(false);updateChecker.getSettings().setAllowContentAccess(false);
         updateChecker.getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-        updateChecker.getSettings().setUserAgentString(updateChecker.getSettings().getUserAgentString()+" InhouseReadApp/0.3.2");
+        updateChecker.getSettings().setUserAgentString(updateChecker.getSettings().getUserAgentString()+" InhouseReadApp/0.3.3");
         updateChecker.addJavascriptInterface(new UpdateCheckBridge(),"InhouseNative");
         updateChecker.addJavascriptInterface(new UpdateOfferBridge(),"InhouseUpdateHost");
         updateChecker.setWebViewClient(new UpdateAssetClient(this));
         updateChecker.loadUrl("https://appassets.androidplatform.net/updates/index.html?inhouse_app=1&quiet=1");
     }
-    public class UpdateCheckBridge {@JavascriptInterface public String getAppVersion(){return "0.3.2";}}
+    public class UpdateCheckBridge {@JavascriptInterface public String getAppVersion(){return "0.3.3";}}
     public class UpdateOfferBridge {@JavascriptInterface public void offer(){runOnUiThread(() -> {if(!updateOffered && !isFinishing() && hasWindowFocus()){updateOffered=true;startActivity(new Intent(MainActivity.this,UpdateActivity.class));}});}}
     private String read(String name)throws IOException {
         try(InputStream in=getAssets().open(name);ByteArrayOutputStream out=new ByteArrayOutputStream()) {

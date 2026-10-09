@@ -1,9 +1,9 @@
 {
-  "version": "0.3.2",
-  "versionCode": 6,
+  "version": "0.3.3",
+  "versionCode": 7,
   "required": true,
-  "apkUrl": "https://raw.githubusercontent.com/miguelcoxcaballero/ig-calma/main/downloads/IG-Calma-0.3.2.apk",
-  "apkSha256": "cd3993089d3af25c3493cfaae68e4eba32ed849ad82ac517dc3b6737d9679c96",
+  "apkUrl": "https://raw.githubusercontent.com/miguelcoxcaballero/ig-calma/main/downloads/IG-Calma-0.3.3.apk",
+  "apkSha256": "7502493e205a89390470917b5dfb061c9b137d6ceec0e28b930fbf1c43d5c4bb",
   "apkSizeBytes": 476293,
-  "releaseNotes": "Actualizador interno reutilizado de Inhouse Read: descarga, progreso y confirmación de Android."
+  "releaseNotes": "Correcciones del feed: paginación conservada, autores y colaboraciones reconocidos, duplicados eliminados y sincronización de amigos sin vaciar la lista anterior."
 }

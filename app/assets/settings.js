@@ -20,7 +20,7 @@
     '<div id="calma-permissions" role="status"></div><button type="button" data-action="permissions">Activar permisos de notificaciones</button>' +
     '<div><button type="button" data-action="save">Guardar</button><button type="button" data-action="new_session">Nueva sesión</button></div><div id="calma-saved" role="status" aria-live="polite"></div>' +
     '<h3>Actualizaciones</h3><button type="button" data-action="update">Actualizar aplicación</button>' +
-    '<p>Instagram Calma 0.3.2 · Cliente independiente basado en Instagram web. Estos ajustes se guardan en esta app y no cambian los ajustes de tu cuenta en otros dispositivos.</p>';
+    '<p>Instagram Calma 0.3.3 · Cliente independiente basado en Instagram web. Estos ajustes se guardan en esta app y no cambian los ajustes de tu cuenta en otros dispositivos.</p>';
   function status() {
     if (!section || !section.isConnected) return;
     const state = window.__calmaRelations || {}, config = window.CALMA_CONFIG;

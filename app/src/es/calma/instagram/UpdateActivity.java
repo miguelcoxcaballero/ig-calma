@@ -26,7 +26,7 @@ public class UpdateActivity extends Activity {
         web.getSettings().setJavaScriptEnabled(true); web.getSettings().setDomStorageEnabled(true);
         web.getSettings().setAllowFileAccess(false); web.getSettings().setAllowContentAccess(false);
         web.getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-        web.getSettings().setUserAgentString(web.getSettings().getUserAgentString()+" InhouseReadApp/0.3.2");
+        web.getSettings().setUserAgentString(web.getSettings().getUserAgentString()+" InhouseReadApp/0.3.3");
         web.addJavascriptInterface(new InhouseNativeBridge(),"InhouseNative");
         web.setWebViewClient(new UpdateAssetClient(this));
         setContentView(web);
@@ -34,7 +34,7 @@ public class UpdateActivity extends Activity {
     }
     public class InhouseNativeBridge {
         private volatile boolean updateDownloadRunning=false;
-        @JavascriptInterface public String getAppVersion(){return "0.3.2";}
+        @JavascriptInterface public String getAppVersion(){return "0.3.3";}
         // Descarga el APK indicado (validado por src/js/android-update.js
         // contra una lista blanca de hosts antes de llegar aqui) y lanza el
         // instalador del sistema. Puerto de installAppUpdate() de

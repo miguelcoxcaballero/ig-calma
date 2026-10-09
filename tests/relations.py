@@ -10,6 +10,7 @@ FILTER = Path(__file__).resolve().parents[1].joinpath('app/assets/filter.js').re
 with sync_playwright() as p:
     browser=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
     calls=[]
+    fail_followers=False
     context=browser.new_context()
     page=context.new_page()
     def route(r):
@@ -18,6 +19,8 @@ with sync_playwright() as p:
             r.fulfill(content_type='text/html',body='<main><article><header><a href="/alice/">alice</a></header><a href="/p/a/">Time</a></article><article id="charlie"><header><a href="/charlie/">charlie</a></header><a href="/p/c/">Time</a></article></main>')
             return
         calls.append(r.request.url)
+        if fail_followers and '/followers/' in u.path:
+            r.fulfill(status=403,content_type='application/json',body='{}');return
         assert r.request.headers.get('x-ig-app-id')=='936619743392459'
         if '/9/' in u.path:
             r.fulfill(status=429,content_type='application/json',body='{}');return
@@ -58,6 +61,13 @@ with sync_playwright() as p:
     page.evaluate('window.__calmaRelations.updated=0;window.__calmaRelationsController.refreshIdentity("1")')
     page.wait_for_function('window.__calmaRelations.phase==="ready" && window.__calmaRelations.updated>0')
     assert len(calls)==count+3, 'An open document must refresh a stale snapshot automatically'
+    fail_followers=True
+    page.evaluate('window.__calmaRelationsController.sync()')
+    assert page.evaluate('window.__calmaRelations.friendsReady && window.__calmaRelations.friends.includes("alice")'), 'Refresh must not blank the previous complete graph'
+    page.wait_for_function('window.__calmaRelations.phase==="error"')
+    assert page.evaluate('window.__calmaRelations.friendsReady && window.__calmaRelations.friends.includes("alice")'), 'A failed refresh must preserve the verified mutual snapshot'
+    assert page.locator('article').first.is_visible(), 'Already verified friend posts remain visible on refresh failure'
+    fail_followers=False
     page.evaluate('window.__calmaRelationsController.refreshIdentity("9")')
     page.wait_for_function('window.__calmaRelations.phase==="error"')
     assert page.evaluate('window.__calmaRelations.followingReady') is False
