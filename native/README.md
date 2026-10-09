@@ -20,12 +20,12 @@ La entrada aceptada está fijada en [`stock.lock.json`](stock.lock.json):
 | Android mínimo | Android 9, API 28 |
 | Formato de entrada | APKM con `base.apk` y `split_config.xxhdpi.apk` |
 | Procedencia | [Variante de APKMirror](https://www.apkmirror.com/apk/instagram/instagram-instagram/instagram-439-0-0-37-89-release/instagram-439-0-0-37-89-4-android-apk-download/) |
-| Versión propia de Calma | `0.4.1`, definida en [`CalmaBuild.java`](src/es/calma/instagram/nativeapp/CalmaBuild.java) |
+| Versión propia de Calma | `0.4.2`, definida en [`CalmaBuild.java`](src/es/calma/instagram/nativeapp/CalmaBuild.java) |
 | Paquete resultante | `es.calma.instagram` |
-| versionCode resultante | `384510829` |
+| versionCode resultante | `384510830` |
 
 El manifiesto del APK conserva `versionName=439.0.0.37.89` para Instagram. La
-comparación de actualizaciones utiliza `CalmaBuild.VERSION`, actualmente `0.4.1`.
+comparación de actualizaciones utiliza `CalmaBuild.VERSION`, actualmente `0.4.2`.
 Son versiones distintas con funciones distintas.
 
 El build verifica el SHA-256 del APKM y de cada split, además de la cadena de firma
@@ -146,13 +146,13 @@ regenera los metadatos del cargador, alinea a **16 KB**, firma y verifica el res
 
 Los resultados quedan en:
 
-- `native/build/dist/IG-Calma-0.4.1.apk`.
+- `native/build/dist/IG-Calma-0.4.2.apk`.
 - `native/build/dist/SHA256SUMS.txt`, `build-info.json` y `verification.json`.
 - `native/build/patch-result.json` y `native/build/extension/build-report.json`.
 - `android-update.json` y `native/android-update.json`, idénticos y generados a partir del APK firmado.
 
 El build genera los archivos locales; no publica una release. El manifiesto de
-actualización apunta al APK de la release `v0.4.1` del repositorio configurado en el
+actualización apunta al APK de la release `v0.4.2` del repositorio configurado en el
 script. La publicación debe adjuntar exactamente ese APK y mantener su versión,
 tamaño y SHA-256 sincronizados con el manifiesto. Los dos manifiestos usan
 `required: true`; con `false`, Inhouse Read no ofrece la actualización. Publicar
@@ -207,12 +207,39 @@ Los estilos propios se incorporan a `styles.xml` de día y noche sin reemplazar 
 de Instagram. Los recursos nuevos reciben IDs explícitos. Esto evita que ARSCLib
 interprete un nombre de archivo personalizado como un tipo de recurso distinto.
 
+## Feed, Explorar y búsqueda
+
+Desde 0.4.2, `CalmaConfig.mode()` exige seguimiento mutuo incluso antes de cargar
+las preferencias. La migración aplica la misma regla a las instalaciones previas
+sin modificar su elección sobre Reels. El feed conserva el orden cronológico y
+la ventana de 48 horas.
+
+Explorar (`X.094e`) usa relaciones de seguimiento del usuario de esa petición;
+no exige que la otra cuenta le siga de vuelta. La cuadrícula de una búsqueda
+escrita (`X.0XEv`) permite otros autores y mantiene los filtros de anuncios/Reels.
+Los parsers de cuentas de búsqueda ya no eliminan usuarios no seguidos.
+
+El proveedor nativo de la búsqueda principal `X.0I4B` distingue resultados con
+texto (`GDb(String, List)`) y la pantalla sin consulta (`GDc()`). La segunda
+retorna el estado vacío original `X.0I2T.A01()`. La primera comprueba su propio
+argumento al entrar: si solo contiene espacios, retorna el mismo estado vacío;
+si contiene texto, ejecuta el método original. No se guarda una bandera global
+de búsqueda y no se modifican proveedores de destinatarios DM. Esto oculta
+sugerencias e historial sin borrar los datos almacenados por Instagram.
+
+`tests/config.py` verifica la política al instalar/actualizar; `tests/discover.py`
+comprueba las reglas separadas y los espacios Unicode. `DiscoverDexCheck.java`
+verifica en la APK los argumentos, los saltos, el estado vacío y la ausencia del
+antiguo filtro en los parsers de cuentas. Las pruebas sin sesión no validan la
+pantalla de búsqueda de una cuenta real.
+
 ## Comprobaciones y límites
 
 Desde la raíz:
 
 ```sh
 python3 native/tests/package_clone.py
+python3 native/tests/config.py
 python3 native/tests/feed.py
 python3 native/tests/discover.py
 python3 native/tests/reels.py
@@ -230,10 +257,10 @@ Para verificar otra vez el APK firmado:
 
 ```sh
 python3 native/scripts/verify-apk.py \
-  --apk native/build/dist/IG-Calma-0.4.1.apk \
+  --apk native/build/dist/IG-Calma-0.4.2.apk \
   --stock /ruta/al/base.apk \
   --build-tools "$CALMA_SDK/build-tools/36.0.0"
-python3 native/tests/updater.py --apk native/build/dist/IG-Calma-0.4.1.apk
+python3 native/tests/updater.py --apk native/build/dist/IG-Calma-0.4.2.apk
 ```
 
 La verificación del artefacto comprueba firma, alineación de 16 KB, versiones,

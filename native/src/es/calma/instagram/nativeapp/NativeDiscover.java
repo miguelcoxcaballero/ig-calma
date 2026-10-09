@@ -1,6 +1,5 @@
 package es.calma.instagram.nativeapp;
 
-import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -14,20 +13,19 @@ import java.util.Set;
 public final class NativeDiscover {
     private static final String[] SINGLE = {"A01", "A02", "A03", "A04", "A05", "A06", "A07", "A08"};
     private static final String[] LISTS = {"A0C", "A0D", "A0F"};
-    private static final ThreadLocal<WeakReference<Object>> SEARCH = new ThreadLocal<>();
     private NativeDiscover() {}
 
     /** Only X.094e's Explore response is hooked; shared media/profile/DM parsers are untouched. */
     public static void explore(Object response, Object parser) {
-        filterGrid(response, parser, "A06");
+        filterGrid(response, parser, "A06", true);
     }
 
     /** The dedicated search media_grid parser is used by submitted-keyword SERPs. */
     public static void searchGrid(Object response, Object parser) {
-        filterGrid(response, parser, "A05");
+        filterGrid(response, parser, "A05", false);
     }
 
-    private static void filterGrid(Object response, Object parser, String field) {
+    private static void filterGrid(Object response, Object parser, String field, boolean followingOnly) {
         if (response == null) return;
         try {
             Object session = StockAccess.get(parser, "A01");
@@ -40,13 +38,13 @@ public final class NativeDiscover {
                 Object value = media(tile);
                 if (value != null) media.add(value);
             }
-            resolveAuthors(session, media);
+            if (followingOnly) resolveAuthors(session, media);
             List<Object> allowed = new ArrayList<>();
             Set<String> seen = new HashSet<>();
             for (Object tile : tiles) {
                 try {
                     Object value = media(tile);
-                    if (value == null || !permittedMedia(value, session)) continue;
+                    if (value == null || !permittedMedia(value, session, followingOnly)) continue;
                     Object dictionary = StockAccess.get(value, "A04");
                     String id = (String) StockAccess.call(dictionary, "getId");
                     if (id == null || id.length() == 0 || !seen.add(id)) continue;
@@ -63,90 +61,16 @@ public final class NativeDiscover {
         }
     }
 
-    /** Keep top/accounts SERP's raw and rendered account collections in agreement. */
-    public static void serpEntities(Object response, Object parser) {
-        if (response == null) return;
-        try {
-            Object session = StockAccess.get(parser, "A01");
-            String name = response.getClass().getName();
-            String rawField = "X.0YCE".equals(name) || "X.0YCJ".equals(name) ? "A01" : "A00";
-            StockAccess.set(response, rawField, users(list(StockAccess.get(response, rawField)), session));
-            StockAccess.set(response, "A0A", users(list(StockAccess.get(response, "A0A")), session));
-            // These modules carry preview images without a verifiable media author.
-            // Resolve the declaring base explicitly: subclass A01 is the raw list.
-            type("X.0WDs").getField("A01").set(response, null);
-            type("X.0WDs").getField("A02").set(response, null);
-            clear(response, "A0C");
-            if ("X.0YCJ".equals(name)) clear(response, "A00");
-        } catch (ReflectiveOperationException | RuntimeException unexpectedShape) {
-            clear(response, "A0A");
+    /** Used only by the main Search provider; blank queries never show history or suggestions. */
+    public static boolean hasQuery(String query) {
+        if (query == null) return false;
+        for (int i = 0; i < query.length(); i++) {
+            char value = query.charAt(i);
+            if (!Character.isWhitespace(value) && !Character.isSpaceChar(value)) return true;
         }
+        return false;
     }
 
-    /** Resolves REST typeahead account status off the UI thread before it enters the search cache. */
-    public static void searchResponse(Object response, Object parser) {
-        if (response == null) return;
-        try {
-            Object session = StockAccess.get(parser, "A01");
-            StockAccess.set(response, "A02", users(list(StockAccess.get(response, "A02")), session));
-        } catch (ReflectiveOperationException | RuntimeException unexpectedShape) { clear(response, "A02"); }
-    }
-
-    /** Paired immediately with searchState at the native main-search provider's return. */
-    public static void searchOwner(Object provider) {
-        SEARCH.remove();
-        try { SEARCH.set(new WeakReference<>(StockAccess.get(provider, "A00"))); }
-        catch (ReflectiveOperationException | RuntimeException unavailable) { /* Fail closed below. */ }
-    }
-
-    /** Filters cached, recent and GraphQL results and their parallel native metadata together. */
-    public static void searchState(Object state) {
-        try {
-            WeakReference<Object> reference = SEARCH.get();
-            Object session = reference == null ? null : reference.get();
-            List<?> items = list(StockAccess.get(state, "A00"));
-            List<?> metadata = list(StockAccess.get(state, "A01"));
-            List<Object> kept = new ArrayList<>(), keptMetadata = new ArrayList<>();
-            if (items.size() == metadata.size()) {
-                resolveUsers(session, items);
-                for (int i = 0; i < items.size(); i++) {
-                    Object user = rowUser(items.get(i));
-                    if (permittedUser(user, session)) {
-                        kept.add(items.get(i)); keptMetadata.add(metadata.get(i));
-                    }
-                }
-            }
-            StockAccess.set(state, "A00", kept);
-            StockAccess.set(state, "A01", keptMetadata);
-        } catch (ReflectiveOperationException | RuntimeException unexpectedShape) {
-            clear(state, "A00"); clear(state, "A01");
-        } finally { SEARCH.remove(); }
-    }
-
-    private static List<Object> users(List<?> items, Object session) {
-        resolveUsers(session, items);
-        List<Object> result = new ArrayList<>();
-        for (Object item : items) if (permittedUser(rowUser(item), session)) result.add(item);
-        return result;
-    }
-
-    private static Object rowUser(Object row) {
-        if (row == null) return null;
-        try {
-            String name = row.getClass().getName();
-            if ("X.0I7G".equals(name)) row = StockAccess.get(row, "A00");
-            if ("X.0C9d".equals(row.getClass().getName())) return StockAccess.get(row, "A01");
-            if ("X.0YCr".equals(row.getClass().getName())) return StockAccess.get(row, "A07");
-            if ("com.instagram.user.model.User".equals(row.getClass().getName())) return row;
-        } catch (ReflectiveOperationException | RuntimeException unknownRow) { /* Unverified result. */ }
-        return null;
-    }
-
-    private static void resolveUsers(Object session, List<?> items) {
-        LinkedHashSet<String> pending = new LinkedHashSet<>();
-        for (Object item : items) unresolved(rowUser(item), session, pending);
-        NativeRelationLookup.awaitOffMainThread(session, new ArrayList<>(pending));
-    }
     private static void resolveAuthors(Object session, List<?> media) {
         LinkedHashSet<String> pending = new LinkedHashSet<>();
         for (Object value : media) try {
@@ -170,10 +94,11 @@ public final class NativeDiscover {
         try { return NativeRelations.isFollowing(session, (String) StockAccess.call(user, "getId")); }
         catch (ReflectiveOperationException | RuntimeException unavailable) { return false; }
     }
-    private static boolean permittedMedia(Object media, Object session) throws ReflectiveOperationException {
+    private static boolean permittedMedia(Object media, Object session, boolean followingOnly) throws ReflectiveOperationException {
         if (NativeAds.media(media)) return false;
         Object dictionary = StockAccess.get(media, "A04");
         if (CalmaConfig.reels() && "clips".equals(StockAccess.call(dictionary, "A7W"))) return false;
+        if (!followingOnly) return true;
         if (permittedUser(StockAccess.call(dictionary, "A33"), session)) return true;
         for (Object collaborator : list(StockAccess.call(dictionary, "A8F")))
             if (permittedUser(collaborator, session)) return true;

@@ -22,7 +22,6 @@ import android.widget.TextView;
 /** Native port of Calma's settings.js controls, reached from Instagram's settings list. */
 public final class CalmaSettingsActivity extends Activity {
     private int foreground, background, muted, line;
-    private final Mark[] modes = new Mark[2];
     private Mark reels;
 
     @Override public void onCreate(Bundle state) {
@@ -65,24 +64,9 @@ public final class CalmaSettingsActivity extends Activity {
         scroll.addView(content);
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
 
-        heading(content, "Mostrar publicaciones de");
+        heading(content, "Feed");
+        content.addView(text("Amigos · Os seguís mutuamente", 16, foreground));
         content.addView(text("Últimas 48 horas · Más recientes primero", 13, muted));
-        String[] labels = {"Cuentas que sigues", "Amigos"};
-        for (int i = 0; i < labels.length; i++) {
-            final int mode = i + 1;
-            LinearLayout choice = row();
-            LinearLayout copy = column();
-            copy.addView(text(labels[i], 16, foreground));
-            if (mode == 2) copy.addView(text("Os seguís mutuamente", 13, muted));
-            choice.addView(copy, new LinearLayout.LayoutParams(0, -2, 1));
-            modes[i] = new Mark(false);
-            choice.addView(modes[i], new LinearLayout.LayoutParams(dp(28), dp(28)));
-            choice.setMinimumHeight(dp(mode == 2 ? 68 : 58));
-            choice.setContentDescription(labels[i]);
-            choice.setAccessibilityDelegate(checkable("android.widget.RadioButton"));
-            press(choice, () -> { CalmaConfig.setMode(mode); refresh(); });
-            content.addView(choice);
-        }
         separator(content);
         LinearLayout reelRow = row();
         reelRow.addView(text("Ocultar Reels", 16, foreground), new LinearLayout.LayoutParams(0, dp(54), 1));
@@ -94,10 +78,11 @@ public final class CalmaSettingsActivity extends Activity {
         content.addView(reelRow);
         content.addView(text("Abre los que te envíen tus amigos, sin pasar al siguiente.", 13, muted));
         separator(content);
-        TextView discover = text("Buscar y Explorar", 16, foreground);
+        TextView discover = text("Explorar", 16, foreground);
         discover.setMinimumHeight(dp(40));
         content.addView(discover);
         content.addView(text("Solo cuentas que sigues", 13, muted));
+        content.addView(text("Busca por nombre para encontrar otras cuentas", 13, muted));
         separator(content);
         LinearLayout update = row();
         update.addView(text("Actualizar aplicación", 16, foreground), new LinearLayout.LayoutParams(0, dp(58), 1));
@@ -109,10 +94,6 @@ public final class CalmaSettingsActivity extends Activity {
     }
 
     private void refresh() {
-        for (int i = 0; i < modes.length; i++) {
-            modes[i].setChecked(CalmaConfig.mode() == i + 1);
-            ((View) modes[i].getParent()).setSelected(CalmaConfig.mode() == i + 1);
-        }
         reels.setChecked(CalmaConfig.reels());
         ((View) reels.getParent()).setSelected(CalmaConfig.reels());
     }

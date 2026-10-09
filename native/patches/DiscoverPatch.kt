@@ -2,6 +2,8 @@ package es.calma.patches
 
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
+import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
+import app.morphe.patcher.util.smali.ExternalLabel
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import com.android.tools.smali.dexlib2.Opcode
@@ -17,7 +19,7 @@ private fun MutableMethod.discoverStrings(): Set<String> = implementation!!.inst
 /** Independently mapped native Explore and main-search filtering. */
 val calmaNativeDiscover = bytecodePatch(
     name = "Calma native Discover",
-    description = "Only followed accounts in Explore, main-search results and search history"
+    description = "Followed accounts in Explore, unrestricted explicit search, no empty-query suggestions"
 ) {
     compatibleWith("com.instagram.android"("439.0.0.37.89"))
     dependsOn(calmaExtensionPatch)
@@ -53,15 +55,8 @@ val calmaNativeDiscover = bytecodePatch(
             }
         }
         parser("LX/094e;", "explore", setOf("sectional_items", "more_available", "next_max_id"))
-        parser("LX/0XFB;", "searchResponse", setOf("users", "list", "tags", "search_session_context"))
         fields("LX/0cnK;", mapOf("A05" to "Ljava/util/List;", "A02" to "Ljava/lang/String;", "A03" to "Ljava/lang/String;", "A06" to "Z"))
-        fields("LX/0WDs;", mapOf("A0A" to "Ljava/util/List;", "A0C" to "Ljava/util/List;", "A01" to "LX/0HQV;", "A02" to "Lcom/instagram/api/schemas/TopSerpOtherResultsImpl;"))
-        fields("LX/0YCr;", mapOf("A07" to "Lcom/instagram/user/model/User;"))
         parser("LX/0XEv;", "searchGrid", setOf("sections", "has_more", "next_max_id", "rank_token"))
-        parser("LX/0XFD;", "serpEntities", setOf("list", "background_color"))
-        parser("LX/0XFE;", "serpEntities", setOf("users", "upsell_cards"))
-        parser("LX/0XEu;", "serpEntities", setOf("results"))
-        parser("LX/0XEw;", "serpEntities", setOf("items"))
 
         // This provider belongs to Instagram's main Search, not the interfaces also
         // used for DM recipients, location pickers and other account selectors.
@@ -69,22 +64,29 @@ val calmaNativeDiscover = bytecodePatch(
         check(provider.methods.single { it.name == "GDd" }.discoverStrings().contains(
             "MainSearchResultsProvider no longer supports single-query population. Use populateResultsForMultipleQueries(...)."
         ))
-        fields("LX/0I4B;", mapOf("A00" to "Lcom/instagram/common/session/UserSession;"))
         fields("LX/0I2T;", mapOf("A00" to "Ljava/util/List;", "A01" to "Ljava/util/List;"))
-        fields("LX/0C9d;", mapOf("A01" to "Lcom/instagram/user/model/User;"))
-        fields("LX/0I7G;", mapOf("A00" to "LX/0C9d;"))
-        for (name in listOf("GDb", "GDc")) {
-            val method = provider.methods.single { it.name == name && it.returnType == "LX/0I2T;" }
-            val returns = method.implementation!!.instructions.withIndex().filter { it.value.opcode == Opcode.RETURN_OBJECT }.toList()
-            check(returns.size == 1)
-            for ((index, instruction) in returns.asReversed()) {
-                val result = (instruction as OneRegisterInstruction).registerA
-                method.replaceInstruction(index, "invoke-static/range {p0 .. p0}, $DISCOVER->searchOwner(Ljava/lang/Object;)V")
-                method.addInstructions(index + 1, """
-                    invoke-static/range {v$result .. v$result}, $DISCOVER->searchState(Ljava/lang/Object;)V
-                    return-object v$result
-                """.trimIndent())
-            }
-        }
+        check(mutableClassDefBy("LX/0I2T;").methods.any {
+            it.name == "A01" && it.parameterTypes.isEmpty() && it.returnType == "LX/0I2T;" && it.accessFlags and 9 == 9
+        }) { "Stock empty search-state factory changed" }
+        val typed = provider.methods.single { it.name == "GDb" }
+        check(typed.parameterTypes == listOf("Ljava/lang/String;", "Ljava/util/List;") && typed.returnType == "LX/0I2T;")
+        check(typed.implementation!!.registerCount >= 4)
+        // Read the query at entry, before Redex can reuse parameter registers.
+        // No global query flag or cache mutation can leak across accounts or late responses.
+        typed.addInstructionsWithLabels(0, """
+            invoke-static/range {p1 .. p1}, $DISCOVER->hasQuery(Ljava/lang/String;)Z
+            move-result v0
+            if-nez v0, :calma_typed_query
+            invoke-static {}, LX/0I2T;->A01()LX/0I2T;
+            move-result-object v0
+            return-object v0
+        """.trimIndent(), ExternalLabel("calma_typed_query", typed.implementation!!.instructions.first()))
+        val empty = provider.methods.single { it.name == "GDc" }
+        check(empty.parameterTypes.isEmpty() && empty.returnType == "LX/0I2T;" && empty.implementation!!.registerCount >= 2)
+        empty.addInstructions(0, """
+            invoke-static {}, LX/0I2T;->A01()LX/0I2T;
+            move-result-object v0
+            return-object v0
+        """.trimIndent())
     }
 }

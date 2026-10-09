@@ -16,26 +16,20 @@ public final class CalmaConfig {
         if (preferences != null || context == null) return;
         application = context.getApplicationContext();
         preferences = application.getSharedPreferences("calma", Context.MODE_PRIVATE);
-        if (!preferences.getBoolean("native_48h_initialized", false)) {
-            preferences.edit().putInt("mode", 1).remove("limit")
-                    .putBoolean("native_48h_initialized", true).apply();
+        if (!preferences.getBoolean("native_friends_feed_initialized", false)) {
+            preferences.edit().putInt("mode", 2).remove("limit")
+                    .putBoolean("native_48h_initialized", true)
+                    .putBoolean("native_friends_feed_initialized", true).apply();
         }
     }
 
     public static Context context() { return application; }
-    public static int mode() {
-        SharedPreferences p = preferences;
-        int value = p == null ? 1 : p.getInt("mode", 1);
-        return value == 2 ? 2 : 1;
-    }
+    /** The Home feed always requires mutual follow, including before preferences load. */
+    public static int mode() { return 2; }
+
     public static boolean reels() {
         SharedPreferences p = preferences;
         return p == null || p.getBoolean("reels", true);
-    }
-    public static void setMode(int value) {
-        if (value < 1 || value > 2) throw new IllegalArgumentException("mode");
-        SharedPreferences p = preferences;
-        if (p != null && mode() != value) { p.edit().putInt("mode", value).apply(); newSession(); }
     }
     public static void setReels(boolean value) {
         SharedPreferences p = preferences;
