@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 1,
+  "version": "0.4.4",
+  "recordedAt": "2026-10-09T21:41:59+00:00",
+  "runtimeTesting": {
+    "scope": "Logged-out startup on official Android Emulator with ARM64 translation",
+    "ciUrl": "https://github.com/miguelcoxcaballero/ig-calma/actions/runs/37994215874",
+    "apkSha256": "176cbf7713b3cd393278066914095e6fb917358b88f10946d318ececa41bbfaa",
+    "apkSizeBytes": 146260653,
+    "physicalDeviceTested": false,
+    "instagramAccountTested": false,
+    "startupPassedOnApis": [
+      34,
+      35,
+      36
+    ],
+    "observations": [
+      {
+        "api": 34,
+        "sourceCommit": "cffbf03eef60a1f7e1a9d409948c37e21c956fa3",
+        "bootCompleted": true,
+        "abiList": "x86_64,arm64-v8a",
+        "stock": {
+          "attempted": false
+        },
+        "baseline": {
+          "attempted": true,
+          "installed": true,
+          "updatingExistingInstall": false,
+          "launchAccepted": false,
+          "survived": true,
+          "appCrashLogged": false,
+          "passed": false,
+          "observedThroughSeconds": 45.1,
+          "visibleText": [
+            "English (US)",
+            "Instagram from Meta",
+            "Username, email or mobile number",
+            "Username, email or mobile number,",
+            "Password",
+            "Password,",
+            "Log in",
+            "Forgot password?",
+            "Create new account",
+            "Meta logo"
+          ]
+        },
+        "candidate": {
+          "attempted": true,
+          "installed": true,
+          "updatingExistingInstall": true,
+          "launchAccepted": true,
+          "survived": true,
+          "appCrashLogged": false,
+          "passed": true,
+          "observedThroughSeconds": 45.0,
+          "visibleText": [
+            "English (US)",
+            "Join Instagram",
+            "Share what you're into with the people who get you.",
+            "Get started",
+            "I already have a profile",
+            "Meta logo"
+          ]
+        },
+        "baselineSha256": "f97029712084d911fe15e17394d66ef1b1fe982f4e2369e5f5cd2a5e32c12539",
+        "nativeModelSmoke": {
+          "passed": true,
+          "scope": "Actual native end-model allocation, inline row, light/dark rendering, accessibility, recycling and four original selector models with remaining time and credit lock; no logged-in feed"
+        },
+        "outcome": "startup_passed"
+      },
+      {
+        "api": 35,
+        "sourceCommit": "cffbf03eef60a1f7e1a9d409948c37e21c956fa3",
+        "bootCompleted": true,
+        "abiList": "x86_64,arm64-v8a",
+        "stock": {
+          "attempted": false
+        },
+        "baseline": {
+          "attempted": true,
+          "installed": true,
+          "updatingExistingInstall": false,
+          "launchAccepted": false,
+          "survived": true,
+          "appCrashLogged": false,
+          "passed": false,
+          "observedThroughSeconds": 45.1,
+          "visibleText": [
+            "English (US)",
+            "Instagram from Meta",
+            "Username, email or mobile number",
+            "Username, email or mobile number,",
+            "Password",
+            "Password,",
+            "Log in",
+            "Forgot password?",
+            "Create new account",
+            "Meta logo"
+          ]
+        },
+        "candidate": {
+          "attempted": true,
+          "installed": true,
+          "updatingExistingInstall": true,
+          "launchAccepted": true,
+          "survived": true,
+          "appCrashLogged": false,
+          "passed": true,
+          "observedThroughSeconds": 45.0,
+          "visibleText": [
+            "English (US)",
+            "Join Instagram",
+            "Share what you're into with the people who get you.",
+            "Get started",
+            "I already have a profile",
+            "Meta logo"
+          ]
+        },
+        "baselineSha256": "f97029712084d911fe15e17394d66ef1b1fe982f4e2369e5f5cd2a5e32c12539",
+        "nativeModelSmoke": {
+          "passed": true,
+          "scope": "Actual native end-model allocation, inline row, light/dark rendering, accessibility, recycling and four original selector models with remaining time and credit lock; no logged-in feed"
+        },
+        "outcome": "startup_passed"
+      },
+      {
+        "api": 36,
+        "sourceCommit": "cffbf03eef60a1f7e1a9d409948c37e21c956fa3",
+        "bootCompleted": true,
+        "abiList": "x86_64,arm64-v8a",
+        "stock": {
+          "attempted": false
+        },
+        "baseline": {
+          "attempted": true,
+          "installed": true,
+          "updatingExistingInstall": false,
+          "launchAccepted": true,
+          "survived": true,
+          "appCrashLogged": false,
+          "passed": true,
+          "observedThroughSeconds": 45.0,
+          "visibleText": [
+            "English (US)",
+            "Instagram from Meta",
+            "Username, email or mobile number",
+            "Username, email or mobile number,",
+            "Password",
+            "Password,",
+            "Log in",
+            "Forgot password?",
+            "Create new account",
+            "Meta logo"
+          ]
+        },
+        "candidate": {
+          "attempted": true,
+          "installed": true,
+          "updatingExistingInstall": true,
+          "launchAccepted": true,
+          "survived": true,
+          "appCrashLogged": false,
+          "passed": true,
+          "observedThroughSeconds": 45.0,
+          "visibleText": [
+            "English (US)",
+            "Join Instagram",
+            "Share what you're into with the people who get you.",
+            "Get started",
+            "I already have a profile",
+            "Meta logo"
+          ]
+        },
+        "baselineSha256": "f97029712084d911fe15e17394d66ef1b1fe982f4e2369e5f5cd2a5e32c12539",
+        "nativeModelSmoke": {
+          "passed": true,
+          "scope": "Actual native end-model allocation, inline row, light/dark rendering, accessibility, recycling and four original selector models with remaining time and credit lock; no logged-in feed"
+        },
+        "outcome": "startup_passed"
+      }
+    ]
+  }
+}

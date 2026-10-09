@@ -28,7 +28,7 @@ El [manifiesto anterior](android-update.json) y el [nativo](native/android-updat
 
 ## Estado de la prueba
 
-La APK 0.4.4 se comprueba como actualización sobre la 0.4.3 y el arranque sin sesión en emuladores oficiales de **Android 14, 15 y 16**, sin cierres ni ANR registrados. [Resultados vinculados al SHA-256](native/validation/0.4.4.json) · [Ejecución de las pruebas](PENDING_RUNTIME_URL).
+La APK 0.4.4 se comprueba como actualización sobre la 0.4.3 y el arranque sin sesión en emuladores oficiales de **Android 14, 15 y 16**, sin cierres ni ANR registrados. [Resultados vinculados al SHA-256](native/validation/0.4.4.json) · [Ejecución de las pruebas](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/37994215874).
 
 La instrumentación crea los cuatro modelos del selector y las filas IGDS originales, verifica el saldo y el estado bloqueado, y comprueba el final del timeline en ambos temas. Las pruebas locales cubren caducidad, persistencia, cambios de hora y separación entre Friends y Following.
 
