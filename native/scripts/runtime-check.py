@@ -349,6 +349,9 @@ def main() -> int:
             require(device('uninstall', PACKAGE), 'Remove failed test installation')
             report['candidateClean'] = launch(candidate, 'candidate-clean-0.4.3', updating=False)
         smoke = ROOT / 'native/runtime-input/Calma-Native-Smoke.apk'
+        smoke_metadata = json.loads((ROOT / 'native/runtime-input/transport.json').read_text())
+        if smoke_metadata.get('modelSmokeSha256') and not smoke.is_file():
+            raise RuntimeError('Required native model test APK is missing from CI transport')
         if smoke.is_file() and report['candidate'].get('passed'):
             expected = json.loads((ROOT / 'native/runtime-input/transport.json').read_text())['modelSmokeSha256']
             if sha(smoke) != expected:

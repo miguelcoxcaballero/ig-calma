@@ -26,7 +26,9 @@ El [manifiesto anterior](android-update.json) y el [nativo](native/android-updat
 
 ## Estado de la prueba
 
-La APK 0.4.2 supera la actualización sobre la 0.4.1 y el arranque sin sesión en emuladores oficiales de **Android 14, 15 y 16**, sin cierres ni ANR registrados. [Resultados vinculados al SHA-256](native/validation/0.4.2.json) · [Ejecución de las pruebas](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/37985595538).
+La APK 0.4.3 supera la actualización sobre la 0.4.2 y el arranque sin sesión en emuladores oficiales de **Android 14, 15 y 16**, sin cierres ni ANR registrados. [Resultados vinculados al SHA-256](native/validation/0.4.3.json) · [Ejecución de las pruebas](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/37988421107).
+
+La prueba de instrumentación también crea el modelo original del final, dibuja el smiley y el texto en ambos temas y comprueba la accesibilidad y la reutilización de la fila en las tres versiones de Android.
 
 La compilación y las comprobaciones de firma, recursos, clases nativas, destinos de los parches y pruebas automatizadas son reproducibles. **No se ha probado el inicio de sesión, la fluidez, la reproducción ni las notificaciones push con una cuenta real en un teléfono.** Se mantienen los servicios nativos de mensajes; eso no demuestra que Meta acepte las notificaciones de una aplicación con otro paquete y firma.
 

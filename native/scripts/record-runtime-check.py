@@ -93,6 +93,13 @@ def summarize_report(report: dict, manifest: dict, apk_sha: str, apk_size: int) 
             if not isinstance(report[field], str) or not re.fullmatch(r'[0-9a-f]{64}', report[field]):
                 raise ValueError(f'Invalid comparison APK hash: {field}')
             result[field] = report[field]
+    smoke = report.get('nativeModelSmoke')
+    if smoke is not None:
+        if not isinstance(smoke, dict) or not isinstance(smoke.get('passed'), bool):
+            raise ValueError('Invalid native model instrumentation result')
+        result['nativeModelSmoke'] = {'passed': smoke['passed'], 'scope': 'Actual native end-model allocation, inline row, light/dark rendering, accessibility and recycling; no logged-in feed'}
+        if smoke['passed'] and 'CALMA_NATIVE_MODELS_PASSED' not in smoke.get('output', ''):
+            raise ValueError('Native model success has no instrumentation marker')
     if report.get('environmentError'):
         result['environmentError'] = short_text(report['environmentError'])
     candidate = result.get('candidate', {})
@@ -100,6 +107,8 @@ def summarize_report(report: dict, manifest: dict, apk_sha: str, apk_size: int) 
         raise ValueError('Successful candidate contradicts emulator environment result')
     if result.get('environmentError') or not result['bootCompleted']:
         result['outcome'] = 'environment_error'
+    elif smoke is not None and not smoke['passed']:
+        result['outcome'] = 'native_model_smoke_failed'
     elif candidate.get('passed'):
         result['outcome'] = 'startup_passed'
     elif not candidate.get('attempted'):

@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Build a same-signer instrumentation APK for CI only; never shipped in a release."""
-import os, pathlib, subprocess, zipfile
+import argparse, os, pathlib, subprocess, zipfile
 ROOT=pathlib.Path(__file__).resolve().parents[2]
-SDK=pathlib.Path('/workspace/native-instagram-research/tools/android-sdk/build-tools/36.0.0')
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--build-tools',type=pathlib.Path,required=True)
+SDK=parser.parse_args().build_tools.resolve()
 BUILD=ROOT/'native/build/model-smoke'; BUILD.mkdir(parents=True,exist_ok=True)
 ANDROID=ROOT/'tools/android-35/android.jar'
 def run(*args,**kwargs):subprocess.run(list(map(str,args)),check=True,**kwargs)
