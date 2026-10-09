@@ -2,6 +2,8 @@
 
 Cliente Android independiente que abre **Instagram web** y aplica filtros locales. No es el APK oficial modificado ni una aplicación afiliada a Meta. Requiere Android 8 o posterior, conexión a Internet y Android System WebView actualizado.
 
+**[Descargar el APK 0.1.0](https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.1.0/IG-Calma-0.1.0.apk)** · [Versiones y archivos de descarga](https://github.com/miguelcoxcaballero/ig-calma/releases)
+
 ## Instalación y uso
 
 1. Descarga `IG-Calma-0.1.0.apk` y ábrelo en tu Android. Si Android lo pide, permite instalar aplicaciones desde el navegador o gestor de archivos que utilizaste.
