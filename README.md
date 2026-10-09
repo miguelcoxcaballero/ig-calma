@@ -24,6 +24,8 @@ El [manifiesto anterior](android-update.json) y el [nativo](native/android-updat
 
 ## Estado de la prueba
 
+La APK 0.4.2 supera la actualización sobre la 0.4.1 y el arranque sin sesión en emuladores oficiales de **Android 14, 15 y 16**, sin cierres ni ANR registrados. [Resultados vinculados al SHA-256](native/validation/0.4.2.json) · [Ejecución de las pruebas](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/37985595538).
+
 La compilación y las comprobaciones de firma, recursos, clases nativas, destinos de los parches y pruebas automatizadas son reproducibles. **No se ha probado el inicio de sesión, la fluidez, la reproducción ni las notificaciones push con una cuenta real en un teléfono.** Se mantienen los servicios nativos de mensajes; eso no demuestra que Meta acepte las notificaciones de una aplicación con otro paquete y firma.
 
 El orden entre páginas depende también de que Instagram respete su feed de Siguiendo. Si entrega una página fuera de orden, Calma evita cortar prematuramente a las 48 horas, pero no recoloca publicaciones que ya estaban renderizadas. El feed de amigos puede omitir temporalmente publicaciones cuya relación todavía no se ha resuelto; una actualización del feed vuelve a evaluarlas. Explorar puede quedar vacío cuando los resultados recibidos no contienen cuentas seguidas verificadas. La búsqueda escrita no exige una relación de seguimiento.
