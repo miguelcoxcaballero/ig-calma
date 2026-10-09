@@ -2,7 +2,7 @@
   "instagramVersion": "439.0.0.37.89",
   "instagramVersionCode": 384510827,
   "origin": "Independently inspected stock Instagram DEX; original Calma implementation",
-  "settings": "CalmaConfig.reels()",
+  "settings": "CalmaReels.locked(): CalmaConfig.reels() with the foreground For you credit exception",
   "sourcePolicy": "The sender of a native direct message must have both native following and followed_by states true; unknown states are denied",
   "nativeDirectData": {
     "class": "com.instagram.clips.intf.ClipsViewerDirectData",

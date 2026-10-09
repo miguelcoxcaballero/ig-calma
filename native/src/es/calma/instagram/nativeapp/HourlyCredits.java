@@ -36,6 +36,10 @@ final class HourlyCredits {
     /** Settle active time before granting the next hour; new earnings cannot pay old usage. */
     synchronized void spend(long wallStart, long wallEnd, long activeMillis) {
         long span = Math.max(0, wallEnd - wallStart);
+        // A clock correction must neither make usage free nor iterate years on the UI thread.
+        if (wallEnd < wallStart || wallEnd / HOUR < through || Math.abs(span - activeMillis) > HOUR) {
+            consume(Math.max(0, activeMillis), Long.MAX_VALUE); advance(wallEnd); return;
+        }
         long cursor = wallStart, remaining = Math.max(0, activeMillis);
         while (cursor < wallEnd) {
             advance(cursor);

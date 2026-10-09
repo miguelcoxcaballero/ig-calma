@@ -9,6 +9,7 @@ Los puntos de integración se han identificado en el APK original fijado en
 | Tarjetas del feed | `X.05qw.A0x` es `Ad4adDictImpl`; `A0y` es `X.02lY`. El único constructor de `X.02lY` fija su booleano final `A1H=true`, devuelto por `EKS()`. | Se eliminan las tarjetas promocionales aunque no tengan todavía un objeto `Media`. |
 | Inserciones del feed | `X.02px` lee `disable_client_insertions` en `X.07do.A0E` y `max_num_possible_ad_insertions` en `A0J`. | Se fijan a `true` y `0`, respectivamente, en todos los modos. |
 | Explorar y resultados de búsqueda | `X.032D.A09` es el contenido del tipo `X.031N.AD` (ordinal 32); `A08` contiene el medio normal. | Se descarta el contenido de `A09`; el medio de `A08` también debe superar `Media.EKS()`. |
+| Reels | `X.0Es9.Bd0(UserSession)` identifica `ClipsFeedOfAdsResponse_getClipsAdItems`, una fuente separada del feed orgánico. | Devuelve una lista vacía para impedir que esa fuente entregue anuncios al visor nativo. |
 | Historias | `X.03sn.EKS()` comprueba el tipo `X.03st.A04`, definido como `ADS_REEL` / `ads_reel`. `X.08S0.E1e` lo inserta en el adaptador de historias. | Se rechaza antes de modificar el adaptador o los registros de inserción. |
 
 El rechazo de historias devuelve `Integer(8)`, la condición nativa

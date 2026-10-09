@@ -209,10 +209,12 @@ interprete un nombre de archivo personalizado como un tipo de recurso distinto.
 
 ## Feed, Explorar y búsqueda
 
-Desde 0.4.2, `CalmaConfig.mode()` exige seguimiento mutuo incluso antes de cargar
-las preferencias. La migración aplica la misma regla a las instalaciones previas
-sin modificar su elección sobre Reels. El feed conserva el orden cronológico y
-la ventana de 48 horas.
+La opción inicial es Friends, con seguimiento mutuo incluso antes de cargar
+las preferencias. En 0.4.4 el selector también ofrece Following, Favourites y
+For you. Friends y Following guardan snapshots independientes de 48 horas;
+Favourites y For you conservan sus respuestas nativas y sólo eliminan anuncios.
+El filtro de cada respuesta queda ligado al modo de su petición, y una generación
+anterior no se entrega después de cambiar de modo.
 
 Explorar (`X.094e`) usa relaciones de seguimiento del usuario de esa petición;
 no exige que la otra cuenta le siga de vuelta. La cuadrícula de una búsqueda
@@ -298,11 +300,11 @@ ARM64 de esas versiones.
 pruebas de arranque sin sesión no verifican la navegación, las notificaciones DM,
 la reproducción, la fluidez ni la instalación desde el popup en un teléfono.
 
-## Timeline completo (0.4.4)
+## Timeline completo (introducido en 0.4.3)
 
 El feed nativo reúne las páginas de 48 horas antes de cerrar su snapshot, verifica todas las amistades pendientes, ordena globalmente y conserva los datos por cuenta. Una caché privada de metadatos permite reutilizar un snapshot reciente. El final es una fila nativa con `That's it` y una cara sonriente. Los fallos y cursores repetidos dan una opción de reintento y no un bucle de carga. La sincronización inicial necesita red; las imágenes siguen usando la caché nativa. [Mapeos, pruebas y límites actuales](feed.md).
 
-La instrumentación independiente `tests/android/NativeModelSmoke.java` ejecuta el constructor DEX del modelo final y su dibujo real en Android, sin una cuenta. El APK de prueba se compila con `python3 native/scripts/build-smoke-test.py --build-tools /ruta/al/sdk/build-tools/36.0.0`, se firma con la clave existente y sólo se incluye en el transporte de CI, nunca en la release. La 0.4.4 supera esta comprobación y la actualización/arranque sobre la 0.4.2 en API 34, 35 y 36: [evidencia del APK](validation/0.4.4.json), [ejecución](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/37988421107).
+La instrumentación independiente `tests/android/NativeModelSmoke.java` ejecuta el constructor DEX del modelo final y su dibujo real en Android, sin una cuenta. El APK de prueba se compila con `python3 native/scripts/build-smoke-test.py --build-tools /ruta/al/sdk/build-tools/36.0.0`, se firma con la clave existente y sólo se incluye en el transporte de CI, nunca en la release. La 0.4.3 supera esta comprobación y la actualización/arranque sobre la 0.4.2 en API 34, 35 y 36: [evidencia del APK](validation/0.4.3.json), [ejecución](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/37988421107).
 
 ## Selector y saldo de For you (0.4.4)
 

@@ -23,6 +23,12 @@ public final class HourlyCreditsTest {
         check(rate.balance(104*h)==360000,"New rate applies to subsequent hours");
         check(rate.balance(102*h)==360000,"Backwards clock does not mint credits");
         check(rate.balance(104*h)==360000,"Returning to previous hour does not mint twice");
+        rate.spend(102*h,102*h+10000,10000);
+        check(rate.balance(102*h+10000)==350000,"Clock rollback cannot make foreground usage free");
+        HourlyCredits correction=new HourlyCredits(start,1);
+        correction.balance(101*h);
+        correction.spend(101*h,101*h+10000*d,1000);
+        check(correction.balance(101*h+10000*d)==24*60000,"Large clock correction has bounded work and expires old credits");
         HourlyCredits gap=new HourlyCredits(start,1);
         check(gap.balance(start+10000*d)==24*60000,"Long absence only keeps unexpired hours and has bounded work");
         HourlyCredits boundary=new HourlyCredits(100*h,1);
