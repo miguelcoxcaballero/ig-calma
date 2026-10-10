@@ -28,7 +28,7 @@ El [manifiesto anterior](android-update.json) y el [nativo](native/android-updat
 
 ## Estado de la prueba
 
-La APK 0.4.12 se valida como actualización sobre la 0.4.11 y en el arranque sin sesión en emuladores oficiales de **Android 14, 15 y 16**. La instrumentación comprueba las tres opciones nativas, la migración a Following y el retorno a Following al agotarse el saldo. Incluye pruebas del feed y Reels. No reproduce respuestas de una cuenta autenticada. [Resultados vinculados al SHA-256](native/validation/0.4.12.json) · [Ejecución de las pruebas](RUNTIME_0412_URL).
+La APK 0.4.12 se valida como actualización sobre la 0.4.11 y en el arranque sin sesión en emuladores oficiales de **Android 14, 15 y 16**. La instrumentación comprueba las tres opciones nativas, la migración a Following y el retorno a Following al agotarse el saldo. Incluye pruebas del feed y Reels. No reproduce respuestas de una cuenta autenticada. [Resultados vinculados al SHA-256](native/validation/0.4.12.json) · [Ejecución de las pruebas](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38029781380).
 
 La instrumentación crea los tres modelos del selector y las filas IGDS originales, verifica el saldo y el estado bloqueado, y comprueba el final del timeline en ambos temas. Las pruebas locales cubren caducidad, persistencia, cambios de hora y migración de las preferencias antiguas a Following.
 
