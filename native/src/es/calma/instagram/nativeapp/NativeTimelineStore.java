@@ -8,7 +8,7 @@ import java.util.*;
 
 /** Private per-account metadata cache using the pinned native Media codec. No credentials or bitmaps. */
 final class NativeTimelineStore {
-    private static final int MAGIC = 0x43414c3a;
+    private static final int MAGIC = 0x43414c3b;
     private static final long MAX_BYTES = 64L * 1024 * 1024;
     private NativeTimelineStore() {}
     private static File file(NativeTimeline.Context context) throws Exception {

@@ -45,9 +45,11 @@ final class NativeTimeline {
             this.media = media == null ? null : Collections.unmodifiableList(new ArrayList<>(media));
             this.anchor = anchor; this.epoch = CalmaConfig.contentId();
         }
-        void apply(Object response) throws ReflectiveOperationException {
-            StockAccess.set(response, "A0S", wrappers == null ? null : new ArrayList<>(wrappers));
-            StockAccess.set(response, "A0U", media == null ? null : new ArrayList<>(media));
+        void apply(Object response, Object session) throws ReflectiveOperationException {
+            // A completed snapshot preserves posts, not permission to show their authors forever.
+            long now = System.currentTimeMillis() / 1000L;
+            StockAccess.set(response, "A0S", wrappers == null ? null : NativeFeed.filter(wrappers, true, now, true, session).items);
+            StockAccess.set(response, "A0U", media == null ? null : NativeFeed.filter(media, false, now, true, session).items);
             finish(response);
         }
     }

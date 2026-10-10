@@ -118,8 +118,12 @@ public final class NativeRelations {
         State verified = user == null ? null : cached(session, id(user));
         if (mode != 0 && verified != null && Boolean.FALSE.equals(verified.following)) return false;
         if (mode == 1 && followingResponse) return true;
-        if (mode == 2 && followingResponse && verified != null && verified.followedBy != null)
-            return Boolean.TRUE.equals(verified.followedBy);
+        if (mode == 2) {
+            // A feed's cached User is not proof for the current account. Only the
+            // exact account/author row parsed from friendships/show_many can admit it.
+            return verified != null && Boolean.TRUE.equals(verified.followedBy)
+                    && (Boolean.TRUE.equals(verified.following) || followingResponse);
+        }
         return permits(state(session, user, id(user)), mode, followingResponse);
     }
     private static boolean permits(State state, int mode, boolean followingResponse) {

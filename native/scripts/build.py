@@ -52,7 +52,7 @@ def finalize(apk: Path, build_tools: Path, morphe: Path) -> None:
         'version': version, 'versionCode': version_code, 'required': True,
         'apkUrl': f'https://github.com/miguelcoxcaballero/ig-calma/releases/download/v{version}/{apk.name}',
         'apkSha256': digest(apk), 'apkSizeBytes': apk.stat().st_size,
-        'releaseNotes': "Corrige Friends vacío al comprobar amistades. Following precarga las siguientes páginas sin esperar al scroll y sin el corte de 90 segundos. Mantiene los Reels individuales y los minutos de For you.",
+        'releaseNotes': "Friends muestra sólo publicaciones de seguidores mutuos confirmados para tu cuenta. Corrige los estados antiguos y revisa también la caché. Following mantiene todas las cuentas que sigues y la precarga.",
     }
     payload = json.dumps(manifest, indent=2, ensure_ascii=False) + '\n'
     for destination in (ROOT / 'android-update.json', NATIVE / 'android-update.json'):

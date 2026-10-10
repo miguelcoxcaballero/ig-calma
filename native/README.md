@@ -20,12 +20,12 @@ La entrada aceptada está fijada en [`stock.lock.json`](stock.lock.json):
 | Android mínimo | Android 9, API 28 |
 | Formato de entrada | APKM con `base.apk` y `split_config.xxhdpi.apk` |
 | Procedencia | [Variante de APKMirror](https://www.apkmirror.com/apk/instagram/instagram-instagram/instagram-439-0-0-37-89-release/instagram-439-0-0-37-89-4-android-apk-download/) |
-| Versión propia de Calma | `0.4.10`, definida en [`CalmaBuild.java`](src/es/calma/instagram/nativeapp/CalmaBuild.java) |
+| Versión propia de Calma | `0.4.11`, definida en [`CalmaBuild.java`](src/es/calma/instagram/nativeapp/CalmaBuild.java) |
 | Paquete resultante | `es.calma.instagram` |
-| versionCode resultante | `384510838` |
+| versionCode resultante | `384510839` |
 
 El manifiesto del APK conserva `versionName=439.0.0.37.89` para Instagram. La
-comparación de actualizaciones utiliza `CalmaBuild.VERSION`, actualmente `0.4.10`.
+comparación de actualizaciones utiliza `CalmaBuild.VERSION`, actualmente `0.4.11`.
 Son versiones distintas con funciones distintas.
 
 El build verifica el SHA-256 del APKM y de cada split, además de la cadena de firma
@@ -146,13 +146,13 @@ regenera los metadatos del cargador, alinea a **16 KB**, firma y verifica el res
 
 Los resultados quedan en:
 
-- `native/build/dist/IG-Calma-0.4.10.apk`.
+- `native/build/dist/IG-Calma-0.4.11.apk`.
 - `native/build/dist/SHA256SUMS.txt`, `build-info.json` y `verification.json`.
 - `native/build/patch-result.json` y `native/build/extension/build-report.json`.
 - `android-update.json` y `native/android-update.json`, idénticos y generados a partir del APK firmado.
 
 El build genera los archivos locales; no publica una release. El manifiesto de
-actualización apunta al APK de la release `v0.4.10` del repositorio configurado en el
+actualización apunta al APK de la release `v0.4.11` del repositorio configurado en el
 script. La publicación debe adjuntar exactamente ese APK y mantener su versión,
 tamaño y SHA-256 sincronizados con el manifiesto. Los dos manifiestos usan
 `required: true`; con `false`, Inhouse Read no ofrece la actualización. Publicar
@@ -259,10 +259,10 @@ Para verificar otra vez el APK firmado:
 
 ```sh
 python3 native/scripts/verify-apk.py \
-  --apk native/build/dist/IG-Calma-0.4.10.apk \
+  --apk native/build/dist/IG-Calma-0.4.11.apk \
   --stock /ruta/al/base.apk \
   --build-tools "$CALMA_SDK/build-tools/36.0.0"
-python3 native/tests/updater.py --apk native/build/dist/IG-Calma-0.4.10.apk
+python3 native/tests/updater.py --apk native/build/dist/IG-Calma-0.4.11.apk
 ```
 
 La verificación del artefacto comprueba firma, alineación de 16 KB, versiones,
@@ -346,3 +346,12 @@ El parser de red conserva las publicaciones hasta la entrega nativa aunque el se
 Cada respuesta de amistad puede activar la entrega local antes de que finalicen los demás autores. La lectura/escritura de snapshots usa otra cola. La precarga comprueba la vista real de Home (`05qX.A0Y.A01`), conserva las comprobaciones nativas de peticiones en curso, reintenta hasta seis veces a intervalos de 250 ms tras un rechazo y después espera otro evento nativo. Ya no se detiene a los 90 segundos mientras Home siga visible. El replay de Friends se prepara también cuando Home está oculto, sin descargar nuevas páginas fuera de esa vista.
 
 Validación: `native/tests/feed.py`, `pager.py`, checks del DEX y parser JSON de amistades original en Android 14–16. [Ejecución](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38006543018). Los datos de estas pruebas son sintéticos; no miden la latencia de una cuenta real.
+
+
+## Seguidores mutuos verificados (0.4.11)
+
+Friends requiere un `followed_by:true` procedente de la respuesta nativa de amistades para la cuenta y el autor concretos. Los campos positivos de un User guardado ya no permiten saltarse esa consulta. El endpoint Following confirma que sigues al autor principal; un coautor necesita su propio `following:true`. Un `following:false` explícito siempre lo excluye.
+
+Las consultas siguen agrupadas y no bloquean la entrega de amigos ya confirmados ni la precarga. Los snapshots se vuelven a filtrar al mostrarlos; la caché de disco entra en el acumulador para resolver sus autores, sin duplicar historias ni dar por terminada la descarga actual. La entrega final al adaptador vuelve a comprobar Friends incluso cuando falta el envoltorio de la petición. Se invalida el formato de caché anterior.
+
+Regresión reproducida sobre 0.4.10 con un User positivo antiguo. Las pruebas comprueban Friends frente a Following con las mismas publicaciones, aislamiento entre cuentas, entrega incompleta y revocación del seguimiento en un snapshot terminado. [Pruebas del APK en Android 14–16](RUNTIME_0411_URL); datos sintéticos, sin sesión autenticada.

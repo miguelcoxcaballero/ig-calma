@@ -66,10 +66,22 @@ public final class NativeModelSmoke extends Instrumentation {
         check(!((List<?>)result.getClass().getMethod("A01").invoke(result)).isEmpty(),"Stock delivery list is updated, not only its parser model");
         return result;
     }
+    private void prepareUserCache(ClassLoader loader,Object session)throws Exception {
+        Field scoped=Class.forName("X.04BG",false,loader).getDeclaredField("A00");scoped.setAccessible(true);scoped.set(session,new java.util.concurrent.ConcurrentHashMap<>());
+        Object cache=allocate(loader,"com.instagram.user.model.UserCache");set(cache,"A00",session);set(cache,"A01",new java.util.concurrent.ConcurrentHashMap<>());
+        session.getClass().getMethod("A04",Class.class,Object.class).invoke(session,cache.getClass(),cache);
+    }
+    private void parseFriendships(ClassLoader loader,Object session,String json)throws Exception {
+        Object parser=Class.forName("X.02tC",true,loader).getMethod("A00",String.class).invoke(null,json);
+        try {Class.forName("X.0ICa",true,loader).getMethod("A00",Class.forName("X.03q7",false,loader),session.getClass(),boolean.class).invoke(null,parser,session,false);}
+        finally {((java.io.Closeable)parser).close();}
+    }
     private void feedModels(ClassLoader loader)throws Exception {
         Class<?> config=Class.forName("es.calma.instagram.nativeapp.CalmaConfig",true,loader);
         Method select=config.getDeclaredMethod("select",String.class);select.setAccessible(true);select.invoke(null,"RECENTS");
         Object session=allocate(loader,"com.instagram.common.session.UserSession");set(session,"userId","994400");
+        prepareUserCache(loader,session);
+        parseFriendships(loader,session,"{\"friendship_statuses\":{\"994411\":{\"following\":true,\"followed_by\":true}},\"status\":\"ok\"}");
         Object controller=allocate(loader,"X.05qX");set(controller,"A0X",session);
         Object parser=allocate(loader,"X.03gD");set(parser,"A01",session);
         Class<?> feed=Class.forName("es.calma.instagram.nativeapp.NativeFeed",true,loader);
@@ -129,7 +141,23 @@ public final class NativeModelSmoke extends Instrumentation {
         set(data,"A8X","994413");check(Boolean.FALSE.equals(permit.invoke(null,session,author,2,true)),"Actual explicit unfollow overrides Following source");
         check(Boolean.TRUE.equals(relations.getMethod("isMutual",Object.class,String.class).invoke(null,session,"994414")),"Actual native parser captures mutual status even without cached User");
         set(data,"A8X","994415");set(data,"A2E",null);set(data,"A3r",true);
-        check(Boolean.TRUE.equals(permit.invoke(null,session,author,2,true)),"Actual modern is_following_current_user field permits Friends from Following");
+        check(Boolean.FALSE.equals(permit.invoke(null,session,author,2,true)),"Native modern positive is not current-account verification");
+        set(data,"A2E",true);
+        check(Boolean.FALSE.equals(permit.invoke(null,session,author,2,true)),"Native followed_by positive cannot bypass the batch lookup either");
+        set(data,"A8X","994412");
+        check(Boolean.FALSE.equals(permit.invoke(null,session,author,2,true)),"Verified one-way overrides both stale positive native flags");
+        check(Boolean.TRUE.equals(permit.invoke(null,session,author,1,true)),"Same original User is allowed in Following");
+        set(data,"A8X","994414");
+        Object controller=allocate(loader,"X.05qX");set(controller,"A0X",session);
+        Class<?> feed=Class.forName("es.calma.instagram.nativeapp.NativeFeed",true,loader);
+        Object request=request(loader,"strict-friends",null), row=wrapper(loader,post), response=page(loader,null,null,row);
+        feed.getMethod("context",Object.class,Object.class,Object.class,Object.class,Object.class,Object.class).invoke(null,null,null,null,session,request,null);
+        deliver(loader,controller,request,response);
+        check(((List<?>)response.getClass().getField("A0S").get(response)).contains(row),"Verified mutual enters the real completed snapshot");
+        parseFriendships(loader,session,"{\"friendship_statuses\":{\"994414\":{\"following\":true,\"followed_by\":false}},\"status\":\"ok\"}");
+        response=page(loader,null,"unused",row);deliver(loader,controller,request,response);
+        for(Object shown:(List<?>)response.getClass().getField("A0S").get(response))
+            check(shown.getClass().getMethod("A0A").invoke(shown)==null,"Snapshot replay removes no-longer-mutual Media and retains only controls");
     }
     private Object getStatic(Class<?> type,String name)throws Exception {Field f=type.getDeclaredField(name);f.setAccessible(true);return f.get(null);}
     private void setStatic(Class<?> type,String name,Object value)throws Exception {Field f=type.getDeclaredField(name);f.setAccessible(true);f.set(null,value);}
@@ -239,7 +267,7 @@ public final class NativeModelSmoke extends Instrumentation {
             } catch (Throwable failure) { error[0] = failure; }
         });
         if (error[0] == null) {
-            result.putString("stream", "CALMA_NATIVE_MODELS_PASSED: allocation, native row, light/dark drawing, accessibility, recycling, four stock selector models, remaining time, zero-credit lock, real Media/dictionary/user/wrapper/response/parser models; actual HTTP parameter map and delivery envelope with absent/different response IDs, cold head, native continuation, duplicate removal, completed cache; actual ClipsViewerConfig/ViewPager2 single-clip lock and earned-time restore; actual friendship JSON parser, omitted following and modern follower fields\n");
+            result.putString("stream", "CALMA_NATIVE_MODELS_PASSED: allocation, native row, light/dark drawing, accessibility, recycling, four stock selector models, remaining time, zero-credit lock, real Media/dictionary/user/wrapper/response/parser models; actual HTTP parameter map and delivery envelope with absent/different response IDs, cold head, native continuation, duplicate removal, completed cache; actual ClipsViewerConfig/ViewPager2 single-clip lock and earned-time restore; actual friendship JSON parser, strict account-verified Friends and snapshot revocation\n");
             finish(-1,result);
         } else {
             result.putString("stream", "CALMA_NATIVE_MODELS_FAILED: " + android.util.Log.getStackTraceString(error[0]));

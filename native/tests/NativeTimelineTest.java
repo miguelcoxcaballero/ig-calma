@@ -43,7 +43,7 @@ public class NativeTimelineTest {
         check(fetched.get()==1,"preloads remaining pages before completing");
         check(snapshot.wrappers.size()==3 && snapshot.wrappers.get(0)==stories,"stories retained once; duplicate post removed globally");
         check(((Wrapper)snapshot.wrappers.get(1)).A0A()==two,"late newer post is globally sorted");
-        Response delivered=new Response();snapshot.apply(delivered);
+        Response delivered=new Response();snapshot.apply(delivered,c.session);
         check(!delivered.A0a && !delivered.A0W && delivered.A0N==null,"complete snapshot never requests more pages on scroll");
         delivered.A0S.clear();check(snapshot.wrappers.size()==3,"native adapter cannot mutate saved list");
         NativeTimeline.Snapshot stable=worker(()->NativeTimeline.load(page(null),c,now+20,(a,b,d)->{throw new AssertionError("Unexpected fetch");}));

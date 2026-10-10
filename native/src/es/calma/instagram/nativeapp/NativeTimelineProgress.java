@@ -35,7 +35,12 @@ final class NativeTimelineProgress {
         String reason = String.valueOf(StockAccess.get(context.request, "A09"));
         boolean refresh = reason.equals("pull_to_refresh") || reason.equals("pill_refresh") || reason.equals("new_follow");
         if (head && g != null && g.snapshot != null && !refresh && g.snapshot.epoch == CalmaConfig.contentId()) {
-            g.snapshot.apply(response); NativeFeedEnd.append(response, context.session); return;
+            List<String> missing = NativeFeed.missing(g.wrappers, g.media, context.session, now);
+            if (missing.isEmpty()) {
+                g.snapshot.apply(response, context.session); NativeFeedEnd.append(response, context.session); return;
+            }
+            // Expired friendship proof requires a fresh generation; never reuse its old positives.
+
         }
         if (head || g == null || g.epoch != epoch) {
             g = new Generation(context, epoch, now); GENERATIONS.put(key, g);
@@ -76,7 +81,18 @@ final class NativeTimelineProgress {
                         NativeTimeline.Snapshot disk = NativeTimelineStore.read(context, response, now);
                         synchronized (generation) {
                             if (disk != null && current(key, generation) && generation.snapshot == null) {
-                                generation.snapshot = disk; generation.done = true; generation.replay = true;
+                                // Disk contains posts, not current friendship proof. Merge it
+                                // into the same accumulator and resolve authors in batches.
+                                if (disk.wrappers != null) {
+                                    for (Object row : disk.wrappers) {
+                                        try { if (StockAccess.call(row,"A0A") != null) generation.wrappers.add(row); }
+                                        catch (ReflectiveOperationException | RuntimeException invalidRow) { }
+                                    }
+                                    generation.hasWrappers = true;
+                                }
+                                if (disk.media != null) { generation.media.addAll(disk.media); generation.hasMedia = true; }
+                                resolve(key, generation);
+                                generation.replay = true;
                                 NativeTimelinePager.wake(context.session);
                             }
                         }
@@ -134,7 +150,6 @@ final class NativeTimelineProgress {
     }
     private static boolean current(String key, Generation g) { return GENERATIONS.get(key) == g && g.epoch == CalmaConfig.sessionId(); }
     private static boolean complete(Generation g) throws ReflectiveOperationException {
-        if (g.snapshot != null) return true;
         if (!NativeFeed.missing(g.wrappers, g.media, g.context.session, g.anchor).isEmpty()) return false;
         g.snapshot = new NativeTimeline.Snapshot(
             g.hasWrappers ? NativeFeed.filter(g.wrappers, true, g.anchor, true, g.context.session).items : null,
@@ -183,7 +198,7 @@ final class NativeTimelineProgress {
             ViewPage page = new ViewPage();
             page.A0S = g.hasWrappers ? NativeFeed.filter(g.wrappers,true,g.anchor,true,session).items : null;
             page.A0U = g.hasMedia ? NativeFeed.filter(g.media,false,g.anchor,true,session).items : null;
-            if (g.snapshot != null) g.snapshot.apply(page);
+            if (g.snapshot != null) g.snapshot.apply(page, session);
             if (g.done) NativeFeedEnd.appendStatus(page,session,g.snapshot != null);
             List<?> rows = page.A0S;
             if (rows == null && page.A0U != null) rows = (List<?>) StockAccess.method(Class.forName("X.04ss",false,session.getClass().getClassLoader()),"A00",List.class).invoke(null,page.A0U);

@@ -84,6 +84,7 @@ public final class NativeFeed {
     }
     /** Use the actual stock delivery request: response request_id is not a correlation contract. */
     public static void delivered(Object controller, Object envelope, Object result) {
+        boolean followingSource = false;
         try {
             Object session = StockAccess.get(controller,"A0X"), nativeRequest = StockAccess.get(envelope,"A00");
             Object response = StockAccess.get(result,"A03");
@@ -94,7 +95,8 @@ public final class NativeFeed {
                 Object id = StockAccess.get(nativeRequest,"A0H"), cursor = StockAccess.get(nativeRequest,"A0G");
                 synchronized (NATIVE_REQUESTS) {
                     for (Map.Entry<Object,Request> entry : NATIVE_REQUESTS.entrySet()) {
-                        if (java.util.Objects.equals(id,StockAccess.get(entry.getKey(),"A0H"))
+                        if (NativeRelations.owner(session).equals(entry.getValue().owner)
+                                && java.util.Objects.equals(id,StockAccess.get(entry.getKey(),"A0H"))
                                 && java.util.Objects.equals(cursor,StockAccess.get(entry.getKey(),"A0G"))) {
                             request = entry.getValue(); break;
                         }
@@ -103,6 +105,7 @@ public final class NativeFeed {
             }
             RawPage raw = RAW.remove(response);
             if (raw != null) raw.restore(response);
+            followingSource = (request != null && request.following) || "following".equals(StockAccess.get(response,"A0O"));
             process(response, session, request, request != null);
             Object rows = StockAccess.get(response,"A0S");
             if (!(rows instanceof List)) {
@@ -111,7 +114,20 @@ public final class NativeFeed {
             }
             StockAccess.method(result.getClass(),"A02",List.class).invoke(result,rows);
             if (request != null && request.epoch == CalmaConfig.sessionId()) NativeTimelinePager.delivery(controller,envelope,request.head);
-        } catch (ReflectiveOperationException | RuntimeException ignored) { /* Parser's safe page remains available. */ }
+        } catch (ReflectiveOperationException | RuntimeException ignored) { /* Final Friends guard below also covers unmatched/cache envelopes. */ }
+        finally { guardFriends(controller, result, followingSource); }
+    }
+    private static void guardFriends(Object controller, Object result, boolean following) {
+        if (CalmaConfig.mode() != 2 || result == null) return;
+        List<?> rows = java.util.Collections.emptyList();
+        try {
+            Object session = StockAccess.get(controller, "A0X"), value = StockAccess.get(result, "A02");
+            if (value instanceof List) rows = filter((List<?>) value, true, System.currentTimeMillis()/1000, following, session).items;
+        } catch (ReflectiveOperationException | RuntimeException unavailable) { /* Unverified rows stay hidden. */ }
+        try { StockAccess.method(result.getClass(), "A02", List.class).invoke(result, rows); }
+        catch (ReflectiveOperationException | RuntimeException unavailable) {
+            try { StockAccess.set(result, "A02", rows); } catch (ReflectiveOperationException ignored) { }
+        }
     }
     private static final String[] SUGGESTION_FIELDS = {
         "A0N", "A0O", "A0P", "A0Q", "A0R", "A0S", "A0T", "A0U", "A0K", "A0W", "A04", "A0J",
@@ -250,7 +266,7 @@ public final class NativeFeed {
             // a successful empty page with auto-pagination still switched on.
             try {
                 NativeTimeline.Snapshot previous = NativeTimeline.saved(session);
-                if (previous != null) previous.apply(response);
+                if (previous != null) previous.apply(response, session);
                 else {
                     StockAccess.set(response, "A0S", new ArrayList<>());
                     StockAccess.set(response, "A0U", new ArrayList<>());
@@ -326,7 +342,7 @@ public final class NativeFeed {
             if (!permitted) {
                 Object collaborators = StockAccess.call(dictionary, "A8F");
                 if (collaborators instanceof List) for (Object collaborator : (List<?>) collaborators) {
-                    if (NativeRelations.permitted(session, collaborator, CalmaConfig.mode(), following)) { permitted = true; break; }
+                    if (NativeRelations.permitted(session, collaborator, CalmaConfig.mode(), false)) { permitted = true; break; }
                 }
             }
             if (!permitted) continue;
@@ -365,13 +381,13 @@ public final class NativeFeed {
                 Object author = StockAccess.call(dictionary, "A33");
                 if (author != null) {
                     String id = (String) StockAccess.call(author, "getId");
-                    if (id != null && id.matches("[0-9]+") && !NativeRelations.verified(session, id) && !NativeRelations.permitted(session, author, 2, true)) ids.add(id);
+                    if (id != null && id.matches("[0-9]+") && !NativeRelations.verified(session, id)) ids.add(id);
                 }
                 Object collaborators = StockAccess.call(dictionary, "A8F");
                 if (collaborators instanceof List) for (Object collaborator : (List<?>) collaborators)
                     if (collaborator != null) {
                         String id = (String) StockAccess.call(collaborator, "getId");
-                        if (id != null && id.matches("[0-9]+") && !NativeRelations.verified(session, id) && !NativeRelations.permitted(session, collaborator, 2, true)) ids.add(id);
+                        if (id != null && id.matches("[0-9]+") && !NativeRelations.verified(session, id)) ids.add(id);
                     }
             } catch (ReflectiveOperationException | RuntimeException missingOptionalAuthor) { /* Filter rejects malformed items. */ }
         }

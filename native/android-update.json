@@ -1,9 +1,9 @@
 {
-  "version": "0.4.10",
-  "versionCode": 384510838,
+  "version": "0.4.11",
+  "versionCode": 384510839,
   "required": true,
-  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.10/IG-Calma-0.4.10.apk",
-  "apkSha256": "d8318afbe6e9691ffe0e7469a4660a78e187f35641671a95a8ecf5cbd86e6d58",
+  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.11/IG-Calma-0.4.11.apk",
+  "apkSha256": "8758e08c29e6b1ff27757349ed325cbf16a981fa19c51d13adfeff964e8204ee",
   "apkSizeBytes": 146268845,
-  "releaseNotes": "Corrige Friends vacío al comprobar amistades. Following precarga las siguientes páginas sin esperar al scroll y sin el corte de 90 segundos. Mantiene los Reels individuales y los minutos de For you."
+  "releaseNotes": "Friends muestra sólo publicaciones de seguidores mutuos confirmados para tu cuenta. Corrige los estados antiguos y revisa también la caché. Following mantiene todas las cuentas que sigues y la precarga."
 }

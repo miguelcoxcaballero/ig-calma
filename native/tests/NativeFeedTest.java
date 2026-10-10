@@ -7,7 +7,11 @@ import java.util.List;
 import java.util.Map;
 
 public final class NativeFeedTest {
-    public static final class Session { final String owner; Session(){this("100");} Session(String owner){this.owner=owner;} public String getUserId() { return owner; } }
+    public static final class Session { final String owner; Session(){this("100");} Session(String owner){this.owner=owner;
+        // Fixture account has two explicitly verified relationship rows. Other IDs stay unknown.
+        for(String id:new String[]{"2101","2102"}) { Status status=new Status(true,id.equals("2101"));
+            NativeRelations.beginStatus(this,id,status);NativeRelations.statusField(status,"following");NativeRelations.endStatus(status); }
+    } public String getUserId() { return owner; } }
     public static final class Status { public boolean A0H; public Boolean A02; Status(boolean following,Boolean followedBy){A0H=following;A02=followedBy;} }
     public static final class Parser { public Object A01 = new Session(); }
     public static final class Friendship {
@@ -27,7 +31,9 @@ public final class NativeFeedTest {
     }
     public static final class User {
         public UserDictionary A00;
-        User(Boolean following, Boolean followedBy) { A00 = new UserDictionary(following, followedBy); }
+        private final String id;
+        User(Boolean following, Boolean followedBy) { A00 = new UserDictionary(following, followedBy); id=Boolean.TRUE.equals(followedBy)?"2101":Boolean.FALSE.equals(followedBy)?"2102":"2103"; }
+        public String getId(){return id;}
     }
     public static final class MediaDictionary {
         final String id, kind;
@@ -164,7 +170,7 @@ public final class NativeFeedTest {
         User modern = new User(false,null); modern.A00.currentUserFollower=true;
         Media modernPost = new Media("modern-friend",now-2,"feed",modern);
         Response modernFriends=response(modernPost);apply(modernFriends);
-        check(modernFriends.A0U.equals(Arrays.asList(modernPost)),"Friends trusts Following membership and reads is_following_current_user despite stale follow enum");
+        check(modernFriends.A0U.isEmpty(),"Friends cannot promote unverified modern follower hints to account proof");
         Response staleFriend=response(new Media("stale-mutual",now-2,"feed",new User(false,true)));apply(staleFriend);
         check(staleFriend.A0U.size()==1,"Friends accepts confirmed followers from Following despite stale not-following state");
         CalmaConfig.testMode = 1;
