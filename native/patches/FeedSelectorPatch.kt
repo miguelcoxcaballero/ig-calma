@@ -11,8 +11,8 @@ private const val BUDGET = "Les/calma/instagram/nativeapp/NativeFeedBudget;"
 
 /** Independently mapped stock popup, native refresh delegate and Home lifecycle. */
 val calmaFeedSelector = bytecodePatch(
-    name = "Calma four feed modes",
-    description = "Native Friends/Following selector and expiring hourly For you time"
+    name = "Calma three feed modes",
+    description = "Native Following selector and expiring hourly For you time"
 ) {
     compatibleWith("com.instagram.android"("439.0.0.37.89"))
     dependsOn(calmaNativeFeed)

@@ -13,10 +13,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Four stock menu models, rendered by Instagram's original IGDS popup and row binder. */
+/** Three stock menu models, rendered by Instagram's original IGDS popup and row binder. */
 public final class NativeFeedSelector {
-    private static final String[] TYPES = {"BLENDED_FOR_YOU", "FAVORITES", "RECENTS", "FOLLOWING"};
-    private static final String[] LABELS = {"For you", "Favourites", "Friends", "Following"};
+    private static final String[] TYPES = {"BLENDED_FOR_YOU", "FAVORITES", "FOLLOWING"};
+    private static final String[] LABELS = {"For you", "Favourites", "Following"};
     private static WeakReference<Object> listener = new WeakReference<>(null);
     private static WeakReference<Object> state = new WeakReference<>(null);
     private static WeakReference<PopupWindow> open = new WeakReference<>(null);
@@ -53,14 +53,16 @@ public final class NativeFeedSelector {
     }
     private static String saved(String owner) {
         android.content.SharedPreferences p = CalmaConfig.preferences();
-        String value = p == null ? "RECENTS" : p.getString("feed:" + owner, "RECENTS");
-        if (!supported(value) || "BLENDED_FOR_YOU".equals(value)) return "RECENTS";
-        return value;
+        String value = p == null ? "FOLLOWING" : p.getString("feed:" + owner, "FOLLOWING");
+        String normalized = CalmaConfig.normalizeFeed(value);
+        if (!supported(normalized) || "BLENDED_FOR_YOU".equals(normalized)) normalized = "FOLLOWING";
+        if (p != null && !normalized.equals(value)) p.edit().putString("feed:" + owner, normalized).apply();
+        return normalized;
     }
     private static boolean supported(String name) { for (String t : TYPES) if (t.equals(name)) return true; return false; }
     public static String savedType(Object preference) {
-        // The constructor below supplies the account-scoped selection. Cold startup always starts safely in Friends.
-        return "RECENTS".equals(CalmaConfig.feed()) ? "FOLLOWING" : CalmaConfig.feed();
+        // The constructor below supplies the account-scoped selection. Cold startup defaults to Following.
+        return CalmaConfig.feed();
     }
     public static boolean openPicker(Object click, View anchor) {
         try {
@@ -102,7 +104,7 @@ public final class NativeFeedSelector {
                     null, LABELS[index], subtitle, choice == selected, true, false, index == 0 && balance <= 0, false);
             StockAccess.set(option, "A00", model); rows.add(model); i++;
         }
-        if (i != 4) throw new IllegalStateException("Native selector requires four rows");
+        if (i != TYPES.length) throw new IllegalStateException("Native selector requires three rows");
         return rows;
     }
     private static void populate(Object current, PopupWindow popup) throws ReflectiveOperationException {
@@ -139,10 +141,10 @@ public final class NativeFeedSelector {
             listener = new WeakReference<>(target); state = new WeakReference<>(current);
             PopupWindow popup = open.get(); if (popup != null) popup.dismiss();
             clear.invoke(feed);
-            Map<String, String> params = new HashMap<>(); params.put("feed_type", "RECENTS".equals(name) ? "FOLLOWING" : name);
+            Map<String, String> params = new HashMap<>(); params.put("feed_type", name);
             if (name.equals("BLENDED_FOR_YOU")) params.put("pagination_source", "feed_recs");
             if (name.equals("FAVORITES")) params.put("pagination_source", "favorites");
-            if (name.equals("FOLLOWING") || name.equals("RECENTS")) params.put("pagination_source", "following");
+            if (name.equals("FOLLOWING")) params.put("pagination_source", "following");
             load.invoke(refresh, reason, params); title.invoke(header, true);
             NativeFeedBudget.changed();
             return true;
@@ -154,8 +156,8 @@ public final class NativeFeedSelector {
     }
     static void expired() {
         Object target = listener.get();
-        if (target != null) try { select(target, enumValue(target, "RECENTS")); } catch (ReflectiveOperationException ignored) {}
-        else CalmaConfig.select("RECENTS");
+        if (target != null) try { select(target, enumValue(target, "FOLLOWING")); } catch (ReflectiveOperationException ignored) {}
+        else CalmaConfig.select("FOLLOWING");
     }
     public static boolean header(Object helper) {
         try {
@@ -171,7 +173,7 @@ public final class NativeFeedSelector {
             return true;
         } catch (ReflectiveOperationException | RuntimeException ignored) { return false; }
     }
-    /** Reuse the stock title/chevron on the newer two-tab header as the same four-item picker. */
+    /** Reuse the stock title/chevron on the newer two-tab header as the same three-item picker. */
     public static void topBar(Object bar) {
         try {
             TextView title = (TextView) StockAccess.get(bar, "A06");

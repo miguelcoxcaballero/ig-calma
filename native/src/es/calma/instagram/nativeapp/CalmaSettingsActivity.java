@@ -66,7 +66,7 @@ public final class CalmaSettingsActivity extends Activity {
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
 
         heading(content, "Feed");
-        content.addView(text("Friends · Os seguís mutuamente", 16, foreground));
+        content.addView(text("Following · Cuentas que sigues", 16, foreground));
         content.addView(text("Últimas 48 horas · Más recientes primero", 13, muted));
         separator(content);
         heading(content, "For you");

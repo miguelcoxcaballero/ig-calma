@@ -97,15 +97,15 @@ def summarize_report(report: dict, manifest: dict, apk_sha: str, apk_size: int) 
     if smoke is not None:
         if not isinstance(smoke, dict) or not isinstance(smoke.get('passed'), bool):
             raise ValueError('Invalid native model instrumentation result')
-        result['nativeModelSmoke'] = {'passed': smoke['passed'], 'scope': 'Actual native end-model allocation, inline row, light/dark rendering, accessibility, recycling and four original selector models with remaining time and credit lock; no logged-in feed'}
+        result['nativeModelSmoke'] = {'passed': smoke['passed'], 'scope': 'Actual native end-model allocation, inline row, light/dark rendering, accessibility, recycling and three original selector models with remaining time and credit lock; no logged-in feed'}
         if 'real Media/dictionary/user/wrapper/response/parser models' in smoke.get('output', ''):
             result['nativeModelSmoke']['scope'] += '; actual Media, LiveTree dictionaries, User, wrapper, response and parser-context models with synthetic cached fields: cold main-thread head, cursor, cross-page deduplication and complete cache replay; no authenticated HTTP'
         if 'actual HTTP parameter map and delivery envelope with absent/different response IDs' in smoke.get('output', ''):
             result['nativeModelSmoke']['scope'] += '; original HTTP parameter setter/map, client request and delivery envelope, absent/different server IDs, stale native NotFollowing enum; synthetic account data, no network call'
         if 'actual ClipsViewerConfig/ViewPager2 single-clip lock and earned-time restore' in smoke.get('output', ''):
             result['nativeModelSmoke']['scope'] += '; actual ClipsViewerConfig and ViewPager2 single-clip lock, patched native next-item guard and real earned-time policy restore; synthetic clip/session, no playback'
-        if 'actual friendship JSON parser, strict account-verified Friends and snapshot revocation' in smoke.get('output', ''):
-            result['nativeModelSmoke']['scope'] += '; original batch friendship JSON parser and presence hook, exact-account mutual verification, rejection of stale positive native fields, one-way Following distinction and snapshot revocation; synthetic users, no authenticated HTTP'
+        if 'legacy Friends selection migrated to Following, three options and expired-credit fallback' in smoke.get('output', ''):
+            result['nativeModelSmoke']['scope'] += '; saved Friends selection migrates to Following, Favourites preserved, three original menu rows and Following fallback after credit expiry; synthetic account, no authenticated HTTP'
         if smoke['passed'] and 'CALMA_NATIVE_MODELS_PASSED' not in smoke.get('output', ''):
             raise ValueError('Native model success has no instrumentation marker')
     if report.get('environmentError'):

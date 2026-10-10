@@ -35,7 +35,7 @@ val calmaPackagePatch = resourcePatch(
             cloneManifestNames(manifest, STOCK, CALMA, providerNames, manifestNames)
             manifest.setAttribute("package", CALMA)
             // Morphe parses this DOM without namespace awareness; update the existing qualified attribute.
-            manifest.setAttribute("android:versionCode", "384510839")
+            manifest.setAttribute("android:versionCode", "384510840")
             // Keep Instagram's original protocol version; CalmaBuild reports our updater version.
             val app = manifest.getElementsByTagName("application").item(0) as Element
             app.setAttribute("android:label", "Instagram Calma")
@@ -51,7 +51,7 @@ val calmaPackagePatch = resourcePatch(
             add(app, "activity", mapOf("name" to "$CALMA.nativeapp.CalmaSettingsActivity", "exported" to "false", "theme" to "@style/CalmaSettingsTheme"))
             val provider = add(app, "provider", mapOf("name" to "es.calma.vendor.androidx.core.content.FileProvider", "authorities" to "$CALMA.fileprovider", "exported" to "false", "grantUriPermissions" to "true"))
             add(provider, "meta-data", mapOf("name" to "android.support.FILE_PROVIDER_PATHS", "resource" to "@xml/calma_update_file_paths"))
-            add(app, "meta-data", mapOf("name" to "es.calma.version", "value" to "0.4.11"))
+            add(app, "meta-data", mapOf("name" to "es.calma.version", "value" to "0.4.12"))
         }
         val files = listOf(
             "assets/updates/index.html", "assets/updates/updater.js", "assets/updates/android-update.css",

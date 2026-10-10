@@ -1,9 +1,9 @@
 {
-  "version": "0.4.11",
-  "versionCode": 384510839,
+  "version": "0.4.12",
+  "versionCode": 384510840,
   "required": true,
-  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.11/IG-Calma-0.4.11.apk",
-  "apkSha256": "8758e08c29e6b1ff27757349ed325cbf16a981fa19c51d13adfeff964e8204ee",
+  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.12/IG-Calma-0.4.12.apk",
+  "apkSha256": "2c0e883dc892c62c2e3d3e948d6ced68a944852df2390f3fe5e3d68e09befaaf",
   "apkSizeBytes": 146268845,
-  "releaseNotes": "Friends muestra sólo publicaciones de seguidores mutuos confirmados para tu cuenta. Corrige los estados antiguos y revisa también la caché. Following mantiene todas las cuentas que sigues y la precarga."
+  "releaseNotes": "Elimina Friends. El selector queda con For you, Favourites y Following. Las selecciones antiguas de Friends pasan automáticamente a Following."
 }

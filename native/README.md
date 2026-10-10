@@ -20,12 +20,12 @@ La entrada aceptada está fijada en [`stock.lock.json`](stock.lock.json):
 | Android mínimo | Android 9, API 28 |
 | Formato de entrada | APKM con `base.apk` y `split_config.xxhdpi.apk` |
 | Procedencia | [Variante de APKMirror](https://www.apkmirror.com/apk/instagram/instagram-instagram/instagram-439-0-0-37-89-release/instagram-439-0-0-37-89-4-android-apk-download/) |
-| Versión propia de Calma | `0.4.11`, definida en [`CalmaBuild.java`](src/es/calma/instagram/nativeapp/CalmaBuild.java) |
+| Versión propia de Calma | `0.4.12`, definida en [`CalmaBuild.java`](src/es/calma/instagram/nativeapp/CalmaBuild.java) |
 | Paquete resultante | `es.calma.instagram` |
-| versionCode resultante | `384510839` |
+| versionCode resultante | `384510840` |
 
 El manifiesto del APK conserva `versionName=439.0.0.37.89` para Instagram. La
-comparación de actualizaciones utiliza `CalmaBuild.VERSION`, actualmente `0.4.11`.
+comparación de actualizaciones utiliza `CalmaBuild.VERSION`, actualmente `0.4.12`.
 Son versiones distintas con funciones distintas.
 
 El build verifica el SHA-256 del APKM y de cada split, además de la cadena de firma
@@ -146,13 +146,13 @@ regenera los metadatos del cargador, alinea a **16 KB**, firma y verifica el res
 
 Los resultados quedan en:
 
-- `native/build/dist/IG-Calma-0.4.11.apk`.
+- `native/build/dist/IG-Calma-0.4.12.apk`.
 - `native/build/dist/SHA256SUMS.txt`, `build-info.json` y `verification.json`.
 - `native/build/patch-result.json` y `native/build/extension/build-report.json`.
 - `android-update.json` y `native/android-update.json`, idénticos y generados a partir del APK firmado.
 
 El build genera los archivos locales; no publica una release. El manifiesto de
-actualización apunta al APK de la release `v0.4.11` del repositorio configurado en el
+actualización apunta al APK de la release `v0.4.12` del repositorio configurado en el
 script. La publicación debe adjuntar exactamente ese APK y mantener su versión,
 tamaño y SHA-256 sincronizados con el manifiesto. Los dos manifiestos usan
 `required: true`; con `false`, Inhouse Read no ofrece la actualización. Publicar
@@ -209,9 +209,9 @@ interprete un nombre de archivo personalizado como un tipo de recurso distinto.
 
 ## Feed, Explorar y búsqueda
 
-La opción inicial es Friends, con seguimiento mutuo incluso antes de cargar
-las preferencias. En 0.4.4 el selector también ofrece Following, Favourites y
-For you. Friends y Following guardan snapshots independientes de 48 horas;
+La opción inicial es Following, incluso antes de cargar las preferencias.
+Desde 0.4.12 el selector ofrece For you, Favourites y Following; Friends se ha eliminado.
+Following conserva su snapshot de 48 horas;
 Favourites y For you conservan sus respuestas nativas y sólo eliminan anuncios.
 El filtro de cada respuesta queda ligado al modo de su petición, y una generación
 anterior no se entrega después de cambiar de modo.
@@ -259,10 +259,10 @@ Para verificar otra vez el APK firmado:
 
 ```sh
 python3 native/scripts/verify-apk.py \
-  --apk native/build/dist/IG-Calma-0.4.11.apk \
+  --apk native/build/dist/IG-Calma-0.4.12.apk \
   --stock /ruta/al/base.apk \
   --build-tools "$CALMA_SDK/build-tools/36.0.0"
-python3 native/tests/updater.py --apk native/build/dist/IG-Calma-0.4.11.apk
+python3 native/tests/updater.py --apk native/build/dist/IG-Calma-0.4.12.apk
 ```
 
 La verificación del artefacto comprueba firma, alineación de 16 KB, versiones,
@@ -355,3 +355,10 @@ Friends requiere un `followed_by:true` procedente de la respuesta nativa de amis
 Las consultas siguen agrupadas y no bloquean la entrega de amigos ya confirmados ni la precarga. Los snapshots se vuelven a filtrar al mostrarlos; la caché de disco entra en el acumulador para resolver sus autores, sin duplicar historias ni dar por terminada la descarga actual. La entrega final al adaptador vuelve a comprobar Friends incluso cuando falta el envoltorio de la petición. Se invalida el formato de caché anterior.
 
 Regresión reproducida sobre 0.4.10 con un User positivo antiguo. Las pruebas comprueban Friends frente a Following con las mismas publicaciones, aislamiento entre cuentas, entrega incompleta y revocación del seguimiento en un snapshot terminado. [Pruebas del APK en Android 14–16](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38008132362); datos sintéticos, sin sesión autenticada.
+
+
+## Eliminación de Friends (0.4.12)
+
+El selector y los ajustes muestran únicamente For you, Favourites y Following. Following es el valor inicial y el destino al agotarse los minutos de For you. Las preferencias `feed:<cuenta>` guardadas como RECENTS se migran a FOLLOWING; los antiguos valores recibidos al seleccionar o procesar respuestas tampoco pueden activar el filtro mutuo. Se mantienen las preferencias de Reels, el saldo, Favourites y la caché existente de Following.
+
+Pruebas: migración de varias cuentas, valores iniciales, opciones nativas del selector, regreso desde For you y carga de publicaciones de cuentas sin seguimiento mutuo. [APK en Android 14–16](RUNTIME_0412_URL). Los detalles de Friends de las secciones anteriores documentan versiones antiguas; esa opción ya no está disponible.

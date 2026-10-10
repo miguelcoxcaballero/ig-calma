@@ -1,6 +1,12 @@
-# Native Friends and Following timelines
+# Native Following timeline
 
 Calma's original hooks are mapped against the stock Instagram 439.0.0.37.89 APK. No third-party feature patches are used.
+
+## Current behavior (0.4.12)
+
+The selector contains For you, Favourites and Following. Friends is removed. Following is the cold-start default and the fallback when For you credits expire. Saved RECENTS selections migrate to FOLLOWING, including preferences for other accounts. Legacy mode 2 scopes normalize to mode 1, so no current selection enters the mutual-only filter or waits for friendship batches. Following retains its existing cache, 48-hour window, order and preload; For you, Favourites, Reels controls and credits remain available.
+
+The sections below record implementation history, including the removed Friends feature. APK instrumentation now checks three native menu rows, preference migration, credit-expiry fallback and Following delivery with non-mutual authors.
 
 ## Request binding and progressive delivery (0.4.8)
 

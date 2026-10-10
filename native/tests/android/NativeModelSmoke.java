@@ -66,29 +66,17 @@ public final class NativeModelSmoke extends Instrumentation {
         check(!((List<?>)result.getClass().getMethod("A01").invoke(result)).isEmpty(),"Stock delivery list is updated, not only its parser model");
         return result;
     }
-    private void prepareUserCache(ClassLoader loader,Object session)throws Exception {
-        Field scoped=Class.forName("X.04BG",false,loader).getDeclaredField("A00");scoped.setAccessible(true);scoped.set(session,new java.util.concurrent.ConcurrentHashMap<>());
-        Object cache=allocate(loader,"com.instagram.user.model.UserCache");set(cache,"A00",session);set(cache,"A01",new java.util.concurrent.ConcurrentHashMap<>());
-        session.getClass().getMethod("A04",Class.class,Object.class).invoke(session,cache.getClass(),cache);
-    }
-    private void parseFriendships(ClassLoader loader,Object session,String json)throws Exception {
-        Object parser=Class.forName("X.02tC",true,loader).getMethod("A00",String.class).invoke(null,json);
-        try {Class.forName("X.0ICa",true,loader).getMethod("A00",Class.forName("X.03q7",false,loader),session.getClass(),boolean.class).invoke(null,parser,session,false);}
-        finally {((java.io.Closeable)parser).close();}
-    }
     private void feedModels(ClassLoader loader)throws Exception {
         Class<?> config=Class.forName("es.calma.instagram.nativeapp.CalmaConfig",true,loader);
         Method select=config.getDeclaredMethod("select",String.class);select.setAccessible(true);select.invoke(null,"RECENTS");
         Object session=allocate(loader,"com.instagram.common.session.UserSession");set(session,"userId","994400");
-        prepareUserCache(loader,session);
-        parseFriendships(loader,session,"{\"friendship_statuses\":{\"994411\":{\"following\":true,\"followed_by\":true}},\"status\":\"ok\"}");
         Object controller=allocate(loader,"X.05qX");set(controller,"A0X",session);
         Object parser=allocate(loader,"X.03gD");set(parser,"A01",session);
         Class<?> feed=Class.forName("es.calma.instagram.nativeapp.NativeFeed",true,loader);
         Method context=feed.getMethod("context",Object.class,Object.class,Object.class,Object.class,Object.class,Object.class);
         Method response=feed.getMethod("response",Object.class,Object.class);
-        Object firstMedia=media(loader,"99440001",System.currentTimeMillis()/1000-10,true);
-        Object nextMedia=media(loader,"99440002",System.currentTimeMillis()/1000-20,true);
+        Object firstMedia=media(loader,"99440001",System.currentTimeMillis()/1000-10,false);
+        Object nextMedia=media(loader,"99440002",System.currentTimeMillis()/1000-20,false);
         check(Boolean.FALSE.equals(firstMedia.getClass().getMethod("EKS").invoke(firstMedia)),"Native sponsored predicate on real cached Media");
         Object firstRow=wrapper(loader,firstMedia),nextRow=wrapper(loader,nextMedia);
         Object request=request(loader,"smoke-head",null),first=page(loader,"server-generated-id","smoke-next",firstRow);
@@ -98,10 +86,10 @@ public final class NativeModelSmoke extends Instrumentation {
         feed.getMethod("wire",Object.class).invoke(null,builder);
         Map<?,?> actual=(Map<?,?>)parameters.getClass().getField("A00").get(parameters);
         check("following".equals(actual.get("pagination_source").getClass().getField("A00").get(actual.get("pagination_source"))),"Final original HTTP parameter map overwrites experimental source");
-        check("FOLLOWING".equals(actual.get("feed_type").getClass().getField("A00").get(actual.get("feed_type"))),"Original HTTP map sends FOLLOWING for Friends");
+        check("FOLLOWING".equals(actual.get("feed_type").getClass().getField("A00").get(actual.get("feed_type"))),"Original HTTP map sends FOLLOWING after legacy selection");
         long start=android.os.SystemClock.elapsedRealtime();response.invoke(null,first,parser);deliver(loader,controller,request,first);
         check(android.os.SystemClock.elapsedRealtime()-start<1000,"Actual-model cold delivery does not block UI");
-        check(((List<?>)first.getClass().getField("A0S").get(first)).contains(firstRow),"Cold Friends delivers real native Media despite a different response ID");
+        check(((List<?>)first.getClass().getField("A0S").get(first)).contains(firstRow),"Cold Following delivers one-way native Media despite a different response ID");
         check((Boolean)first.getClass().getField("A0a").get(first),"Cold native cursor remains available");
         request=request(loader,"smoke-next","smoke-next");Object tail=page(loader,null,null,firstRow,nextRow);
         context.invoke(null,null,null,null,session,request,null);response.invoke(null,tail,parser);deliver(loader,controller,request,tail);
@@ -118,46 +106,11 @@ public final class NativeModelSmoke extends Instrumentation {
         Object dict=user.getClass().getField("A00").get(user),data=dict.getClass().getField("A00").get(dict);
         for(Object status:Class.forName("X.02tG",true,loader).getEnumConstants())if("FollowStatusNotFollowing".equals(status.toString()))set(data,"A05",status);
         request=request(loader,"stale-status",null);Object staleRow=wrapper(loader,stale),fresh=page(loader,null,"cursor",staleRow);
+        for(Object reason:Class.forName("X.02pk",true,loader).getEnumConstants())
+            if("pull_to_refresh".equals(reason.toString()))set(request,"A09",reason);
         context.invoke(null,null,null,null,session,request,null);response.invoke(null,fresh,parser);deliver(loader,controller,request,fresh);
         check(((List<?>)fresh.getClass().getField("A0S").get(fresh)).contains(staleRow),"Following survives actual stale NotFollowing enum in original User model");
         select.invoke(null,"RECENTS");
-    }
-    private void friendshipModels(ClassLoader loader)throws Exception {
-        Object session=allocate(loader,"com.instagram.common.session.UserSession");set(session,"userId","994410");
-        Field scoped=Class.forName("X.04BG",false,loader).getDeclaredField("A00");scoped.setAccessible(true);scoped.set(session,new java.util.concurrent.ConcurrentHashMap<>());
-        Object cache=allocate(loader,"com.instagram.user.model.UserCache");set(cache,"A00",session);set(cache,"A01",new java.util.concurrent.ConcurrentHashMap<>());
-        session.getClass().getMethod("A04",Class.class,Object.class).invoke(session,cache.getClass(),cache);
-        String json="{\"friendship_statuses\":{\"994411\":{\"followed_by\":true},\"994412\":{\"following\":true,\"followed_by\":false},\"994413\":{\"following\":false,\"followed_by\":true},\"994414\":{\"following\":true,\"followed_by\":true}},\"status\":\"ok\"}";
-        Object parser=Class.forName("X.02tC",true,loader).getMethod("A00",String.class).invoke(null,json);
-        try {Class.forName("X.0ICa",true,loader).getMethod("A00",Class.forName("X.03q7",false,loader),session.getClass(),boolean.class).invoke(null,parser,session,false);}
-        finally {((java.io.Closeable)parser).close();}
-        Class<?> relations=Class.forName("es.calma.instagram.nativeapp.NativeRelations",true,loader);
-        Method permit=relations.getDeclaredMethod("permitted",Object.class,Object.class,int.class,boolean.class);permit.setAccessible(true);
-        Object post=media(loader,"99441001",System.currentTimeMillis()/1000-10,false);
-        Object author=post.getClass().getField("A04").get(post).getClass().getMethod("A33").invoke(post.getClass().getField("A04").get(post));
-        Object dict=author.getClass().getField("A00").get(author),data=dict.getClass().getField("A00").get(dict);
-        check(Boolean.TRUE.equals(permit.invoke(null,session,author,2,true)),"Actual batch JSON with only followed_by confirms Friends without inventing a false following value");
-        set(data,"A8X","994412");check(Boolean.FALSE.equals(permit.invoke(null,session,author,2,true)),"Actual one-way batch JSON stays excluded");
-        set(data,"A8X","994413");check(Boolean.FALSE.equals(permit.invoke(null,session,author,2,true)),"Actual explicit unfollow overrides Following source");
-        check(Boolean.TRUE.equals(relations.getMethod("isMutual",Object.class,String.class).invoke(null,session,"994414")),"Actual native parser captures mutual status even without cached User");
-        set(data,"A8X","994415");set(data,"A2E",null);set(data,"A3r",true);
-        check(Boolean.FALSE.equals(permit.invoke(null,session,author,2,true)),"Native modern positive is not current-account verification");
-        set(data,"A2E",true);
-        check(Boolean.FALSE.equals(permit.invoke(null,session,author,2,true)),"Native followed_by positive cannot bypass the batch lookup either");
-        set(data,"A8X","994412");
-        check(Boolean.FALSE.equals(permit.invoke(null,session,author,2,true)),"Verified one-way overrides both stale positive native flags");
-        check(Boolean.TRUE.equals(permit.invoke(null,session,author,1,true)),"Same original User is allowed in Following");
-        set(data,"A8X","994414");
-        Object controller=allocate(loader,"X.05qX");set(controller,"A0X",session);
-        Class<?> feed=Class.forName("es.calma.instagram.nativeapp.NativeFeed",true,loader);
-        Object request=request(loader,"strict-friends",null), row=wrapper(loader,post), response=page(loader,null,null,row);
-        feed.getMethod("context",Object.class,Object.class,Object.class,Object.class,Object.class,Object.class).invoke(null,null,null,null,session,request,null);
-        deliver(loader,controller,request,response);
-        check(((List<?>)response.getClass().getField("A0S").get(response)).contains(row),"Verified mutual enters the real completed snapshot");
-        parseFriendships(loader,session,"{\"friendship_statuses\":{\"994414\":{\"following\":true,\"followed_by\":false}},\"status\":\"ok\"}");
-        response=page(loader,null,"unused",row);deliver(loader,controller,request,response);
-        for(Object shown:(List<?>)response.getClass().getField("A0S").get(response))
-            check(shown.getClass().getMethod("A0A").invoke(shown)==null,"Snapshot replay removes no-longer-mutual Media and retains only controls");
     }
     private Object getStatic(Class<?> type,String name)throws Exception {Field f=type.getDeclaredField(name);f.setAccessible(true);return f.get(null);}
     private void setStatic(Class<?> type,String name,Object value)throws Exception {Field f=type.getDeclaredField(name);f.setAccessible(true);f.set(null,value);}
@@ -207,27 +160,39 @@ public final class NativeModelSmoke extends Instrumentation {
                 ClassLoader loader = context.getClassLoader();
                 feedModels(loader);
                 reelModels(loader,context);
-                friendshipModels(loader);
                 Class<?> end = Class.forName("es.calma.instagram.nativeapp.NativeFeedEnd", true, loader);
                 Object nativeModel = end.getMethod("newModel", Object.class, Object.class).invoke(null, null, null);
                 check(nativeModel != null && nativeModel.getClass().getName().equals("X.0AMQ"), "Mapped native model allocation");
                 Class<?> selector = Class.forName("es.calma.instagram.nativeapp.NativeFeedSelector", true, loader);
                 List<?> options = (List<?>) selector.getMethod("options", Object.class, List.class).invoke(null, nativeModel, null);
-                check(options != null && options.size() == 4, "Four actual stock selector models");
-                String[] names = {"BLENDED_FOR_YOU", "FAVORITES", "RECENTS", "FOLLOWING"};
-                for (int i=0;i<4;i++) check(names[i].equals(((Enum<?>)options.get(i).getClass().getField("A01").get(options.get(i))).name()), "Exact selector order");
-                Object friends = options.get(2).getClass().getField("A01").get(options.get(2));
+                check(options != null && options.size() == 3, "Three actual stock selector models");
+                String[] names = {"BLENDED_FOR_YOU", "FAVORITES", "FOLLOWING"};
+                for (int i=0;i<3;i++) check(names[i].equals(((Enum<?>)options.get(i).getClass().getField("A01").get(options.get(i))).name()), "Exact selector order");
+                Object following = options.get(2).getClass().getField("A01").get(options.get(2));
+                Class<?> config=Class.forName("es.calma.instagram.nativeapp.CalmaConfig",true,loader);
+                Method preferences=config.getDeclaredMethod("preferences");preferences.setAccessible(true);
+                android.content.SharedPreferences prefs=(android.content.SharedPreferences)preferences.invoke(null);
+                Object account=allocate(loader,"com.instagram.common.session.UserSession");set(account,"userId","994420");
+                prefs.edit().putString("feed:994420","RECENTS").apply();
+                Object migrated=selector.getMethod("initial",Object.class,List.class).invoke(null,account,options);
+                check(migrated==options.get(2) && "FOLLOWING".equals(prefs.getString("feed:994420","")),"Saved Friends migrates and persists as Following");
+                check((Integer)config.getMethod("mode").invoke(null)==1,"Removed mutual mode cannot activate on upgrade");
+                prefs.edit().putString("feed:994420","FAVORITES").apply();
+                check(selector.getMethod("initial",Object.class,List.class).invoke(null,account,options)==options.get(1),"Saved Favourites stays available");
+                Method expired=selector.getDeclaredMethod("expired");expired.setAccessible(true);expired.invoke(null);
+                check("FOLLOWING".equals(config.getMethod("feed").invoke(null)),"Credit expiry falls back to Following");
+                prefs.edit().remove("feed:994420").apply();
                 Class<?> budget=Class.forName("es.calma.instagram.nativeapp.NativeFeedBudget",true,loader);
                 long balance=(Long)budget.getMethod("balance").invoke(null);
                 List<?> menu = (List<?>) selector.getMethod("menuRows", Context.class, Object.class, List.class, Object.class, Object.class)
-                    .invoke(null, context, nativeModel, options, friends, nativeModel);
-                check(menu.size()==4,"Four original IGDS popup rows");
-                String[] labels={"For you","Favourites","Friends","Following"};
-                for(int i=0;i<4;i++) {
+                    .invoke(null, context, nativeModel, options, following, nativeModel);
+                check(menu.size()==3,"Three original IGDS popup rows");
+                String[] labels={"For you","Favourites","Following"};
+                for(int i=0;i<3;i++) {
                     Object item=menu.get(i); Class<?> rowType=item.getClass();
                     check(rowType.getName().equals("X.0VTM"),"Stock popup model type");
                     check(labels[i].equals(rowType.getField("A03").get(item)),"Native option label");
-                    check((Boolean)rowType.getField("A08").get(item)==(i==2),"Friends selected");
+                    check((Boolean)rowType.getField("A08").get(item)==(i==2),"Following selected");
                     check((Boolean)rowType.getField("A05").get(item)==(i==0 && balance<=0),"For you disabled with zero credits");
                 }
                 check(budget.getMethod("label",long.class).invoke(null,balance).equals(menu.get(0).getClass().getField("A04").get(menu.get(0))),"Remaining time in native subtitle");
@@ -267,7 +232,7 @@ public final class NativeModelSmoke extends Instrumentation {
             } catch (Throwable failure) { error[0] = failure; }
         });
         if (error[0] == null) {
-            result.putString("stream", "CALMA_NATIVE_MODELS_PASSED: allocation, native row, light/dark drawing, accessibility, recycling, four stock selector models, remaining time, zero-credit lock, real Media/dictionary/user/wrapper/response/parser models; actual HTTP parameter map and delivery envelope with absent/different response IDs, cold head, native continuation, duplicate removal, completed cache; actual ClipsViewerConfig/ViewPager2 single-clip lock and earned-time restore; actual friendship JSON parser, strict account-verified Friends and snapshot revocation\n");
+            result.putString("stream", "CALMA_NATIVE_MODELS_PASSED: allocation, native row, light/dark drawing, accessibility, recycling, three stock selector models, remaining time, zero-credit lock, real Media/dictionary/user/wrapper/response/parser models; actual HTTP parameter map and delivery envelope with absent/different response IDs, cold head, native continuation, duplicate removal, completed cache; actual ClipsViewerConfig/ViewPager2 single-clip lock and earned-time restore; legacy Friends selection migrated to Following, three options and expired-credit fallback\n");
             finish(-1,result);
         } else {
             result.putString("stream", "CALMA_NATIVE_MODELS_FAILED: " + android.util.Log.getStackTraceString(error[0]));
