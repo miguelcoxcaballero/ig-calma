@@ -1,8 +1,8 @@
-# Instagram Calma 0.4.19 — A y B
+# Instagram Calma 0.4.20 — A y B
 
 Esta versión parte del APK original de Instagram **439.0.0.37.89** y aplica parches propios de Calma. Inicio, historias, mensajes y reproducción usan la aplicación nativa. No incluye paquetes de parches de terceros.
 
-**[Descargar APK nativo](https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.19/IG-Calma-0.4.19.apk)** · [Publicación y comprobaciones](https://github.com/miguelcoxcaballero/ig-calma/releases/tag/v0.4.19) · [Código de los parches](native/patches/)
+**[Descargar APK nativo](https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.20/IG-Calma-0.4.20.apk)** · [Publicación y comprobaciones](https://github.com/miguelcoxcaballero/ig-calma/releases/tag/v0.4.20) · [Código de los parches](native/patches/)
 
 Requiere **Android 9 o posterior y ARM64**. No necesita root. Usa el paquete y la firma de Calma; puede coexistir con Instagram oficial. La sesión nativa requiere iniciar sesión de nuevo al venir del cliente web.
 
@@ -40,7 +40,7 @@ La publicidad se bloquea incluso cuando sigues al anunciante. Se filtran los anu
 
 ## Actualizaciones
 
-**Inhouse Instagram settings → Actualizaciones · A/B** abre [Inhouse services updater](https://github.com/miguelcoxcaballero/inhouse-services-updater), el mismo código de YouTube, Notes, Photos y Read. **A: cambios recientes. B: versiones revisadas.** B solo se publica por petición expresa. A incluye todas las versiones A y B y ofrece la de mayor `versionCode`; B recibe solo versiones B. La 0.4.19 está disponible en ambos canales, con exactamente la misma APK.
+**Inhouse Instagram settings → Actualizaciones · A/B** abre [Inhouse services updater](https://github.com/miguelcoxcaballero/inhouse-services-updater), el mismo código de YouTube, Notes, Photos y Read. **A: cambios recientes. B: versiones revisadas.** B solo se publica por petición expresa. A incluye todas las versiones A y B y ofrece la de mayor `versionCode`; B recibe solo versiones B. La 0.4.20 está disponible en ambos canales, con exactamente la misma APK. Incluye el gestor de descargas compartido actualizado, con progreso integrado y ajustes A/B. Conserva los cambios de peticiones de la 0.4.19.
 
 El popup es opcional, muestra versión instalada/nueva, versiones saltadas y hasta tres cambios breves. «Recordármelo más tarde» aplaza 14 días; puedes comprobar manualmente desde ajustes. El comprobador se inicia tras la pantalla provisional nativa. El instalador conserva la descarga y verificaciones de Inhouse Photos y usa un proveedor privado independiente.
 
