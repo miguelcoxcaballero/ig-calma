@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "version": "0.4.21",
+  "versionCode": 384510849,
+  "recordedAt": "2026-10-11T21:58:21+00:00",
+  "apkSha256": "780659b9527b018e402730e8ed436f6ea6327c1d6b71df133181e5ae1a03dc85",
+  "apkSizeBytes": 147916149,
+  "sharedUpdaterRevision": "faf925d1d576b98baa8a53b1f8d39e842d18d0a9",
+  "scope": "Shared updater CSS palette and header isolation; native behavior unchanged.",
+  "verification": {
+    "signedApkAndNativePreservation": "passed",
+    "exactSharedUpdaterAssets": "passed",
+    "nativeUpdaterLifecycleFixtures": "passed",
+    "upstreamInstallerProvenance": "passed",
+    "bundledBrowserFlow": "passed",
+    "lightAndDarkPopupNeutralColors": "passed: RGB channels equal throughout both popup screenshots",
+    "androidEmulatorsRetested": false,
+    "previousAndroidEmulatorEvidence": "0.4.20.json",
+    "physicalDeviceTested": false,
+    "signedInAccountTested": false
+  }
+}

@@ -2,6 +2,6 @@
   "appId": "instagram",
   "appName": "Inhouse Instagram",
   "repository": "miguelcoxcaballero/ig-calma",
-  "installedVersion": "0.4.20",
+  "installedVersion": "0.4.21",
   "activityClass": "es.calma.instagram.UpdateActivity"
 }
