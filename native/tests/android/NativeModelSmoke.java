@@ -169,6 +169,12 @@ public final class NativeModelSmoke extends Instrumentation {
         check(selection.equals(config.getMethod("feed").invoke(null)) && reels==(Boolean)config.getMethod("savedReels").invoke(null),"Individual preferences survive master cycle");
     }
     private void feedHeaders(ClassLoader loader, Context context) throws Exception {
+        // Instrumentation's ContextImpl loses Instagram's packed-layout Resources override.
+        // Use its actual Application context, as Home does, and restore global configuration.
+        context = context.getApplicationContext();
+        android.content.res.Resources resources = context.getResources();
+        Configuration originalConfiguration = new Configuration(resources.getConfiguration());
+        try {
         Class<?> header = Class.forName("es.calma.instagram.nativeapp.NativeFeedHeader", true, loader);
         Class<?> config = Class.forName("es.calma.instagram.nativeapp.CalmaConfig", true, loader);
         Method select = config.getDeclaredMethod("select", String.class); select.setAccessible(true);
@@ -176,7 +182,8 @@ public final class NativeModelSmoke extends Instrumentation {
         for (int night : new int[]{Configuration.UI_MODE_NIGHT_NO, Configuration.UI_MODE_NIGHT_YES}) {
             Configuration configuration = new Configuration(context.getResources().getConfiguration());
             configuration.uiMode = (configuration.uiMode & ~Configuration.UI_MODE_NIGHT_MASK) | night;
-            Context themed = context.createConfigurationContext(configuration);
+            resources.updateConfiguration(configuration, resources.getDisplayMetrics());
+            Context themed = context;
             android.widget.ViewAnimator title = (android.widget.ViewAnimator) android.view.LayoutInflater.from(themed).inflate(2131627659, null);
             Class<?> type = title.getClass();
             Method logoMode = type.getMethod("A05", String.class, String.class, boolean.class, boolean.class);
@@ -238,6 +245,7 @@ public final class NativeModelSmoke extends Instrumentation {
         logoContainer.setVisibility(View.VISIBLE);
         topBar.invoke(null, modern);
         check(switcher.performClick() && opened[0] == 3, "Returning to logo variant keeps picker callback");
+        } finally { resources.updateConfiguration(originalConfiguration, resources.getDisplayMetrics()); }
     }
     @Override public void onCreate(Bundle arguments) { super.onCreate(arguments); start(); }
     private void check(boolean ok, String message) { if (!ok) throw new AssertionError(message); }
