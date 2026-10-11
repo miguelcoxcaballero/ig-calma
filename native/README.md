@@ -396,3 +396,5 @@ B is the default. Opting into untested development builds on A requires acknowle
 ## Shared download manager (0.4.20 · A and B)
 
 This user-requested B release bundles the same Inhouse services updater revision as YouTube, Notes, Photos and Read. It keeps the permanent signing key and advances the global Android versionCode, so the installed 0.4.19 can update in place. B is mirrored into A; both catalogs point to the identical signed APK. The updater remains optional and the 0.4.19 passive-request behavior is unchanged.
+
+[Exact-APK Android 14–16 upgrade/startup and settings evidence](validation/0.4.20.json). The bundled WebView checks cover actual version, A consent and persistence, optional update popup and the 14-day reminder. Signed-in account and physical-device behavior remain untested.

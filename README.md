@@ -48,7 +48,7 @@ Los manifiestos anteriores se conservan para migrar instalaciones antiguas. Desd
 
 ## Estado de la prueba
 
-La 0.4.19 supera las pruebas de arranque, actualización y modelos nativos en emuladores de Android 14, 15 y 16. Las pruebas de seguridad de peticiones verifican que Calma no inicia paginación automática ni consultas de relaciones; no se ha probado con una cuenta real ni se puede garantizar ausencia de alertas de Meta. [Resultados vinculados a esta APK](native/validation/0.4.19.json). Android 15 requirió repetir la descarga del SDK tras un error 502 de Google.
+La 0.4.20 supera la actualización desde la 0.4.19, el arranque y las pruebas de modelos y ajustes en Android 14, 15 y 16. Se comprueban el WebView real del actualizador, la versión instalada, la confirmación de A, el popup opcional y el aplazamiento de 14 días. Las pruebas de peticiones siguen verificando que Calma no inicia paginación automática ni consultas de relaciones; no se ha probado con una cuenta real ni se puede garantizar ausencia de alertas de Meta. [Resultados vinculados a esta APK](native/validation/0.4.20.json).
 
 La 0.4.16 supera las comprobaciones del actualizador compartido y las pruebas nativas en Android 14, 15 y 16: apertura real de ajustes, versión instalada, persistencia de A/B y aplazamiento de 14 días. [Resultados de esta versión](native/validation/0.4.16.json) · [Ejecución](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38152220446).
 
