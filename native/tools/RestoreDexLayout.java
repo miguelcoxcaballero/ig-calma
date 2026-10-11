@@ -58,7 +58,7 @@ public final class RestoreDexLayout {
         }
         if (definitions.isEmpty()) throw new IllegalArgumentException("Calma extension is missing");
         for (String type : definitions.keySet()) {
-            if (!type.startsWith("Les/calma/")) throw new IllegalArgumentException("Unshaded extension class: " + type);
+            if (!type.startsWith("Les/calma/") && !type.startsWith("Lcom/inhouse/services/updater/")) throw new IllegalArgumentException("Unshaded extension class: " + type);
         }
         String canary = String.format("Lsecondary/dex%02d/Canary;", entries.size());
         List<ClassDef> extension = new ArrayList<>(definitions.values());

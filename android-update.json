@@ -1,9 +1,9 @@
 {
-  "version": "0.4.15",
-  "versionCode": 384510843,
+  "version": "0.4.16",
+  "versionCode": 384510844,
   "required": true,
-  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.15/IG-Calma-0.4.15.apk",
-  "apkSha256": "94849c040919289ad7b355a7cdcc0fb0a5ade7ef27fb8032d01c1e66022fec3f",
-  "apkSizeBytes": 147911851,
-  "releaseNotes": "El logo de Inhouse en los ajustes abre la web de Inhouse Software."
+  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.16/IG-Calma-0.4.16.apk",
+  "apkSha256": "2371de7692e663cd28ffba2a03c913df277c2b7e507c6ac8ca25764ed839cc74",
+  "apkSizeBytes": 147912053,
+  "releaseNotes": "Canales A/B y recordatorio opcional."
 }

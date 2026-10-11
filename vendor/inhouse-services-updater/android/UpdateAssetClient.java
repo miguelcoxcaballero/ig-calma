@@ -1,4 +1,4 @@
-package es.calma.instagram;
+package com.inhouse.services.updater;
 
 import android.content.Context;
 import android.net.Uri;

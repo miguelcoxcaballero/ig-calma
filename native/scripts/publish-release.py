@@ -78,11 +78,11 @@ def main() -> None:
             raise SystemExit('The release is already public; refusing to replace its APK')
     else:
         subprocess.run(['gh', 'release', 'create', tag, '--target', transport['sourceCommit'],
-                        '--title', f'Instagram Calma {version} — prueba nativa',
+                        '--title', f'Instagram Calma {version} — A',
                         '--notes-file', str(source / 'release-notes.txt'), '--draft'], check=True)
     subprocess.run(['gh', 'release', 'upload', tag, str(apk), str(sums), str(source / 'build-info.json'),
                     str(source / 'verification.json'), str(manifest_path), '--clobber'], check=True)
-    subprocess.run(['gh', 'release', 'edit', tag, '--draft=false', '--prerelease=false', '--latest'], check=True)
+    subprocess.run(['gh', 'release', 'edit', tag, '--draft=false', '--prerelease', '--latest=false'], check=True)
 
 
 if __name__ == '__main__':

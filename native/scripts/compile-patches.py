@@ -62,13 +62,7 @@ def main() -> None:
             for p in (ROOT / 'app/assets/updates').rglob('*'):
                 if p.is_file():
                     data = p.read_bytes()
-                    if p.name == 'updater.js':
-                        stable = b'https://raw.githubusercontent.com/miguelcoxcaballero/ig-calma/main/android-update.json'
-                        native = b'https://raw.githubusercontent.com/miguelcoxcaballero/ig-calma/native-instagram/native/android-update.json'
-                        if data.count(stable) != 1:
-                            raise SystemExit('Inhouse manifest configuration changed; review native channel binding')
-                        # Channel configuration only: keep the original Inhouse updater logic.
-                        data = data.replace(stable, native)
+                    # Shared updater selects A/B from app config; do not rewrite canonical JS.
                     entries['calma-res/assets/updates/' + p.relative_to(ROOT / 'app/assets/updates').as_posix()] = data
             resources = NATIVE / 'resources'
             if resources.is_dir():

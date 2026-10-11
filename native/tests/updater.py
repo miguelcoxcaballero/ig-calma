@@ -215,54 +215,29 @@ fixtures = {
       }''',
 }
 
-with tempfile.TemporaryDirectory(prefix='calma-native-updater-') as temporary:
-    work=Path(temporary)
-    # Run the existing mechanical adapters in an isolated copy, never rewrite app sources during tests.
-    for name in PINS:
-        target=work/'vendor'/name;target.parent.mkdir(parents=True,exist_ok=True)
-        shutil.copyfile(ROOT/'vendor'/name,target)
-    (work/'scripts').mkdir()
-    (work/'app/assets/updates').mkdir(parents=True)
-    (work/'app/src/es/calma/instagram').mkdir(parents=True)
-    for name in ['vendor-updater.py','vendor-photos-installer.py']:
-        shutil.copyfile(ROOT/'scripts'/name,work/'scripts'/name)
-        subprocess.run([sys.executable,str(work/'scripts'/name)],check=True)
-    for name in ['app/assets/updates/updater.js','app/assets/updates/android-update.css',
-                 'app/src/es/calma/instagram/PhotosUpdateInstaller.kt']:
-        assert (work/name).read_bytes()==(ROOT/name).read_bytes(), f'Not the original mechanically adapted updater: {name}'
-    print('PASS: pinned Read/Photos originals and generated JS/CSS/Kotlin match byte for byte',flush=True)
 
+# Canonical shared policy is exercised by its browser suite; these fixtures retain
+# the real native lifecycle coverage and verify the APK uses locked shared assets.
+fixtures['android/content/Context.java'] = fixtures['android/content/Context.java'].replace('public Context getApplicationContext()', 'public String getPackageName(){return "es.calma.instagram";} public Context getApplicationContext()')
+fixtures['android/content/Intent.java'] = 'package android.content; public final class Intent {\n public Class<?> target;public String manifest;public Intent(){} public Intent(Context context,Class<?> value){target=value;}\n public Intent setClassName(String app,String name){try{target=Class.forName(name);}catch(Exception e){throw new RuntimeException(e);}return this;}\n public Intent putExtra(String name,String value){if(name.equals("manifest"))manifest=value;return this;}}\n'
+fixtures['com/inhouse/services/updater/UpdateActivity.java']='package com.inhouse.services.updater; public class UpdateActivity extends android.app.Activity {}'
+fixtures['com/inhouse/services/updater/UpdateAssetClient.java']=fixtures.pop('es/calma/instagram/UpdateAssetClient.java').replace('package es.calma.instagram;', 'package com.inhouse.services.updater;')
+fixtures['es/calma/instagram/UpdateActivity.java']='package es.calma.instagram; public final class UpdateActivity extends com.inhouse.services.updater.UpdateActivity {}'
+fixtures['com/inhouse/services/updater/UpdateState.java']='package com.inhouse.services.updater;\npublic final class UpdateState {\n public static String version(android.content.Context c){return es.calma.instagram.nativeapp.CalmaBuild.VERSION;}\n public static long versionCode(android.content.Context c){return 1;}\n public static String read(android.content.Context c){return "{}";}\n public static void save(android.content.Context c,String value){}\n public static boolean accepts(android.content.Context c,String value){return true;}\n public static String offerKey(android.content.Context c,String value){return value;}\n public static Config config(android.content.Context c){return new Config();}\n public static class Config {public String optString(String key,String fallback){return "es.calma.instagram.UpdateActivity";}}\n}\n'
+fixtures[PACKAGE+'/UpdaterHostTest.java']=fixtures[PACKAGE+'/UpdaterHostTest.java'].replace('import android.app.*;', 'import com.inhouse.services.updater.NativeUpdates; import android.app.*;')
+subprocess.run([sys.executable,str(ROOT/'vendor/inhouse-services-updater/verify.py'),str(ROOT)],check=True)
+with tempfile.TemporaryDirectory(prefix='inhouse-updater-lifecycle-') as temporary:
+    work=Path(temporary)
     for name,source in fixtures.items():
         target=work/'src'/name;target.parent.mkdir(parents=True,exist_ok=True);target.write_text(source)
     sources=list((work/'src').rglob('*.java'))
     sources += [ROOT/'native/src'/PACKAGE/name for name in ['CalmaBuild.java','NativeUpdates.java','NativeLifecycle.java','NativeInitProvider.java']]
+    sources += [ROOT/'vendor/inhouse-services-updater/android/NativeUpdates.java']
     subprocess.run(['java','-jar',str(ROOT/'tools/ecj.jar'),'-17','-proc:none','-d',str(work/'classes'),*map(str,sources)],check=True)
     subprocess.run(['java','-cp',str(work/'classes'),'es.calma.instagram.nativeapp.UpdaterHostTest'],check=True)
-
-# When a native extension has been built, verify the sources actually fed to its compilers.
-generated=ROOT/'native/build/extension'
-if (generated/'PhotosUpdateInstaller.kt').exists():
-    assert (generated/'PhotosUpdateInstaller.kt').read_bytes()==(ROOT/'app/src/es/calma/instagram/PhotosUpdateInstaller.kt').read_bytes()
-    assert (generated/'UpdateAssetClient.java').read_bytes()==(ROOT/'app/src/es/calma/instagram/UpdateAssetClient.java').read_bytes()
-    activity=(ROOT/'app/src/es/calma/instagram/UpdateActivity.java').read_text()
-    activity,count=re.subn(r'@JavascriptInterface public String getAppVersion\(\)\{try\{return getPackageManager\(\)\.getPackageInfo\(getPackageName\(\),0\)\.versionName;\}catch\(Exception e\)\{return "[^"]+";\}\}',
-        '@JavascriptInterface public String getAppVersion(){return es.calma.instagram.nativeapp.CalmaBuild.VERSION;}',activity)
-    assert count==1
-    activity,count=re.subn(r'" InhouseReadApp/[^"]+"','" InhouseReadApp/"+es.calma.instagram.nativeapp.CalmaBuild.VERSION',activity)
-    assert count==1 and activity==(generated/'UpdateActivity.java').read_text(), 'Native popup permits version-host adaptation only'
-    print('PASS: compiled extension updater sources preserve Photos, Read callbacks and local asset client; only host version changed')
 if args.apk:
-    stable=b'https://raw.githubusercontent.com/miguelcoxcaballero/ig-calma/main/android-update.json'
-    native=b'https://raw.githubusercontent.com/miguelcoxcaballero/ig-calma/native-instagram/native/android-update.json'
     with zipfile.ZipFile(args.apk) as apk:
         for path in (ROOT/'app/assets/updates').rglob('*'):
-            if not path.is_file():
-                continue
-            expected=path.read_bytes()
-            if path.name=='updater.js':
-                assert expected.count(stable)==1
-                expected=expected.replace(stable,native)
-            packaged='assets/updates/'+path.relative_to(ROOT/'app/assets/updates').as_posix()
-            assert apk.read(packaged)==expected, f'Native APK updater differs beyond channel binding: {packaged}'
-    print('PASS: actual native APK contains the original updater assets with only the native channel URL changed')
-print('LIMIT: JVM fixtures do not measure Android WebView timing, render a device popup or execute PackageInstaller.')
+            if path.is_file():assert apk.read('assets/updates/'+path.relative_to(ROOT/'app/assets/updates').as_posix())==path.read_bytes(), path
+    print('PASS: actual native APK uses the exact shared updater assets and app configuration')
+print('LIMIT: JVM lifecycle fixtures do not execute Android WebView or PackageInstaller; browser policy and Android tests run separately.')

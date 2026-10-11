@@ -20,12 +20,12 @@ La entrada aceptada está fijada en [`stock.lock.json`](stock.lock.json):
 | Android mínimo | Android 9, API 28 |
 | Formato de entrada | APKM con `base.apk` y `split_config.xxhdpi.apk` |
 | Procedencia | [Variante de APKMirror](https://www.apkmirror.com/apk/instagram/instagram-instagram/instagram-439-0-0-37-89-release/instagram-439-0-0-37-89-4-android-apk-download/) |
-| Versión propia de Calma | `0.4.15`, definida en [`CalmaBuild.java`](src/es/calma/instagram/nativeapp/CalmaBuild.java) |
+| Versión propia de Calma | `0.4.16`, definida en [`CalmaBuild.java`](src/es/calma/instagram/nativeapp/CalmaBuild.java) |
 | Paquete resultante | `es.calma.instagram` |
-| versionCode resultante | `384510843` |
+| versionCode resultante | `384510844` |
 
 El manifiesto del APK conserva `versionName=439.0.0.37.89` para Instagram. La
-comparación de actualizaciones utiliza `CalmaBuild.VERSION`, actualmente `0.4.15`.
+comparación de actualizaciones utiliza `CalmaBuild.VERSION`, actualmente `0.4.16`.
 Son versiones distintas con funciones distintas.
 
 El build verifica el SHA-256 del APKM y de cada split, además de la cadena de firma
@@ -146,13 +146,13 @@ regenera los metadatos del cargador, alinea a **16 KB**, firma y verifica el res
 
 Los resultados quedan en:
 
-- `native/build/dist/IG-Calma-0.4.15.apk`.
+- `native/build/dist/IG-Calma-0.4.16.apk`.
 - `native/build/dist/SHA256SUMS.txt`, `build-info.json` y `verification.json`.
 - `native/build/patch-result.json` y `native/build/extension/build-report.json`.
 - `android-update.json` y `native/android-update.json`, idénticos y generados a partir del APK firmado.
 
 El build genera los archivos locales; no publica una release. El manifiesto de
-actualización apunta al APK de la release `v0.4.15` del repositorio configurado en el
+actualización apunta al APK de la release `v0.4.16` del repositorio configurado en el
 script. La publicación debe adjuntar exactamente ese APK y mantener su versión,
 tamaño y SHA-256 sincronizados con el manifiesto. Los dos manifiestos usan
 `required: true`; con `false`, Inhouse Read no ofrece la actualización. Publicar
@@ -259,10 +259,10 @@ Para verificar otra vez el APK firmado:
 
 ```sh
 python3 native/scripts/verify-apk.py \
-  --apk native/build/dist/IG-Calma-0.4.15.apk \
+  --apk native/build/dist/IG-Calma-0.4.16.apk \
   --stock /ruta/al/base.apk \
   --build-tools "$CALMA_SDK/build-tools/36.0.0"
-python3 native/tests/updater.py --apk native/build/dist/IG-Calma-0.4.15.apk
+python3 native/tests/updater.py --apk native/build/dist/IG-Calma-0.4.16.apk
 ```
 
 La verificación del artefacto comprueba firma, alineación de 16 KB, versiones,
@@ -375,8 +375,8 @@ La APK 0.4.13 supera actualización sobre 0.4.12, arranque y pruebas de modelos 
 
 La 0.4.14 supera actualización desde 0.4.13, arranque y pruebas de icono adaptativo, logo interior, ajustes y modelos nativos en Android 14, 15 y 16. [Evidencia del APK](validation/0.4.14.json) · [Ejecución](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38140316945). Popup blanco sobre negro comprobado en ambos temas. Sin cuenta autenticada ni teléfono físico.
 
-## Enlace a Inhouse Software (0.4.15)
+## Enlace a Inhouse Software (0.4.16)
 
 Pulsar el logo o el nombre del pie de ajustes abre https://inhouse.miguelcoxcaballero.com/. La web incluye Inhouse Instagram e Inhouse YouTube con enlaces a sus APK.
 
-Supera actualización desde 0.4.14, arranque y pruebas nativas en Android 14, 15 y 16. Se pulsa el logo en la actividad real y se comprueba el destino del intent. [Evidencia del APK](validation/0.4.15.json) · [Ejecución](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38141574853). El primer intento de Android 15 falló al preparar el SDK, antes de instalar la app; la repetición pasó. Sin cuenta autenticada ni teléfono físico.
+Supera actualización desde 0.4.14, arranque y pruebas nativas en Android 14, 15 y 16. Se pulsa el logo en la actividad real y se comprueba el destino del intent. [Evidencia del APK](validation/0.4.16.json) · [Ejecución](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38141574853). El primer intento de Android 15 falló al preparar el SDK, antes de instalar la app; la repetición pasó. Sin cuenta autenticada ni teléfono físico.

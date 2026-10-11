@@ -82,12 +82,12 @@ def main() -> None:
                 expected_authorities.append('es.calma.instagram' + authority.removeprefix('com.instagram.android'))
             else:
                 expected_authorities.append('es.calma.instagram.' + authority)
-    expected_authorities += ['es.calma.instagram.calma.init', 'es.calma.instagram.fileprovider']
+    expected_authorities += ['es.calma.instagram.calma.init', 'es.calma.instagram.update-provider']
     # Instagram itself declares two initializers with the same authority; preserve
     # its exact provider set and reject newly introduced collisions or omissions.
     assert Counter(authorities) == Counter(expected_authorities), 'Provider authority mapping changed'
     assert all(authority.startswith('es.calma.instagram.') for authority in authorities), authorities
-    assert 'es.calma.instagram.calma.init' in authorities and 'es.calma.instagram.fileprovider' in authorities
+    assert 'es.calma.instagram.calma.init' in authorities and 'es.calma.instagram.update-provider' in authorities
     own = {node['attrs'].get('name'): node['attrs'] for node in nodes}
     for component in ['es.calma.instagram.UpdateActivity', 'es.calma.instagram.nativeapp.CalmaSettingsActivity',
                       'es.calma.instagram.nativeapp.NativeInitProvider', 'es.calma.vendor.androidx.core.content.FileProvider']:
@@ -125,7 +125,7 @@ def main() -> None:
                      'NativeUpdates', 'NativeInitProvider'):
             assert f'Les/calma/instagram/nativeapp/{name};' in classes, name
         assert 'Les/calma/instagram/MainActivity;' not in classes, 'Legacy web feed bundled accidentally'
-        for name in ('index.html', 'android-update.css', 'updater.js'):
+        for name in ('index.html', 'updater.css', 'updater.js', 'host.js', 'host.css', 'config.json'):
             expected = (ROOT / 'app/assets/updates' / name).read_bytes()
             if name == 'updater.js':
                 expected = expected.replace(

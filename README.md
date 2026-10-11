@@ -1,8 +1,8 @@
-# Instagram Calma 0.4.15 — prueba nativa
+# Instagram Calma 0.4.16 — A
 
 Esta versión parte del APK original de Instagram **439.0.0.37.89** y aplica parches propios de Calma. Inicio, historias, mensajes y reproducción usan la aplicación nativa. No incluye paquetes de parches de terceros.
 
-**[Descargar APK nativo](https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.15/IG-Calma-0.4.15.apk)** · [Publicación y comprobaciones](https://github.com/miguelcoxcaballero/ig-calma/releases/tag/v0.4.15) · [Código de los parches](native/patches/)
+**[Descargar APK nativo](https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.16/IG-Calma-0.4.16.apk)** · [Publicación y comprobaciones](https://github.com/miguelcoxcaballero/ig-calma/releases/tag/v0.4.16) · [Código de los parches](native/patches/)
 
 Requiere **Android 9 o posterior y ARM64**. No necesita root. Usa el paquete y la firma de Calma; puede coexistir con Instagram oficial. La sesión nativa requiere iniciar sesión de nuevo al venir del cliente web.
 
@@ -34,9 +34,11 @@ La publicidad se bloquea incluso cuando sigues al anunciante. Se filtran los anu
 
 ## Actualizaciones
 
-Se reutilizan el comprobador y popup de **Inhouse Read** y el instalador Kotlin de **Inhouse Photos**, con sus fuentes originales conservadas en `vendor/`. El comprobador se inicia con la primera pantalla nativa real, después de la pantalla provisional de arranque, y conserva el aviso hasta que puede mostrarlo. **Inhouse Instagram settings → Actualizar aplicación** abre el mismo actualizador.
+**Inhouse Instagram settings → Actualizaciones · A/B** abre [Inhouse services updater](https://github.com/miguelcoxcaballero/inhouse-services-updater), el mismo código de YouTube, Notes, Photos y Read. **A: cambios recientes. B: versiones revisadas.** B solo se publica por petición expresa.
 
-El [manifiesto anterior](android-update.json) y el [nativo](native/android-update.json) anuncian el mismo APK firmado, para que las instalaciones anteriores también reciban el aviso de la 0.4.15. Se publica con `required: true`, como exige el comprobador original de Read para mostrarlo. Los cambios al actualizador se limitan a la conexión con Android y a la configuración de marca, versión y URL; [procedencia y pruebas](native/updater.md).
+El popup es opcional, muestra versión instalada/nueva, versiones saltadas y hasta tres cambios breves. «Recordármelo más tarde» aplaza 14 días; puedes comprobar manualmente desde ajustes. El comprobador se inicia tras la pantalla provisional nativa. El instalador conserva la descarga y verificaciones de Inhouse Photos y usa un proveedor privado independiente.
+
+Los manifiestos anteriores se conservan para migrar instalaciones antiguas. Desde esta versión se consultan exclusivamente los catálogos de canal `updates/A.json` y `updates/B.json`. [Reglas de sincronización y publicación](UPDATER.md).
 
 ## Estado de la prueba
 
