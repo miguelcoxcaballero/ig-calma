@@ -19,5 +19,6 @@
   ],
   "version": "0.4.18",
   "apkSha256": "919b239575459702ce042ee7486a02b319771c078e8dd53e284366c38337fec5",
-  "apkSizeBytes": 147916149
+  "apkSizeBytes": 147916149,
+  "versionCode": 384510846
 }
