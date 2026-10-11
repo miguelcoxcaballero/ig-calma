@@ -1,5 +1,5 @@
 {
-  "sourceCommit": "e0f1e51c6f9c7ba3ede5d851537fcf3d4d2473ea",
+  "sourceCommit": "b758d10ced80d44cafd5c4de491c259cdf39a0e2",
   "parts": [
     {
       "name": "IG-Calma-0.4.17.apk.part000",
@@ -20,5 +20,5 @@
   "version": "0.4.17",
   "apkSha256": "b8c1d1c3f037a59e257da9a09656cf2fd1a61216f03b25b27b8b1b40ba012761",
   "apkSizeBytes": 147912053,
-  "modelSmokeSha256": "b5db0b92fb7ca4263949c4993418a2f6a0bd9ac3c876532e6270c5c07b0fe6f1"
+  "modelSmokeSha256": "13d075834cb4ff767261f25a1fc47036126a1905da240ac346da7629bfb97c2f"
 }
