@@ -170,6 +170,16 @@ public final class NativeModelSmoke extends Instrumentation {
     }
     @Override public void onCreate(Bundle arguments) { super.onCreate(arguments); start(); }
     private void check(boolean ok, String message) { if (!ok) throw new AssertionError(message); }
+    private View findBrand(View view) {
+        if("Inhouse Software · Abrir web".contentEquals(view.getContentDescription()==null?"":view.getContentDescription()))return view;
+        if(view instanceof android.view.ViewGroup)for(int i=0;i<((android.view.ViewGroup)view).getChildCount();i++){View found=findBrand(((android.view.ViewGroup)view).getChildAt(i));if(found!=null)return found;}return null;
+    }
+    private void brandLink(android.app.Activity activity)throws Exception {
+        android.content.IntentFilter filter=new android.content.IntentFilter(android.content.Intent.ACTION_VIEW);filter.addDataScheme("https");filter.addDataAuthority("inhouse.miguelcoxcaballero.com",null);
+        android.app.Instrumentation.ActivityMonitor monitor=addMonitor(filter,new android.app.Instrumentation.ActivityResult(0,null),true);
+        final boolean[] clicked={false};runOnMainSync(()->{View brand=findBrand(activity.getWindow().getDecorView());if(brand!=null)clicked[0]=brand.performClick();});
+        check(clicked[0] && monitor.getHits()==1,"Settings logo opens Inhouse Software website");removeMonitor(monitor);
+    }
     private String brandingIcon(android.content.Context context) throws Exception {
         android.content.pm.PackageManager pm=context.getPackageManager();
         android.content.Intent launch=pm.getLaunchIntentForPackage(context.getPackageName());
@@ -272,6 +282,7 @@ public final class NativeModelSmoke extends Instrumentation {
             Context context=getTargetContext();
             android.content.Intent intent=new android.content.Intent().setClassName(context,"es.calma.instagram.nativeapp.CalmaSettingsActivity").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
             android.app.Activity activity=startActivitySync(intent);waitForIdleSync();
+            brandLink(activity);
             List<String> labels=new ArrayList<>();runOnMainSync(()->texts(activity.getWindow().getDecorView(),labels));
             Class<?> build=Class.forName("es.calma.instagram.nativeapp.CalmaBuild",true,context.getClassLoader());
             check(labels.contains("Activar cambios") && labels.contains("Inhouse") && labels.contains("GitHub ↗"),"Actual settings activity includes master switch and Inhouse footer");
