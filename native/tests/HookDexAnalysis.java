@@ -80,11 +80,35 @@ public final class HookDexAnalysis {
                             "Static/instance invocation mismatch: " + call + " from " + method);
                     if (!BLOCKED.equals(call.getDefiningClass())) helpers.add(call.getDefiningClass());
                 }
-                if (hooked) { selected.add(method); stockMethods++; }
+                if (hooked) {
+                    selected.add(method); stockMethods++;
+                    if (type.getType().equals("Lcom/instagram/actionbar/ActionBarTitleViewSwitcher;")
+                            || (type.getType().equals("LX/06nZ;") && method.getName().equals("A01"))) {
+                        // A stock branch to return-void must not jump past our final title repair.
+                        var offsets = new HashMap<Integer, com.android.tools.smali.dexlib2.iface.instruction.Instruction>();
+                        int offset = 0;
+                        for (var instruction : method.getImplementation().getInstructions()) {
+                            offsets.put(offset, instruction); offset += instruction.getCodeUnits();
+                        }
+                        offset = 0;
+                        for (var instruction : method.getImplementation().getInstructions()) {
+                            if (instruction instanceof com.android.tools.smali.dexlib2.iface.instruction.OffsetInstruction branch) {
+                                var target = offsets.get(offset + branch.getCodeOffset());
+                                if (type.getType().equals("Lcom/instagram/actionbar/ActionBarTitleViewSwitcher;"))
+                                    check(target == null || target.getOpcode() != com.android.tools.smali.dexlib2.Opcode.RETURN_VOID,
+                                        "Stock branch bypasses Home header repair: " + method);
+                                check(!(target instanceof ReferenceInstruction callTarget)
+                                    || !callTarget.getReference().toString().equals("LX/004C;->A0b(III)Landroid/view/View;"),
+                                    "Stock branch bypasses Home layout selection: " + method);
+                            }
+                            offset += instruction.getCodeUnits();
+                        }
+                    }
+                }
             }
         }
         Set<String> expected = Set.of(OWN + "NativeFeed;", OWN + "NativeRelations;",
-                OWN + "NativeDiscover;", OWN + "CalmaReels;", OWN + "NativeFeedSelector;", OWN + "NativeFeedBudget;", SETTINGS);
+                OWN + "NativeDiscover;", OWN + "CalmaReels;", OWN + "NativeFeedHeader;", OWN + "NativeFeedSelector;", OWN + "NativeFeedBudget;", SETTINGS);
         check(helpers.containsAll(expected), "Missing hook families: " + expected + "; found " + helpers);
         check(generatedMethods == 6, "Missing generated fragment/factory methods: " + generatedMethods);
         // ART-style field layout for dexlib; this does not select an Android device runtime.

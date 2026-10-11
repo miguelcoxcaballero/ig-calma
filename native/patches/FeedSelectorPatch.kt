@@ -91,9 +91,12 @@ val calmaFeedSelector = bytecodePatch(
         check(inflateCall.registerD == 6)
         check((classic.implementation!!.instructions[inflate + 1] as com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction).registerA == 6)
         classic.addInstructions(inflate + 2, "invoke-static {v6, p3}, Les/calma/instagram/nativeapp/NativeFeedHeader;->classicCreated(Ljava/lang/Object;Ljava/lang/Object;)V")
-        classic.addInstructions(inflate, """
-            invoke-static {v6}, Les/calma/instagram/nativeapp/NativeFeedHeader;->layout(I)I
+        check(inflateCall.registerC == 13 && inflateCall.registerE == 5 && inflateCall.registerF == 0)
+        // The zero-margin branch jumps directly to A0b: preserve that target on our replacement.
+        classic.replaceInstruction(inflate, "invoke-static {v6}, Les/calma/instagram/nativeapp/NativeFeedHeader;->layout(I)I")
+        classic.addInstructions(inflate + 1, """
             move-result v6
+            invoke-virtual {v13, v6, v5, v0}, LX/004C;->A0b(III)Landroid/view/View;
         """.trimIndent())
         // The modern binder changes visibility/listeners AFTER A01/A03; repair at its common join.
         val binder = mutableClassDefBy("LX/07kV;").methods.single { it.name == "A0A" }
@@ -111,7 +114,9 @@ val calmaFeedSelector = bytecodePatch(
             val update = switcher.methods.single { it.name == name }
             update.implementation!!.instructions.withIndex().filter { it.value.opcode == com.android.tools.smali.dexlib2.Opcode.RETURN_VOID }
                 .map { it.index }.reversed().forEach { index ->
-                    update.addInstructions(index, "invoke-static/range {p0 .. p0}, Les/calma/instagram/nativeapp/NativeFeedHeader;->update(Ljava/lang/Object;)V")
+                    // Replace the return so stock branches targeting it cannot skip the hook.
+                    update.replaceInstruction(index, "invoke-static/range {p0 .. p0}, Les/calma/instagram/nativeapp/NativeFeedHeader;->update(Ljava/lang/Object;)V")
+                    update.addInstructions(index + 1, "return-void")
                 }
         }
         val home = mutableClassDefBy("LX/05pB;")
@@ -121,7 +126,8 @@ val calmaFeedSelector = bytecodePatch(
             check(update.parameterTypes.take(2) == listOf("Lcom/instagram/common/session/UserSession;", modern.type))
             update.implementation!!.instructions.withIndex().filter { it.value.opcode == com.android.tools.smali.dexlib2.Opcode.RETURN_VOID }
                 .map { it.index }.reversed().forEach { index ->
-                    update.addInstructions(index,"invoke-static/range {p1 .. p1}, $SELECTOR->topBar(Ljava/lang/Object;)V")
+                    update.replaceInstruction(index,"invoke-static/range {p1 .. p1}, $SELECTOR->topBar(Ljava/lang/Object;)V")
+                    update.addInstructions(index + 1, "return-void")
                 }
         }
         for ((name, helper) in mapOf("onResume" to "homeResumed", "onPause" to "homePaused")) {
