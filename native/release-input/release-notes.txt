@@ -1,0 +1,7 @@
+Updated Inhouse services updater.
+
+B release requested by the user; also available in A. Includes the shared download manager, optional updates and A/B settings. Preserves the passive request handling introduced in 0.4.19.
+
+Verified as an upgrade from 0.4.19 on Android 14, 15 and 16, including the actual bundled updater settings and popup. Physical devices and authenticated Instagram sessions were not tested.
+
+https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38175685000
