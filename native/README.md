@@ -365,10 +365,12 @@ Pruebas: migración de varias cuentas, valores iniciales, opciones nativas del s
 
 ## Ajustes Inhouse (0.4.13)
 
-La entrada nativa se coloca después de Accounts Center. El interruptor principal conserva las preferencias individuales y reinicia el proceso para aplicar los cambios. Desactivado, los hooks dejan continuar el flujo original de Instagram, sin filtrar anuncios, feed o Explorar, ni bloquear Reels o cobrar saldo. El actualizador permanece accesible. El pie usa el [logo original de Inhouse Read](https://github.com/miguelcoxcaballero/inhouse-read/blob/main/public/icons/inhouse-read-logo.png), junto a la versión, fecha de release y GitHub.
+La entrada nativa se coloca después de Accounts Center. El interruptor principal conserva las preferencias individuales y reinicia el proceso para aplicar los cambios. Desactivado, los hooks dejan continuar el flujo original de Instagram, sin filtrar anuncios, feed o Explorar, ni bloquear Reels o cobrar saldo. El actualizador permanece accesible. El pie usa una variante blanca sobre negro del [símbolo de Inhouse Read](https://github.com/miguelcoxcaballero/inhouse-read/blob/main/public/icons/inhouse-read-logo.png), junto a la versión, fecha de release y GitHub.
 
 La APK 0.4.13 supera actualización sobre 0.4.12, arranque y pruebas de modelos nativos y ajustes en Android 14, 15 y 16: [evidencia vinculada al APK firmado](validation/0.4.13.json) y [ejecución](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38139464581). La prueba abre la actividad real y valida el pie de Inhouse, apaga y enciende las modificaciones y conserva las preferencias individuales. No se usa una cuenta autenticada ni un teléfono físico.
 
 ## Iconos Inhouse (0.4.14)
 
 [Icono generado con IA y recursos de marca](branding.md). Icono adaptativo en todos los accesos del launcher, símbolo central blanco y punto del flash conservado. Logo interior blanco sobre negro en ajustes y popup.
+
+La 0.4.14 supera actualización desde 0.4.13, arranque y pruebas de icono adaptativo, logo interior, ajustes y modelos nativos en Android 14, 15 y 16. [Evidencia del APK](validation/0.4.14.json) · [Ejecución](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38140316945). Popup blanco sobre negro comprobado en ambos temas. Sin cuenta autenticada ni teléfono físico.

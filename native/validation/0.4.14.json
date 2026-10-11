@@ -1,0 +1,182 @@
+{
+  "schemaVersion": 1,
+  "version": "0.4.14",
+  "recordedAt": "2026-10-11T12:49:16+00:00",
+  "runtimeTesting": {
+    "scope": "Logged-out startup on official Android Emulator with ARM64 translation",
+    "ciUrl": "https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38140316945",
+    "apkSha256": "0c703944a95feb2bc53781344a68738f9737c7b492657c1159b91d4eca0e40d4",
+    "apkSizeBytes": 147911851,
+    "physicalDeviceTested": false,
+    "instagramAccountTested": false,
+    "startupPassedOnApis": [
+      34,
+      35,
+      36
+    ],
+    "observations": [
+      {
+        "api": 34,
+        "sourceCommit": "7006109e70e160f6bdacf6b97995751f9bb034ec",
+        "bootCompleted": true,
+        "abiList": "x86_64,arm64-v8a",
+        "stock": {
+          "attempted": false
+        },
+        "baseline": {
+          "attempted": true,
+          "installed": true,
+          "updatingExistingInstall": false,
+          "launchAccepted": false,
+          "survived": true,
+          "appCrashLogged": false,
+          "passed": false,
+          "observedThroughSeconds": 45.0,
+          "visibleText": [
+            "English (US)",
+            "Instagram from Meta",
+            "Username, email or mobile number",
+            "Username, email or mobile number,",
+            "Password",
+            "Password,",
+            "Log in",
+            "Forgot password?",
+            "Create new account",
+            "Meta logo"
+          ]
+        },
+        "candidate": {
+          "attempted": true,
+          "installed": true,
+          "updatingExistingInstall": true,
+          "launchAccepted": true,
+          "survived": true,
+          "appCrashLogged": false,
+          "passed": true,
+          "observedThroughSeconds": 45.0,
+          "visibleText": [
+            "English (US)",
+            "Join Instagram",
+            "Share what you're into with the people who get you.",
+            "Get started",
+            "I already have a profile",
+            "Meta logo"
+          ]
+        },
+        "baselineSha256": "91ae97a882551cd2974d0a19cf8333af04d5bc230d323cc7efe8c0f0531b4765",
+        "nativeModelSmoke": {
+          "passed": true,
+          "scope": "Actual native end-model allocation, inline row, light/dark rendering, accessibility, recycling and three original selector models with remaining time and credit lock; no logged-in feed; actual Media, LiveTree dictionaries, User, wrapper, response and parser-context models with synthetic cached fields: cold main-thread head, cursor, cross-page deduplication and complete cache replay; no authenticated HTTP; original HTTP parameter setter/map, client request and delivery envelope, absent/different server IDs, stale native NotFollowing enum; synthetic account data, no network call; actual ClipsViewerConfig and ViewPager2 single-clip lock, patched native next-item guard and real earned-time policy restore; synthetic clip/session, no playback; saved Friends selection migrates to Following, Favourites preserved, three original menu rows and Following fallback after credit expiry; synthetic account, no authenticated HTTP; master switch off/on, original request/selector/search behavior restored, individual preferences retained, actual settings activity and Inhouse/version/date/GitHub footer"
+        },
+        "outcome": "startup_passed"
+      },
+      {
+        "api": 35,
+        "sourceCommit": "7006109e70e160f6bdacf6b97995751f9bb034ec",
+        "bootCompleted": true,
+        "abiList": "x86_64,arm64-v8a",
+        "stock": {
+          "attempted": false
+        },
+        "baseline": {
+          "attempted": true,
+          "installed": true,
+          "updatingExistingInstall": false,
+          "launchAccepted": false,
+          "survived": true,
+          "appCrashLogged": true,
+          "passed": false,
+          "observedThroughSeconds": 45.0,
+          "visibleText": [
+            "Instagram Calma isn't responding",
+            "Close app",
+            "Wait"
+          ]
+        },
+        "candidate": {
+          "attempted": true,
+          "installed": true,
+          "updatingExistingInstall": true,
+          "launchAccepted": true,
+          "survived": true,
+          "appCrashLogged": false,
+          "passed": true,
+          "observedThroughSeconds": 45.0,
+          "visibleText": [
+            "English (US)",
+            "Join Instagram",
+            "Share what you're into with the people who get you.",
+            "Get started",
+            "I already have a profile",
+            "Meta logo"
+          ]
+        },
+        "baselineSha256": "91ae97a882551cd2974d0a19cf8333af04d5bc230d323cc7efe8c0f0531b4765",
+        "nativeModelSmoke": {
+          "passed": true,
+          "scope": "Actual native end-model allocation, inline row, light/dark rendering, accessibility, recycling and three original selector models with remaining time and credit lock; no logged-in feed; actual Media, LiveTree dictionaries, User, wrapper, response and parser-context models with synthetic cached fields: cold main-thread head, cursor, cross-page deduplication and complete cache replay; no authenticated HTTP; original HTTP parameter setter/map, client request and delivery envelope, absent/different server IDs, stale native NotFollowing enum; synthetic account data, no network call; actual ClipsViewerConfig and ViewPager2 single-clip lock, patched native next-item guard and real earned-time policy restore; synthetic clip/session, no playback; saved Friends selection migrates to Following, Favourites preserved, three original menu rows and Following fallback after credit expiry; synthetic account, no authenticated HTTP; master switch off/on, original request/selector/search behavior restored, individual preferences retained, actual settings activity and Inhouse/version/date/GitHub footer"
+        },
+        "outcome": "startup_passed"
+      },
+      {
+        "api": 36,
+        "sourceCommit": "7006109e70e160f6bdacf6b97995751f9bb034ec",
+        "bootCompleted": true,
+        "abiList": "x86_64,arm64-v8a",
+        "stock": {
+          "attempted": false
+        },
+        "baseline": {
+          "attempted": true,
+          "installed": true,
+          "updatingExistingInstall": false,
+          "launchAccepted": true,
+          "survived": true,
+          "appCrashLogged": false,
+          "passed": true,
+          "observedThroughSeconds": 45.1,
+          "visibleText": [
+            "English (United States)",
+            "Mobile number or email",
+            "Password",
+            "Log in",
+            "Forgot password?",
+            "Create new account",
+            "Meta logo"
+          ]
+        },
+        "candidate": {
+          "attempted": true,
+          "installed": true,
+          "updatingExistingInstall": true,
+          "launchAccepted": true,
+          "survived": true,
+          "appCrashLogged": false,
+          "passed": true,
+          "observedThroughSeconds": 45.0,
+          "visibleText": [
+            "English (US)",
+            "Join Instagram",
+            "Share what you're into with the people who get you.",
+            "Get started",
+            "I already have a profile",
+            "Meta logo"
+          ]
+        },
+        "baselineSha256": "91ae97a882551cd2974d0a19cf8333af04d5bc230d323cc7efe8c0f0531b4765",
+        "nativeModelSmoke": {
+          "passed": true,
+          "scope": "Actual native end-model allocation, inline row, light/dark rendering, accessibility, recycling and three original selector models with remaining time and credit lock; no logged-in feed; actual Media, LiveTree dictionaries, User, wrapper, response and parser-context models with synthetic cached fields: cold main-thread head, cursor, cross-page deduplication and complete cache replay; no authenticated HTTP; original HTTP parameter setter/map, client request and delivery envelope, absent/different server IDs, stale native NotFollowing enum; synthetic account data, no network call; actual ClipsViewerConfig and ViewPager2 single-clip lock, patched native next-item guard and real earned-time policy restore; synthetic clip/session, no playback; saved Friends selection migrates to Following, Favourites preserved, three original menu rows and Following fallback after credit expiry; synthetic account, no authenticated HTTP; master switch off/on, original request/selector/search behavior restored, individual preferences retained, actual settings activity and Inhouse/version/date/GitHub footer"
+        },
+        "outcome": "startup_passed"
+      }
+    ]
+  },
+  "brandingChecks": {
+    "adaptiveLauncherResourceResolved": true,
+    "androidDrawableInflationAndDrawing": true,
+    "interiorPngDecodesWithBlackBackground": true,
+    "popupWhiteOnBlackInLightAndDark": true,
+    "visualReference": "AI-generated source artwork and browser popup reviewed; Android icon drawing exercised without exporting a screenshot."
+  }
+}
