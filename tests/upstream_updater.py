@@ -6,9 +6,15 @@ root=Path(__file__).resolve().parents[1]
 photos=(root/'vendor/inhouse-photos/UpdateInstaller.kt').read_text()
 adapted=(root/'vendor/inhouse-services-updater/android/PhotosUpdateInstaller.kt').read_text()
 assert photos[photos.index('  private fun download('):photos.index('  private fun publishDownloadProgress(')] in adapted, 'Photos downloader must remain verbatim'
-assert photos[photos.index('  private fun validateUrl('):] in adapted, 'Photos verification must remain verbatim'
-install=photos[photos.index('  private fun installUpdate('):photos.index('  private fun download(')].replace('private fun installUpdate(', 'fun installUpdate(').replace('MethodChannel.Result','Result')
-assert install in adapted, 'Photos install flow must remain copied with host-only adaptations'
+# Returning the already verified archive lets the shared Activity reconcile
+# Android's result against the exact package version, without changing checks.
+verification=adapted.replace('private fun verifyApk(apkFile: File, expectedSha256: String?): PackageInfo {',
+    'private fun verifyApk(apkFile: File, expectedSha256: String?) {').replace('    return archive\n  }', '  }')
+assert photos[photos.index('  private fun validateUrl('):] in verification, 'Photos verification must remain verbatim'
+assert 'setClassName(activity.packageName, "com.inhouse.services.updater.InstallActivity")' in adapted
+assert 'putExtra("versionCode", getVersionCode(verifiedPackage))' in adapted
+patch=(root/'native/patches/CalmaBase.kt').read_text()
+assert '"name" to "com.inhouse.services.updater.InstallActivity", "exported" to "false"' in patch
 assert 'photosInstaller.installUpdate(url,hash' in (root/'vendor/inhouse-services-updater/android/UpdateActivity.java').read_text()
 subprocess.run(['python3',str(root/'vendor/inhouse-services-updater/verify.py'),str(root)],check=True)
 info=json.loads((root/'android-update.json').read_text())
