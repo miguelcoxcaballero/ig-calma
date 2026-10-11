@@ -40,7 +40,7 @@ La publicidad se bloquea incluso cuando sigues al anunciante. Se filtran los anu
 
 ## Actualizaciones
 
-**Inhouse Instagram settings → Actualizaciones · A/B** abre [Inhouse services updater](https://github.com/miguelcoxcaballero/inhouse-services-updater), el mismo código de YouTube, Notes, Photos y Read. **A: cambios recientes. B: versiones revisadas.** B solo se publica por petición expresa. La 0.4.19 está disponible en ambos canales, con exactamente la misma APK.
+**Inhouse Instagram settings → Actualizaciones · A/B** abre [Inhouse services updater](https://github.com/miguelcoxcaballero/inhouse-services-updater), el mismo código de YouTube, Notes, Photos y Read. **A: cambios recientes. B: versiones revisadas.** B solo se publica por petición expresa. A incluye todas las versiones A y B y ofrece la de mayor `versionCode`; B recibe solo versiones B. La 0.4.19 está disponible en ambos canales, con exactamente la misma APK.
 
 El popup es opcional, muestra versión instalada/nueva, versiones saltadas y hasta tres cambios breves. «Recordármelo más tarde» aplaza 14 días; puedes comprobar manualmente desde ajustes. El comprobador se inicia tras la pantalla provisional nativa. El instalador conserva la descarga y verificaciones de Inhouse Photos y usa un proveedor privado independiente.
 
