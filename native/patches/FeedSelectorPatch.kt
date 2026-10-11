@@ -80,6 +80,40 @@ val calmaFeedSelector = bytecodePatch(
             if-eqz v0, :calma_original_header
             return-void
         """.trimIndent(), ExternalLabel("calma_original_header", header.implementation!!.instructions.first()))
+        // Capture every classic logo variant, including configurations that never stored A06.
+        val classic = mutableClassDefBy("LX/06nZ;").methods.single { it.name == "A01" }
+        val inflate = classic.implementation!!.instructions.indexOfFirst {
+            (it as? com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction)?.reference.toString() ==
+                "LX/004C;->A0b(III)Landroid/view/View;"
+        }
+        check(inflate >= 0 && classic.implementation!!.registerCount == 17)
+        val inflateCall = classic.implementation!!.instructions[inflate] as com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
+        check(inflateCall.registerD == 6)
+        check((classic.implementation!!.instructions[inflate + 1] as com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction).registerA == 6)
+        classic.addInstructions(inflate + 2, "invoke-static {v6, p3}, Les/calma/instagram/nativeapp/NativeFeedHeader;->classicCreated(Ljava/lang/Object;Ljava/lang/Object;)V")
+        classic.addInstructions(inflate, """
+            invoke-static {v6}, Les/calma/instagram/nativeapp/NativeFeedHeader;->layout(I)I
+            move-result v6
+        """.trimIndent())
+        // The modern binder changes visibility/listeners AFTER A01/A03; repair at its common join.
+        val binder = mutableClassDefBy("LX/07kV;").methods.single { it.name == "A0A" }
+        val joins = binder.implementation!!.instructions.withIndex().filter {
+            it.value.opcode == com.android.tools.smali.dexlib2.Opcode.IPUT_OBJECT &&
+            (it.value as? com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction)?.reference.toString() ==
+                "LX/06nZ;->A06:Lcom/instagram/actionbar/ActionBarTitleViewSwitcher;"
+        }
+        check(joins.size == 1)
+        val helperRegister = (joins.single().value as com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction).registerB
+        binder.addInstructions(joins.single().index + 1,
+            "invoke-static {v$helperRegister}, $SELECTOR->header(Ljava/lang/Object;)Z")
+        val switcher = mutableClassDefBy("Lcom/instagram/actionbar/ActionBarTitleViewSwitcher;")
+        for (name in listOf("A02", "A03", "A04", "A05", "A06")) {
+            val update = switcher.methods.single { it.name == name }
+            update.implementation!!.instructions.withIndex().filter { it.value.opcode == com.android.tools.smali.dexlib2.Opcode.RETURN_VOID }
+                .map { it.index }.reversed().forEach { index ->
+                    update.addInstructions(index, "invoke-static/range {p0 .. p0}, Les/calma/instagram/nativeapp/NativeFeedHeader;->update(Ljava/lang/Object;)V")
+                }
+        }
         val home = mutableClassDefBy("LX/05pB;")
         val modern = mutableClassDefBy("Linstagram/features/feed/mainfeed/actionbar/MainFeedActionBar;")
         for (name in listOf("A01", "A03")) {

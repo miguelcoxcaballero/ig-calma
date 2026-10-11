@@ -168,6 +168,77 @@ public final class NativeModelSmoke extends Instrumentation {
         check((Boolean)config.getMethod("setEnabled",boolean.class).invoke(null,true),"Master on saved");
         check(selection.equals(config.getMethod("feed").invoke(null)) && reels==(Boolean)config.getMethod("savedReels").invoke(null),"Individual preferences survive master cycle");
     }
+    private void feedHeaders(ClassLoader loader, Context context) throws Exception {
+        Class<?> header = Class.forName("es.calma.instagram.nativeapp.NativeFeedHeader", true, loader);
+        Class<?> config = Class.forName("es.calma.instagram.nativeapp.CalmaConfig", true, loader);
+        Method select = config.getDeclaredMethod("select", String.class); select.setAccessible(true);
+        Method bind = header.getMethod("bind", Object.class);
+        for (int night : new int[]{Configuration.UI_MODE_NIGHT_NO, Configuration.UI_MODE_NIGHT_YES}) {
+            Configuration configuration = new Configuration(context.getResources().getConfiguration());
+            configuration.uiMode = (configuration.uiMode & ~Configuration.UI_MODE_NIGHT_MASK) | night;
+            Context themed = context.createConfigurationContext(configuration);
+            android.widget.ViewAnimator title = (android.widget.ViewAnimator) android.view.LayoutInflater.from(themed).inflate(2131627659, null);
+            Class<?> type = title.getClass();
+            Method logoMode = type.getMethod("A05", String.class, String.class, boolean.class, boolean.class);
+            logoMode.invoke(title, null, null, true, true);
+            check(title.getDisplayedChild() == 0, "Unregistered stock titles remain unchanged");
+            bind.invoke(null, title);
+            for (String mode : new String[]{"FOLLOWING", "FAVORITES", "BLENDED_FOR_YOU"}) {
+                select.invoke(null, mode);
+                for (int repeat = 0; repeat < 3; repeat++) {
+                    logoMode.invoke(title, null, null, true, true);
+                    type.getMethod("A04", String.class).invoke(title, "stale delayed title");
+                    type.getMethod("A03").invoke(title);
+                    check(title.getDisplayedChild() == 1, "Stock logo and delayed title updates retain feed selector");
+                    TextView label = (TextView) title.getCurrentView().findViewById(2131444183);
+                    String expected = mode.equals("FAVORITES") ? "Favourites" : mode.equals("FOLLOWING") ? "Following" : "For you";
+                    check(expected.contentEquals(label.getText()), "Visible selector follows selected feed");
+                    View logo = title.getCurrentView().findViewWithTag("inhouse:home-wordmark");
+                    View chevron = title.getCurrentView().findViewById(2131444161);
+                    check(logo != null && chevron.getVisibility() == View.VISIBLE, "Original wordmark and chevron coexist");
+                    for (int width : new int[]{180, 240, 320}) {
+                        float density = themed.getResources().getDisplayMetrics().density;
+                        int pixels = (int)(width*density), height = (int)(56*density);
+                        title.measure(View.MeasureSpec.makeMeasureSpec(pixels, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY));
+                        title.layout(0, 0, pixels, height);
+                        check(label.getWidth() > 0 && chevron.getWidth() > 0 && logo.getWidth() > 0, "Narrow header keeps all controls measurable");
+                        check(label.getRight() <= chevron.getLeft() && chevron.getRight() <= logo.getLeft(), "Selector stays left of logo without overlap");
+                        check(logo.getRight() <= title.getWidth(), "Wordmark fits available header width");
+                    }
+                    check(((ViewGroup)logo.getParent()).getChildCount() == 3, "Header rebind never duplicates logo or menu");
+                }
+            }
+        }
+        select.invoke(null, "FOLLOWING");
+        Class<?> modernType = Class.forName("instagram.features.feed.mainfeed.actionbar.MainFeedActionBar", true, loader);
+        View modern = (View) modernType.getConstructor(Context.class).newInstance(context);
+        Class<?> handlerType = modernType.getField("A03").getType();
+        final int[] opened = {0};
+        Object handler = Proxy.newProxyInstance(loader, new Class<?>[]{handlerType}, (proxy, method, args) -> {
+            if (method.getName().equals("DvD")) opened[0]++;
+            return null;
+        });
+        modernType.getField("A03").set(modern, handler);
+        Method topBar = Class.forName("es.calma.instagram.nativeapp.NativeFeedSelector", true, loader).getMethod("topBar", Object.class);
+        View logoContainer = (View)modernType.getField("A0A").get(modern);
+        logoContainer.setVisibility(View.VISIBLE);
+        topBar.invoke(null, modern);
+        android.widget.ViewAnimator switcher = (android.widget.ViewAnimator)modernType.getField("A0D").get(modern);
+        check(switcher.getDisplayedChild() == 1 && switcher.performClick() && opened[0] == 1, "Modern logo variant exposes and opens native picker");
+        Object stub = modernType.getField("A0G").get(modern);
+        Method show = modernType.getField("A0G").getType().getMethod("setVisibility", int.class);
+        show.invoke(stub, View.VISIBLE);
+        logoContainer.setVisibility(View.GONE);
+        modernType.getField("A06").set(modern, modern.findViewById(2131427556));
+        modernType.getField("A05").set(modern, modern.findViewById(2131427555));
+        topBar.invoke(null, modern);
+        TextView tab = modern.findViewById(2131427556);
+        check(tab != null && "Following".contentEquals(tab.getText()) && tab.performClick() && opened[0] == 2, "Modern two-tab variant exposes same picker");
+        check(modern.findViewById(2131427555).getVisibility() == View.GONE, "No competing second tab remains");
+        logoContainer.setVisibility(View.VISIBLE);
+        topBar.invoke(null, modern);
+        check(switcher.performClick() && opened[0] == 3, "Returning to logo variant keeps picker callback");
+    }
     @Override public void onCreate(Bundle arguments) { super.onCreate(arguments); start(); }
     private void check(boolean ok, String message) { if (!ok) throw new AssertionError(message); }
     private View findBrand(View view) {
@@ -207,6 +278,7 @@ public final class NativeModelSmoke extends Instrumentation {
                 result.putString("inhouseIconPng",brandingIcon(context));
                 feedModels(loader);
                 reelModels(loader,context);
+                feedHeaders(loader,context);
                 Class<?> end = Class.forName("es.calma.instagram.nativeapp.NativeFeedEnd", true, loader);
                 Object nativeModel = end.getMethod("newModel", Object.class, Object.class).invoke(null, null, null);
                 check(nativeModel != null && nativeModel.getClass().getName().equals("X.0AMQ"), "Mapped native model allocation");
@@ -291,7 +363,7 @@ public final class NativeModelSmoke extends Instrumentation {
             runOnMainSync(()->activity.finish());
         }catch(Throwable failure){error[0]=failure;}
         if (error[0] == null) {
-            result.putString("stream", "CALMA_NATIVE_MODELS_PASSED: master switch off/on, stock bypass, saved individual preferences, actual settings activity with Inhouse/version/date/GitHub; allocation, native row, light/dark drawing, accessibility, recycling, three stock selector models, remaining time, zero-credit lock, real Media/dictionary/user/wrapper/response/parser models; actual HTTP parameter map and delivery envelope with absent/different response IDs, cold head, native continuation, duplicate removal, completed cache; actual ClipsViewerConfig/ViewPager2 single-clip lock and earned-time restore; legacy Friends selection migrated to Following, three options and expired-credit fallback\n");
+            result.putString("stream", "CALMA_NATIVE_MODELS_PASSED: real Home title inflation, logo/title/delayed rebind, all three feed labels, 180/240/320dp layout, light/dark, no overlap/duplicate, unregistered title bypass; master switch off/on, stock bypass, saved individual preferences, actual settings activity with Inhouse/version/date/GitHub; allocation, native row, light/dark drawing, accessibility, recycling, three stock selector models, remaining time, zero-credit lock, real Media/dictionary/user/wrapper/response/parser models; actual HTTP parameter map and delivery envelope with absent/different response IDs, cold head, native continuation, duplicate removal, completed cache; actual ClipsViewerConfig/ViewPager2 single-clip lock and earned-time restore; legacy Friends selection migrated to Following, three options and expired-credit fallback\n");
             finish(-1,result);
         } else {
             result.putString("stream", "CALMA_NATIVE_MODELS_FAILED: " + android.util.Log.getStackTraceString(error[0]));

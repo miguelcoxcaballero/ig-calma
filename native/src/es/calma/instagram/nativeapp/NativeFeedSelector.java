@@ -165,15 +165,11 @@ public final class NativeFeedSelector {
     public static boolean header(Object helper) {
         if (!CalmaConfig.enabled()) return false;
         try {
+            Object modern = StockAccess.get(helper, "A07");
+            if (modern != null) { topBar(modern); return true; }
             Object bar = StockAccess.get(helper, "A06");
-            if (bar == null) {
-                Object modern = StockAccess.get(helper, "A07"); if (modern == null) return false;
-                topBar(modern); return true;
-            }
-            Object current = lazy(helper, "A0H"); String name = ((Enum<?>) StockAccess.get(StockAccess.get(current, "A00"), "A01")).name();
-            int i = 0; for (; i < TYPES.length; i++) if (TYPES[i].equals(name)) break;
-            if (i == TYPES.length) return false;
-            StockAccess.method(bar.getClass(), "A06", boolean.class, String.class).invoke(bar, true, LABELS[i]);
+            if (bar == null) return false;
+            NativeFeedHeader.bind(bar);
             return true;
         } catch (ReflectiveOperationException | RuntimeException ignored) { return false; }
     }
@@ -181,18 +177,31 @@ public final class NativeFeedSelector {
     public static void topBar(Object bar) {
         if (!CalmaConfig.enabled()) return;
         try {
+            View.OnClickListener picker = view -> {
+                try {
+                    Object action = StockAccess.get(bar, "A03");
+                    if (action != null) StockAccess.method(action.getClass(), "DvD", View.class).invoke(action, view);
+                } catch (ReflectiveOperationException | RuntimeException error) {
+                    android.util.Log.e("CalmaFeed", "Native title picker failed", error);
+                }
+            };
+            View logoContainer = (View) StockAccess.get(bar, "A0A");
+            if (logoContainer.getVisibility() == View.VISIBLE) {
+                View switcher = (View) StockAccess.get(bar, "A0D");
+                NativeFeedHeader.bind(switcher);
+                switcher.setVisibility(View.VISIBLE);
+                switcher.setOnClickListener(picker);
+                // Some stock variants have a separate title stub in this same slot.
+                View alternate = (View) StockAccess.get(bar, "A02");
+                if (alternate != null) alternate.setVisibility(View.GONE);
+                return;
+            }
             TextView title = (TextView) StockAccess.get(bar, "A06");
             View secondary = (View) StockAccess.get(bar, "A05");
             if (title == null || secondary == null) return;
             int index = 0; for (; index < TYPES.length; index++) if (TYPES[index].equals(CalmaConfig.feed())) break;
             if (index == TYPES.length) return;
-            title.setText(LABELS[index]); title.setSelected(true); secondary.setVisibility(View.GONE);
-            View.OnClickListener picker = view -> {
-                try {
-                    Object action = StockAccess.get(bar, "A03");
-                    if (action != null) StockAccess.method(action.getClass(), "DvD", View.class).invoke(action, view);
-                } catch (ReflectiveOperationException | RuntimeException error) { android.util.Log.e("CalmaFeed", "Native title picker failed", error); }
-            };
+            title.setText(LABELS[index]); title.setSelected(true); title.setVisibility(View.VISIBLE); secondary.setVisibility(View.GONE);
             title.setOnClickListener(picker);
             ((View)bar).requireViewById(2131427554).setOnClickListener(picker);
         } catch (ReflectiveOperationException | RuntimeException ignored) {}

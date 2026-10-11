@@ -1,9 +1,9 @@
 {
-  "version": "0.4.16",
-  "versionCode": 384510844,
+  "version": "0.4.17",
+  "versionCode": 384510845,
   "required": true,
-  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.16/IG-Calma-0.4.16.apk",
-  "apkSha256": "2371de7692e663cd28ffba2a03c913df277c2b7e507c6ac8ca25764ed839cc74",
+  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.17/IG-Calma-0.4.17.apk",
+  "apkSha256": "8e720e5b9bec81efc8c04042b054a3ae4788cb95fea210d53350363be7ea2c0e",
   "apkSizeBytes": 147912053,
-  "releaseNotes": "Canales A/B y recordatorio opcional."
+  "releaseNotes": "Selector visible junto al logo."
 }
