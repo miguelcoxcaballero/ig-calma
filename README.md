@@ -1,8 +1,8 @@
-# Instagram Calma 0.4.18 — A
+# Instagram Calma 0.4.19 — A
 
 Esta versión parte del APK original de Instagram **439.0.0.37.89** y aplica parches propios de Calma. Inicio, historias, mensajes y reproducción usan la aplicación nativa. No incluye paquetes de parches de terceros.
 
-**[Descargar APK nativo](https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.18/IG-Calma-0.4.18.apk)** · [Publicación y comprobaciones](https://github.com/miguelcoxcaballero/ig-calma/releases/tag/v0.4.18) · [Código de los parches](native/patches/)
+**[Descargar APK nativo](https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.19/IG-Calma-0.4.19.apk)** · [Publicación y comprobaciones](https://github.com/miguelcoxcaballero/ig-calma/releases/tag/v0.4.19) · [Código de los parches](native/patches/)
 
 Requiere **Android 9 o posterior y ARM64**. No necesita root. Usa el paquete y la firma de Calma; puede coexistir con Instagram oficial. La sesión nativa requiere iniciar sesión de nuevo al venir del cliente web.
 
@@ -18,6 +18,12 @@ En la 0.4.15, pulsar el logo de los ajustes abre [Inhouse Software](https://inho
 
 La 0.4.15 está publicada y supera las pruebas de actualización, arranque y ajustes en emuladores Android 14, 15 y 16.
 
+## Actividad de la cuenta (0.4.19)
+
+Se han retirado la precarga automática continua del feed y las consultas adicionales de relaciones de Explorar. Las páginas nuevas se cargan mediante el desplazamiento nativo; se conserva lo ya recibido. Explorar usa las relaciones conocidas localmente y puede mostrar menos contenido o quedar vacío. Una página filtrada vacía detiene su continuación automática. La búsqueda escrita sigue admitiendo cualquier cuenta.
+
+Estos cambios reducen peticiones innecesarias, pero no demuestran qué causó el bloqueo comunicado ni garantizan que Meta acepte una APK modificada. [Revisión, fuentes oficiales y pruebas](native/account-security.md).
+
 ## Feed
 
 El selector superior ofrece **For you, Favourites y Following** usando el menú nativo de Instagram. **Following es la opción inicial** y muestra las cuentas que sigues, sin exigir seguimiento mutuo. Guarda las publicaciones de **48 horas**, ordenadas de más nuevo a más antiguo, sin duplicados y con las historias del encabezado. Al final aparece **That's it** con una cara sonriente. Desliza hacia abajo para actualizarlo.
@@ -30,7 +36,7 @@ En los ajustes habituales de Instagram aparece **Inhouse Instagram settings**. P
 
 Explorar muestra contenido de cuentas que sigues, aunque no te sigan de vuelta. Al escribir en Buscar puedes encontrar cualquier cuenta; sin texto no aparecen sugerencias ni historial. Los Reels enviados por mensaje se abren directamente y, con el bloqueo activo, solo permiten ver ese clip. No esperan a comprobar la relación con el remitente. Los modelos de relaciones proceden de la sesión nativa; no se introducen listas manualmente.
 
-La publicidad se bloquea incluso cuando sigues al anunciante. Se filtran los anuncios del feed y de las cuadrículas de Explorar/búsqueda y se rechazan las inserciones de anuncios entre historias y la fuente específica de anuncios de Reels. Una página compuesta solo por anuncios conserva su cursor para seguir cargando contenido normal. [Implementación y límites](native/ads.md).
+La publicidad se bloquea incluso cuando sigues al anunciante. Se filtran los anuncios del feed y de las cuadrículas de Explorar/búsqueda y se rechazan las inserciones de anuncios entre historias y la fuente específica de anuncios de Reels. En el feed y las búsquedas escritas, una página compuesta solo por anuncios conserva su cursor. En Explorar se detiene una página filtrada vacía para evitar descargas automáticas sucesivas. [Implementación y límites](native/ads.md).
 
 ## Actualizaciones
 
@@ -41,6 +47,8 @@ El popup es opcional, muestra versión instalada/nueva, versiones saltadas y has
 Los manifiestos anteriores se conservan para migrar instalaciones antiguas. Desde esta versión se consultan exclusivamente los catálogos de canal `updates/A.json` y `updates/B.json`. [Reglas de sincronización y publicación](UPDATER.md).
 
 ## Estado de la prueba
+
+La 0.4.19 supera las pruebas de arranque, actualización y modelos nativos en emuladores de Android 14, 15 y 16. Las pruebas de seguridad de peticiones verifican que Calma no inicia paginación automática ni consultas de relaciones; no se ha probado con una cuenta real ni se puede garantizar ausencia de alertas de Meta. [Resultados vinculados a esta APK](native/validation/0.4.19.json). Android 15 requirió repetir la descarga del SDK tras un error 502 de Google.
 
 La 0.4.16 supera las comprobaciones del actualizador compartido y las pruebas nativas en Android 14, 15 y 16: apertura real de ajustes, versión instalada, persistencia de A/B y aplazamiento de 14 días. [Resultados de esta versión](native/validation/0.4.16.json) · [Ejecución](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38152220446).
 
