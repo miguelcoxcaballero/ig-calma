@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -34,12 +33,6 @@ public final class NativeDiscover {
             List<Object> tiles = new ArrayList<>();
             Set<Object> visited = Collections.newSetFromMap(new IdentityHashMap<>());
             for (Object section : sections) collect(section, tiles, visited, 0);
-            List<Object> media = new ArrayList<>();
-            for (Object tile : tiles) {
-                Object value = media(tile);
-                if (value != null) media.add(value);
-            }
-            if (followingOnly) resolveAuthors(session, media);
             List<Object> allowed = new ArrayList<>();
             Set<String> seen = new HashSet<>();
             for (Object tile : tiles) {
@@ -55,10 +48,18 @@ public final class NativeDiscover {
             List<Object> filtered = new ArrayList<>();
             if (!allowed.isEmpty()) filtered.add(grid(allowed));
             StockAccess.set(response, field, filtered);
-            // The native cursor, session paging token and more_available are preserved,
-            // including when one server page contains no followed accounts.
+            // A filtered empty Explore page must not make the stock adapter drain
+            // recommendations automatically while searching for a followed author.
+            // Explicit keyword searches retain their normal native pagination.
+            if (followingOnly && allowed.isEmpty()) {
+                StockAccess.set(response, "A09", false);
+                StockAccess.set(response, "A03", null);
+            }
         } catch (ReflectiveOperationException | RuntimeException unexpectedShape) {
             clear(response, field);
+            if (followingOnly) try {
+                StockAccess.set(response, "A09", false); StockAccess.set(response, "A03", null);
+            } catch (ReflectiveOperationException | RuntimeException ignored) { }
         }
     }
 
@@ -73,23 +74,6 @@ public final class NativeDiscover {
         return false;
     }
 
-    private static void resolveAuthors(Object session, List<?> media) {
-        LinkedHashSet<String> pending = new LinkedHashSet<>();
-        for (Object value : media) try {
-            if (NativeAds.media(value)) continue;
-            Object dictionary = StockAccess.get(value, "A04");
-            unresolved(StockAccess.call(dictionary, "A33"), session, pending);
-            for (Object author : list(StockAccess.call(dictionary, "A8F"))) unresolved(author, session, pending);
-        } catch (ReflectiveOperationException | RuntimeException ignored) { }
-        NativeRelationLookup.awaitOffMainThread(session, new ArrayList<>(pending));
-    }
-    private static void unresolved(Object user, Object session, Set<String> pending) {
-        if (user == null || NativeRelations.known(session, user, 1) || pending.size() >= 100) return;
-        try {
-            String id = (String) StockAccess.call(user, "getId");
-            if (id != null && !NativeRelations.known(session, NativeRelations.user(session, id), 1)) pending.add(id);
-        } catch (ReflectiveOperationException | RuntimeException ignored) { }
-    }
     private static boolean permittedUser(Object user, Object session) {
         if (user == null || session == null) return false;
         if (NativeRelations.known(session, user, 1)) return NativeRelations.permitted(session, user, 1, false);

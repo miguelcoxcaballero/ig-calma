@@ -49,7 +49,6 @@ public final class NativeFeed {
     }
     public static void context(Object androidContext, Object builder, Object unused, Object session, Object request, Object parameters) {
         if (!CalmaConfig.enabled()) return;
-        if (NativeTimeline.internal()) return;
         request(session, request);
         try {
             Request tracked = REQUESTS.get(NativeRelations.owner(session) + ':' + StockAccess.get(request, "A0H"));
@@ -165,13 +164,13 @@ public final class NativeFeed {
     /** Called only for the stock main-feed request's parameter map. */
     public static Map<?, ?> parameters(Map<?, ?> original) {
         if (!CalmaConfig.enabled()) return original;
-        if ("BLENDED_FOR_YOU".equals(CalmaConfig.feed()) && !NativeTimeline.internal()) {
+        if ("BLENDED_FOR_YOU".equals(CalmaConfig.feed())) {
             Object source = original == null ? null : original.get("pagination_source");
             if ("following".equals(source) || "favorites".equals(source)) {
                 Map<Object,Object> result = new HashMap<>(original); result.put("pagination_source", "feed_recs"); return result;
             }
         }
-        if ("FAVORITES".equals(CalmaConfig.feed()) && !NativeTimeline.internal()) {
+        if ("FAVORITES".equals(CalmaConfig.feed())) {
             Map<Object, Object> result = original == null ? new HashMap<>() : new HashMap<>(original);
             result.put("pagination_source", "favorites"); return result;
         }
@@ -205,7 +204,6 @@ public final class NativeFeed {
         try {
             String owner = NativeRelations.owner(session);
             if (owner.length() == 0) return;
-            if (NativeTimeline.capture(response, owner)) return;
             long now = System.currentTimeMillis() / 1000L;
             if (request != null) CalmaConfig.scope(request.mode);
             // Ads stay disabled in every feed mode, including native/default.
@@ -232,12 +230,6 @@ public final class NativeFeed {
             }
             Object wrappers = StockAccess.get(response, "A0S");
             Object media = StockAccess.get(response, "A0U");
-            List<?> rawWrappers = wrappers instanceof List ? (List<?>) wrappers : java.util.Collections.emptyList();
-            List<?> rawMedia = media instanceof List ? (List<?>) media : java.util.Collections.emptyList();
-            List<String> missing = missing(rawWrappers, rawMedia, session, now);
-            if (!missing.isEmpty()) {
-                NativeRelationLookup.refresh(session, missing);
-            }
             boolean exhausted = true, sawPosts = false;
             Page wrapperPage = null, mediaPage = null;
             if (wrappers instanceof List) {
@@ -272,7 +264,7 @@ public final class NativeFeed {
             // Never let extension errors crash cache parsing on the UI thread, or return
             // a successful empty page with auto-pagination still switched on.
             try {
-                NativeTimeline.Snapshot previous = NativeTimeline.saved(session);
+                NativeTimeline.Snapshot previous = NativeTimelineProgress.saved(session);
                 if (previous != null) previous.apply(response, session);
                 else {
                     StockAccess.set(response, "A0S", new ArrayList<>());

@@ -1,8 +1,6 @@
 package es.calma.instagram.nativeapp;
 
 import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.*;
 import es.calma.instagram.nativeapp.NativeFeedTest.*;
 
 public class NativeTimelineTest {
@@ -31,70 +29,95 @@ public class NativeTimelineTest {
     static Media post(String id,long time){return new Media(id,time,"feed",new User(true,true));}
     static NativeTimeline.Context context(String owner,TimelineRequest request){return new NativeTimeline.Context(null,new Session(owner),request,null);}
     static void verify(Session session,String id,boolean mutual){Status status=new Status(true,mutual);NativeRelations.beginStatus(session,id,status); NativeRelations.statusField(status,"following"); NativeRelations.endStatus(status);}
-    static <T> T worker(Callable<T> action)throws Exception{ExecutorService e=Executors.newSingleThreadExecutor();try{return e.submit(action).get(8,TimeUnit.SECONDS);}finally{e.shutdownNow();}}
-    static void fails(Callable<?> action,String message)throws Exception{try{action.call();throw new AssertionError(message);}catch(IllegalStateException expected){checks++;}}
+    static Response deliver(NativeTimeline.Context context, boolean head, long now, Response response)throws Exception {
+        NativeTimelineProgress.response(response,context,head,CalmaConfig.sessionId(),now);
+        return response;
+    }
+    static boolean contains(Response response,Object media) {
+        return response.A0S.stream().anyMatch(row->((Wrapper)row).A0A()==media);
+    }
     public static void main(String[] args)throws Exception{
-        CalmaConfig.testMode=2;long now=System.currentTimeMillis()/1000;
+        CalmaConfig.testMode=1;long now=System.currentTimeMillis()/1000;
         TimelineRequest request=new TimelineRequest();
         NativeTimeline.Context c=context("9001",request);
         Wrapper stories=new Wrapper(null);Media one=post("one",now-20),two=post("two",now-10),old=post("old",now-190000);
-        AtomicInteger fetched=new AtomicInteger();
-        NativeTimeline.Snapshot snapshot=worker(()->NativeTimeline.load(page("a",stories,one),c,now,(ctx,cursor,deadline)->{fetched.incrementAndGet();return page(null,one,two);}));
-        check(fetched.get()==1,"preloads remaining pages before completing");
-        check(snapshot.wrappers.size()==3 && snapshot.wrappers.get(0)==stories,"stories retained once; duplicate post removed globally");
-        check(((Wrapper)snapshot.wrappers.get(1)).A0A()==two,"late newer post is globally sorted");
+        Response first=deliver(c,true,now,page("a",stories,one));
+        check(first.A0S.size()==2 && first.A0S.get(0)==stories,"head stories and post appear immediately from the native page");
+        check(first.A0a && "a".equals(first.A0N) && "a".equals(NativeTimelineProgress.next(c.session)),"native source cursor remains unchanged before more pages arrive");
+        check(NativeTimelineProgress.saved(c.session)==null,"partial native pages are never advertised as a complete snapshot");
+        Response last=deliver(c,false,now,page(null,one,two));
+        check(last.A0S.size()==1 && contains(last,two),"later native page delivers only the new post");
+        check(!last.A0a && !last.A0W && last.A0N==null,"real EOF closes native continuation");
+        check(NativeTimelineProgress.saved(c.session)!=null,"observed native EOF publishes the complete snapshot");
+        Response cached=deliver(c,true,now,page("unused",one));
+        check(cached.A0S.size()==3 && cached.A0S.get(0)==stories,"completed cache retains stories once and deduplicates posts globally");
+        check(((Wrapper)cached.A0S.get(1)).A0A()==two,"late newer post is globally sorted in the saved timeline");
+        check(!cached.A0a && cached.A0N==null,"complete cached timeline does not ask for another native page");
+        cached.A0S.clear();
+        check(deliver(c,true,now,page(null)).A0S.size()==3,"native adapter cannot mutate saved rows");
+
+        List<Object> sourceRows=new ArrayList<>(Arrays.asList(stories,new Wrapper(one)));
+        List<Object> sourceMedia=new ArrayList<>(Arrays.asList(one));
+        NativeTimeline.Snapshot snapshot=new NativeTimeline.Snapshot(sourceRows,sourceMedia,now);
+        sourceRows.clear();sourceMedia.clear();
+        check(snapshot.wrappers.size()==2 && snapshot.media.size()==1,"snapshot defensively copies both native representations");
+        try {snapshot.wrappers.clear();throw new AssertionError("snapshot must be immutable");}
+        catch(UnsupportedOperationException expected){checks++;}
         Response delivered=new Response();snapshot.apply(delivered,c.session);
-        check(!delivered.A0a && !delivered.A0W && delivered.A0N==null,"complete snapshot never requests more pages on scroll");
-        delivered.A0S.clear();check(snapshot.wrappers.size()==3,"native adapter cannot mutate saved list");
-        NativeTimeline.Snapshot stable=worker(()->NativeTimeline.load(page(null),c,now+20,(a,b,d)->{throw new AssertionError("Unexpected fetch");}));
-        check(stable==snapshot,"warm opening retains same snapshot and time window");
+        delivered.A0S.clear();delivered.A0U.clear();
+        snapshot.apply(delivered,c.session);
+        check(delivered.A0S.size()==2 && delivered.A0U.size()==1,"each snapshot application gives the native adapter independent lists");
+
         request.A09="pull_to_refresh";
-        NativeTimeline.Snapshot refreshed=worker(()->NativeTimeline.load(page(null,two),c,now+20,(a,b,d)->null));
-        check(refreshed!=snapshot && refreshed.wrappers.size()==1,"explicit refresh replaces snapshot atomically");
+        Response refreshed=deliver(c,true,now,page(null,two));
+        check(refreshed.A0S.size()==1 && contains(refreshed,two),"explicit refresh replaces the collected timeline");
+        request.A09="cold_start_fetch";
+        check(deliver(c,true,now,page(null,one)).A0S.size()==1,"completed refreshed timeline remains the warm cache");
         NativeTimeline.Context other=context("9002",new TimelineRequest());
-        NativeTimeline.Snapshot empty=worker(()->NativeTimeline.load(page("empty"),other,now,(a,b,d)->page(null,two)));
-        check(empty.wrappers.size()==1,"empty page is not EOF and does not hide later friends");
+        Response empty=deliver(other,true,now,page("empty"));
+        check(empty.A0S.isEmpty() && empty.A0a && "empty".equals(NativeTimelineProgress.next(other.session)),"empty native page is not EOF and keeps its source cursor");
+        deliver(other,false,now,page(null,one));
+        Response otherCache=deliver(other,true,now,page(null));
+        check(contains(otherCache,one) && !contains(otherCache,two),"collected timeline never crosses accounts");
+
         NativeTimeline.Context cyc=context("9003",new TimelineRequest());
-        worker(()->{fails(()->NativeTimeline.load(page("same"),cyc,now,(a,b,d)->page("same")),"repeated cursor must fail");return null;});
-        check(NativeTimeline.saved(cyc.session)==null,"failed cycle never commits an empty completed timeline");
+        deliver(cyc,true,now,page("same",one));
+        Response repeated=deliver(cyc,false,now,page("same",two));
+        check(NativeTimelineProgress.next(cyc.session)==null && repeated.A0a && "same".equals(repeated.A0N),"repeated source cursor does not invent a next request or a completed timeline");
+        check(NativeTimelineProgress.saved(cyc.session)==null,"a repeated cursor cannot publish an incomplete timeline as complete");
         NativeTimeline.Context bounded=context("9004",new TimelineRequest());
-        NativeTimeline.Snapshot cutoff=worker(()->NativeTimeline.load(page("next",one),bounded,now,(a,b,d)->page("unneeded",old)));
-        check(cutoff.wrappers.size()==1,"complete old page closes 48-hour interval");
-        NativeTimeline.Context reversed=context("9005",new TimelineRequest());AtomicInteger requests=new AtomicInteger();
-        NativeTimeline.Snapshot disorder=worker(()->NativeTimeline.load(page("p1",old,post("less-old",now-180000)),reversed,now,(a,b,d)->{requests.incrementAndGet();return page(null,two);}));
-        check(requests.get()==1 && disorder.wrappers.size()==1,"out-of-order old page does not falsely truncate timeline");
-        NativeTimeline.Context late=context("9006",new TimelineRequest());String author="71234";
-        java.lang.reflect.Field activeField=NativeRelationLookup.class.getDeclaredField("ACTIVE");activeField.setAccessible(true);
-        @SuppressWarnings("unchecked") Map<String,CompletableFuture<Void>> active=(Map<String,CompletableFuture<Void>>)activeField.get(null);
-        CompletableFuture<Void> pending=new CompletableFuture<>();active.put("9006:"+author,pending);
-        ScheduledExecutorService delayed=Executors.newSingleThreadScheduledExecutor();
-        delayed.schedule(()->{verify((Session)late.session,author,true);pending.complete(null);},180,TimeUnit.MILLISECONDS);
-        NativeTimeline.Snapshot delayedSnapshot=worker(()->NativeTimeline.load(page(null,new Item("delayed",now-1,new IdentifiedUser(author))),late,now,(a,b,d)->null));
-        delayed.shutdownNow();active.remove("9006:"+author);
-        check(delayedSnapshot.wrappers.size()==1,"pending friendship resolves before filtering instead of losing post");
-        check(NativeRelations.permitted(late.session,new IdentifiedUser(author),2,true),"fresh verified mutual overrides stale native false");
-        check(!NativeRelations.permitted(other.session,new IdentifiedUser(author),2,true),"verified friendship never crosses accounts");
-        request.A09="pull_to_refresh";
-        worker(()->{fails(()->NativeTimeline.load(page("broken"),c,now+30,(a,b,d)->{throw new IllegalStateException("offline");}),"network failure must not complete");return null;});
-        check(NativeTimeline.saved(c.session)==refreshed,"failed refresh keeps previous complete snapshot");
-        NativeTimeline.Context busy=context("9007",new TimelineRequest());CountDownLatch entered=new CountDownLatch(1),release=new CountDownLatch(1);
-        ExecutorService loading=Executors.newSingleThreadExecutor();Future<?> work=loading.submit(()->{try{NativeTimeline.load(page("wait"),busy,now,(a,b,d)->{entered.countDown();release.await();return page(null);});}catch(Exception e){throw new RuntimeException(e);}});
-        entered.await(2,TimeUnit.SECONDS);long start=System.nanoTime();
-        fails(()->NativeTimeline.load(page(null),busy,now,(a,b,d)->null),"main thread must not wait on synchronization lock");
-        check(System.nanoTime()-start<TimeUnit.MILLISECONDS.toNanos(100),"main thread is never held by another loading request");release.countDown();work.get();loading.shutdownNow();
-        CalmaConfig.epoch++;
-        check(NativeTimeline.saved(c.session)==null,"changed feed settings invalidate prior snapshot");
-        CalmaConfig.testMode=1;
-        NativeTimeline.Context following=context("9010",new TimelineRequest());
-        NativeFeedTest.Media oneWay=new NativeFeedTest.Media("one-way",now-5,"feed",new NativeFeedTest.User(true,false));
-        NativeTimeline.Snapshot all=worker(()->NativeTimeline.load(page(null,oneWay),following,now,(a,b,d)->null));
-        check(all.wrappers.stream().anyMatch(row -> ((NativeFeedTest.Wrapper) row).A0A() == oneWay),"Following includes non-mutual followed accounts");
+        deliver(bounded,true,now,page("next",one));
+        Response cutoff=deliver(bounded,false,now,page("unneeded",old));
+        check(cutoff.A0S.isEmpty() && !cutoff.A0a && cutoff.A0N==null,"ordered old native page closes the 48-hour interval");
+        check(deliver(bounded,true,now,page(null)).A0S.size()==1,"48-hour snapshot retains only the observed recent post");
+        NativeTimeline.Context reversed=context("9005",new TimelineRequest());
+        Response disorder=deliver(reversed,true,now,page("p1",old,post("less-old",now-180000)));
+        check(disorder.A0a && "p1".equals(disorder.A0N),"out-of-order old native page does not falsely truncate timeline");
+        Response later=deliver(reversed,false,now,page(null,two));
+        check(later.A0S.size()==1 && contains(later,two),"a later native page can still reveal a recent post");
+
         CalmaConfig.testMode=2;
-        check(NativeTimeline.saved(following.session)==null,"Friends never reuses the Following snapshot");
+        NativeTimeline.Context late=context("9006",new TimelineRequest());String author="71234";
+        Item pending=new Item("delayed",now-1,new IdentifiedUser(author));
+        Response unresolved=deliver(late,true,now,page("native-next",pending));
+        check(unresolved.A0S.isEmpty() && unresolved.A0a,"unknown friend is held locally without completing the native timeline");
+        verify((Session)late.session,author,true);
+        check(NativeTimelineProgress.local(late.session).size()==1,"naturally parsed relationship proof unlocks an already received post");
+        check(NativeRelations.permitted(late.session,new IdentifiedUser(author),2,true),"fresh native mutual proof overrides stale native false");
+        check(!NativeRelations.permitted(other.session,new IdentifiedUser(author),2,true),"verified friendship never crosses accounts");
+        CalmaConfig.epoch++;
+        check(NativeTimelineProgress.local(late.session).isEmpty() && NativeTimelineProgress.next(late.session)==null,"changed feed settings invalidate the prior generation");
+        CalmaConfig.testMode=1;
+        check(NativeTimelineProgress.saved(c.session)==null,"settings changes also invalidate a completed saved snapshot");
+
+        NativeTimeline.Context following=context("9010",new TimelineRequest());
+        Media oneWay=new Media("one-way",now-5,"feed",new User(true,false));
+        check(contains(deliver(following,true,now,page(null,oneWay)),oneWay),"Following includes non-mutual followed accounts");
+        CalmaConfig.testMode=2;
         NativeTimeline.Context friends=context("9010",new TimelineRequest());
-        NativeTimeline.Snapshot mutualOnly=worker(()->NativeTimeline.load(page(null,oneWay),friends,now,(a,b,d)->null));
-        check(mutualOnly.wrappers.isEmpty(),"Friends excludes non-mutual followed accounts");
-        CalmaConfig.testMode=1;check(NativeTimeline.saved(following.session)==all,"Returning to Following reuses its complete timeline");
+        check(deliver(friends,true,now,page(null,oneWay)).A0S.isEmpty(),"Friends does not reuse the Following generation");
+        CalmaConfig.testMode=1;
+        check(contains(deliver(following,true,now,page(null)),oneWay),"returning to Following reuses its own complete timeline");
         System.out.println("Native timeline: "+checks+" assertions passed");
     }
 }

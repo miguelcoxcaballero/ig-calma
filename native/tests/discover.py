@@ -43,7 +43,7 @@ fixtures={
    static boolean isFollowing(Object session,String id){return session!=null && Boolean.TRUE.equals(((DiscoverTest.Session)session).cache.get(id));}
  }''',
  PACKAGE+'/NativeRelationLookup.java': '''package es.calma.instagram.nativeapp; public final class NativeRelationLookup {
-   static java.util.List<String> last; static void awaitOffMainThread(Object session,java.util.List<String> ids){last=ids;}
+   static java.util.List<String> last=java.util.Collections.emptyList(); static void awaitOffMainThread(Object session,java.util.List<String> ids){throw new AssertionError("Explore must never query relationships");}
  }''',
  PACKAGE+'/DiscoverTest.java': '''package es.calma.instagram.nativeapp;
  import X.*; import java.util.*; import com.instagram.user.model.User; import com.instagram.feed.media.Media;
@@ -80,13 +80,13 @@ fixtures={
      _32D safe=(_32D)tiles(result).get(0); check(safe!=mixed && safe.A09==null && safe.A03==null && safe.A0D==mixed.A08,"strips hidden mixed-content siblings");
      check(mixed.A09!=null && layout.A0D.size()==6,"does not mutate native input items");
      check(result.A09 && "cursor".equals(result.A03) && "token".equals(result.A04),"preserves pagination and paging token");
-     check(NativeRelationLookup.last.contains("77"),"resolves unknown relationships through bounded native lookup");
+     check(NativeRelationLookup.last.isEmpty(),"unknown authors trigger no extra requests");
      Response empty=response(section(new _32B(Arrays.asList(outsider)))); NativeDiscover.explore(empty,parser);
-     check(empty.A06.isEmpty() && empty.A09 && "cursor".equals(empty.A03),"empty filtered page is not false exhaustion");
+     check(empty.A06.isEmpty() && !empty.A09 && empty.A03==null,"empty Explore page stops automatic recommendation draining");
      Media ad=new Media("followed-ad",followed,"feed");ad.sponsored=true;
      _32D dedicatedAd=new _32D("AD",null,null,new Media("ad-slot",followed,"feed"),null,false,false,false);
      Response ads=response(section(new _32B(Arrays.asList(tile(ad),dedicatedAd))));NativeDiscover.explore(ads,parser);
-     check(ads.A06.isEmpty() && ads.A09 && "cursor".equals(ads.A03),"sponsored followed media and dedicated AD slots excluded without ending pagination");
+     check(ads.A06.isEmpty() && !ads.A09 && ads.A03==null,"ad-only Explore page stops automatic draining");
      Grid adSearch=new Grid();adSearch.A05=new ArrayList<>(Arrays.asList(section(new _32B(Arrays.asList(tile(ad),dedicatedAd)))));NativeDiscover.searchGrid(adSearch,parser);
      check(adSearch.A05.isEmpty() && adSearch.A06 && "next".equals(adSearch.A02),"search media ad-only page preserves native continuation");
      CalmaConfig.hide=false; Response reel=response(section(new _32B(Arrays.asList(clip)))); NativeDiscover.explore(reel,parser);

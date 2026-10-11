@@ -8,17 +8,15 @@ import java.lang.ref.WeakReference;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** Advance only the stock controller, after its original completion callback. */
+/** Replay already-loaded rows locally. Only Instagram's normal scrolling loads another page. */
 public final class NativeTimelinePager {
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static final Map<String, WeakReference<Object>> CONTROLLERS = new ConcurrentHashMap<>();
-    private static final Map<String, String> ATTEMPTED = new ConcurrentHashMap<>();
-    private static final Map<String, Integer> BUSY_RETRIES = new ConcurrentHashMap<>();
     private static final Map<String, Object> HEADS = new ConcurrentHashMap<>();
     private static final Map<String, Long> EPOCHS = new ConcurrentHashMap<>();
     private static final Set<String> QUEUED = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private NativeTimelinePager() {}
-    /** Preloading follows the actual feed view, independently of For you credit/menu state. */
+    /** Visibility is observed only for UI state, never to trigger a network request. */
     static boolean visible(Object controller) {
         if (!CalmaConfig.enabled()) return false;
         try {
@@ -37,8 +35,6 @@ public final class NativeTimelinePager {
             CONTROLLERS.put(owner,new WeakReference<>(controller));
             if (head || !Long.valueOf(CalmaConfig.sessionId()).equals(EPOCHS.get(owner))) {
                 HEADS.put(owner,request); EPOCHS.put(owner,CalmaConfig.sessionId());
-                ATTEMPTED.remove(owner);
-                BUSY_RETRIES.remove(owner);
             }
             wake(session);
         } catch (ReflectiveOperationException | RuntimeException ignored) {}
@@ -60,47 +56,28 @@ public final class NativeTimelinePager {
         }
     }
     static void wake(Object session) {
-        wake(session,0);
-    }
-    private static void wake(Object session,long delay) {
         if (!CalmaConfig.enabled()) return;
         String owner = NativeRelations.owner(session);
         long epoch = CalmaConfig.sessionId();
         if (owner.isEmpty() || !QUEUED.add(owner)) return;
         MAIN.postDelayed(() -> {
             QUEUED.remove(owner);
-            if (epoch != CalmaConfig.sessionId() || CalmaConfig.mode() == 0) return;
+            if (!CalmaConfig.enabled() || epoch != CalmaConfig.sessionId() || CalmaConfig.mode() == 0) return;
             WeakReference<Object> ref = CONTROLLERS.get(owner);
             Object controller = ref == null ? null : ref.get();
             if (controller == null) return;
             try {
-                String cursor = NativeTimelineProgress.next(session);
-                boolean replay = NativeTimelineProgress.replay(session);
-                if (cursor == null && !replay) return;
+                if (!NativeTimelineProgress.replay(session)
+                        || !Long.valueOf(epoch).equals(EPOCHS.get(owner))) return;
                 ClassLoader loader = controller.getClass().getClassLoader();
-                if (replay && Long.valueOf(epoch).equals(EPOCHS.get(owner))) {
-                    List<?> rows = NativeTimelineProgress.local(session);
-                    if (!rows.isEmpty() && HEADS.get(owner) != null) {
-                        // Original LOCAL delivery updates the adapter without another HTTP request.
-                        StockAccess.method(controller.getClass(),"A0E",Class.forName("X.08KU",false,loader),List.class,boolean.class,boolean.class)
-                            .invoke(controller,HEADS.get(owner),rows,true,true);
-                        NativeTimelineProgress.rendered(session);
-                    }
+                List<?> rows = NativeTimelineProgress.local(session);
+                if (!rows.isEmpty() && HEADS.get(owner) != null) {
+                    // Original LOCAL delivery updates the adapter without another HTTP request.
+                    StockAccess.method(controller.getClass(),"A0E",Class.forName("X.08KU",false,loader),List.class,boolean.class,boolean.class)
+                        .invoke(controller,HEADS.get(owner),rows,true,true);
+                    NativeTimelineProgress.rendered(session);
                 }
-                if (cursor == null || !visible(controller)) return;
-                String attempt = epoch + ":" + cursor;
-                if (attempt.equals(ATTEMPTED.get(owner))) return;
-                Class<?> reasonType = Class.forName("X.02pk", false, loader);
-                Object reason = reasonType.getField("A0R").get(null);
-                Object trigger = Class.forName("X.08cS", false, loader).getConstructor(String.class).newInstance("calma_timeline_preload");
-                Map<String,String> params = Collections.singletonMap("pagination_source", "following");
-                // GRO owns native in-flight guards. Retry a busy controller without requiring
-                // another scroll gesture or a For you budget tick to restart preloading.
-                Object accepted = StockAccess.method(controller.getClass(), "A0J", Class.forName("X.0AHw", false, loader), reasonType, String.class, Map.class)
-                    .invoke(controller, trigger, reason, cursor, params);
-                if (Boolean.TRUE.equals(accepted)) { ATTEMPTED.put(owner,attempt); BUSY_RETRIES.remove(owner); }
-                else if (BUSY_RETRIES.merge(owner,1,Integer::sum)<=6) wake(session,250);
-            } catch (ReflectiveOperationException | RuntimeException ignored) { /* Native scroll remains available. */ }
-        }, delay);
+            } catch (ReflectiveOperationException | RuntimeException ignored) { /* Native scrolling remains available. */ }
+        }, 0);
     }
 }

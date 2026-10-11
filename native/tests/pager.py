@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Drive the real preload scheduler through busy, hidden, resumed and complete states."""
+"""Keep local feed replay working without any extension-driven pagination requests."""
 from pathlib import Path
 import argparse, struct, subprocess, tempfile
 ROOT=Path(__file__).resolve().parents[2]
@@ -26,9 +26,9 @@ PACKAGE+'/CalmaConfig.java':'package es.calma.instagram.nativeapp; class CalmaCo
 PACKAGE+'/NativeRelations.java':'package es.calma.instagram.nativeapp; class NativeRelations {static String owner(Object session){return session.toString();}}',
 PACKAGE+'/NativeFeedBudget.java':'package es.calma.instagram.nativeapp; class NativeFeedBudget {static boolean timelineVisible(){return false;}}',
 PACKAGE+'/NativeTimelineProgress.java':'''package es.calma.instagram.nativeapp; import java.util.*; class NativeTimelineProgress {
- static String cursor="first";static boolean replay;static int rendered;
+ static String cursor="first";static boolean replay,empty;static int rendered;
  static String next(Object s){return cursor;}static boolean replay(Object s){return replay;}
- static List<?> local(Object s){return Arrays.asList("friend");}static void rendered(Object s){replay=false;rendered++;}
+ static List<?> local(Object s){return empty?Collections.emptyList():Arrays.asList("followed post");}static void rendered(Object s){replay=false;rendered++;}
 }''',
 PACKAGE+'/NativePagerTest.java':'''package es.calma.instagram.nativeapp;
 import android.os.Handler;import android.view.View;import java.util.*;
@@ -38,27 +38,34 @@ public class NativePagerTest {
  public static class Controller {
   public Object A0X="100";public Host A0Y=new Host();public int attempts,loads,local;public boolean alwaysBusy;
   public boolean A0J(X.Trigger t,X.Reason r,String cursor,Map<?,?> p){
-   attempts++;if(alwaysBusy || attempts==1)return false;
-   loads++;if(loads>2)throw new AssertionError("Duplicate native cursor");
-   if(!"following".equals(p.get("pagination_source")))throw new AssertionError("Wrong feed source");
-   Handler.queue.add(()->{NativeTimelineProgress.cursor=loads==1?"second":null;NativeTimelinePager.completed(this);});return true;
+   attempts++;throw new AssertionError("The extension must never start a pagination request");
   }
   public void A0E(X.Envelope head,List<?> rows,boolean replace,boolean force){if(rows.size()!=1 || !replace || !force)throw new AssertionError("Local replay shape");local++;}
  }
  static void check(boolean b,String m){if(!b)throw new AssertionError(m);}
  public static void main(String[] args){
-  Controller disabled=new Controller();CalmaConfig.master=false;NativeTimelinePager.delivery(disabled,new X.Envelope(),true);NativeTimelinePager.completed(disabled);NativeTimelinePager.wake(disabled.A0X);Handler.drain();check(disabled.attempts==0,"disabled master schedules no preload");CalmaConfig.master=true;
+  Controller disabled=new Controller();CalmaConfig.master=false;NativeTimelinePager.delivery(disabled,new X.Envelope(),true);NativeTimelinePager.completed(disabled);NativeTimelinePager.wake(disabled.A0X);Handler.drain();check(disabled.attempts==0 && disabled.local==0,"Disabled master schedules no work");CalmaConfig.master=true;
   Controller c=new Controller();NativeTimelinePager.delivery(c,new X.Envelope(),true);Handler.drain();
-  check(c.loads==2 && c.attempts==3,"Preload retries busy native controller and loads all next pages without any scroll or budget tick");
-  check(Handler.delays.contains(250L),"Busy retry is delayed");
+  for(int i=0;i<100;i++){NativeTimelinePager.completed(c);NativeTimelinePager.visible();NativeTimelinePager.wake(c.A0X);}
+  Handler.drain();check(c.attempts==0 && c.local==0,"Visible Home with a next cursor never fetches a page automatically");
   c.A0Y.A01.hidden=true;NativeTimelineProgress.replay=true;NativeTimelinePager.wake(c.A0X);Handler.drain();
-  check(c.local==1 && NativeTimelineProgress.rendered==1,"Resolved Friends render locally even while Home is hidden");
-  NativeTimelineProgress.cursor="third";NativeTimelinePager.wake(c.A0X);Handler.drain();check(c.attempts==3,"Hidden Home does not fetch pages");
-  c.A0Y.A01.hidden=false;c.A0Y.A01.view.portion=30;NativeTimelinePager.wake(c.A0X);Handler.drain();check(c.attempts==3,"DM swipe does not preload offscreen Home");
-  c.A0Y.A01.view.portion=100;c.alwaysBusy=true;NativeTimelinePager.delivery(c,new X.Envelope(),true);Handler.drain();
-  check(c.attempts==10,"Busy retries are bounded until the next native event");
-  CalmaConfig.epoch++;NativeTimelinePager.wake(c.A0X);CalmaConfig.epoch++;Handler.drain();check(c.attempts==10,"Stale selection cannot start a request");
-  System.out.println("PASS: real pager scheduling, busy retry, complete preload, hidden Friends replay, DM visibility and selection cancellation");
+  check(c.local==1 && NativeTimelineProgress.rendered==1,"Cached rows render locally even while Home is hidden");
+  NativeTimelineProgress.cursor="third";NativeTimelinePager.completed(c);Handler.drain();
+  c.A0Y.A01.hidden=false;c.A0Y.A01.view.portion=30;NativeTimelinePager.wake(c.A0X);Handler.drain();
+  c.A0Y.A01.view.portion=100;c.A0Y.A01.resumed=false;NativeTimelinePager.visible();Handler.drain();
+  c.A0Y.A01.resumed=true;c.alwaysBusy=true;NativeTimelinePager.delivery(c,new X.Envelope(),true);Handler.drain();
+  check(c.attempts==0 && Handler.delays.stream().allMatch(d->d==0),"Hidden, partial, paused and busy Home never fetches or schedules network retries");
+  NativeTimelineProgress.replay=true;NativeTimelinePager.wake(c.A0X);CalmaConfig.master=false;Handler.drain();
+  check(c.local==1,"Disabling the master switch cancels already queued replay");CalmaConfig.master=true;
+  NativeTimelinePager.wake(c.A0X);CalmaConfig.mode=0;Handler.drain();check(c.local==1,"Stock feed modes do not replay Following rows");CalmaConfig.mode=1;
+  NativeTimelinePager.wake(c.A0X);CalmaConfig.epoch++;Handler.drain();check(c.local==1,"Changing selection cancels an already queued replay");
+  NativeTimelinePager.wake(c.A0X);Handler.drain();check(c.local==1,"An old head cannot be reused after selection changes");
+  NativeTimelinePager.delivery(c,new X.Envelope(),true);Handler.drain();check(c.local==2,"Current head enables local replay after a selection change");
+  NativeTimelineProgress.empty=true;NativeTimelineProgress.replay=true;NativeTimelinePager.wake(c.A0X);Handler.drain();check(c.local==2,"Missing cached rows do not trigger network fallback");NativeTimelineProgress.empty=false;
+  Controller other=new Controller();other.A0X="200";NativeTimelinePager.completed(other);Handler.drain();check(other.local==0,"A different account cannot reuse another account's head");
+  NativeTimelinePager.delivery(other,new X.Envelope(),true);Handler.drain();check(other.local==1,"A different account replays only after receiving its own head");
+  check(disabled.attempts==0 && c.attempts==0 && other.attempts==0,"No scenario calls the native HTTP pagination entry point");
+  System.out.println("PASS: local replay, no automatic HTTP pagination or retries, master switch, selection and account isolation");
  }
 }'''
 }

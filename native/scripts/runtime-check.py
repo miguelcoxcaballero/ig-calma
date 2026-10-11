@@ -30,7 +30,7 @@ BASELINE_URL = ('https://github.com/miguelcoxcaballero/ig-calma/releases/downloa
 BASELINE_SHA = '0c703944a95feb2bc53781344a68738f9737c7b492657c1159b91d4eca0e40d4'
 BASELINE_SIZE = 147911851
 SIGNER_SHA = '7133a4b3e4b9f9c4d2fbbd38b7dd2d44c7b8d0d7d16568bfe3da74a09e7887b6'
-CANDIDATE_VERSION = '0.4.18'
+CANDIDATE_VERSION = '0.4.19'
 
 
 def sha(path: Path) -> str:

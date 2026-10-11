@@ -26,3 +26,11 @@ Every AI/developer working in this app must read this section even without openi
 - See the central `AGENTS.md`, `docs/PROTOCOL.md` and `tools/catalog.py` before changing publication logic.
 
 This section supersedes older instructions that mandate blocking update gates, independently copied updaters, or unconditional latest/stable publication. Existing signature and integrity requirements remain in force.
+
+# Instagram request safety (0.4.19)
+
+- Read `native/account-security.md` before changing feed, Explore or relationship handling.
+- Calma must not automatically drain feed cursors or request friendship data. Reuse native received models/cache; let the original client own request scheduling, rate limits and authentication challenges.
+- Do not restore the removed independent timeline transport, add retry loops, spoof device/session/signature/attestation data, or suppress login/security challenges to hide a modified client.
+- An empty filtered Explore page must stop continuation; typed searches retain their normal pagination.
+- Run `native/tests/pager.py`, `native/tests/network_safety.py`, `native/tests/feed.py` and `native/tests/discover.py` when touching these paths. Do not claim account safety or non-detection from logged-out/emulator tests.

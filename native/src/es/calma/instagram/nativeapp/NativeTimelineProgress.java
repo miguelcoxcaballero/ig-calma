@@ -19,8 +19,7 @@ final class NativeTimelineProgress {
         final List<Object> wrappers = new ArrayList<>(), media = new ArrayList<>();
         final Set<String> sentWrappers = new HashSet<>(), sentMedia = new HashSet<>(), cursors = new HashSet<>();
         final ChronologyState chronology = new ChronologyState();
-        boolean hasWrappers, hasMedia, done, replay, diskChecked, resolving;
-        int retries;
+        boolean hasWrappers, hasMedia, done, replay, diskChecked;
         String next;
         volatile NativeTimeline.Snapshot snapshot;
         Generation(NativeTimeline.Context context, long epoch, long anchor) {
@@ -57,7 +56,6 @@ final class NativeTimelineProgress {
                 catch (ReflectiveOperationException | RuntimeException invalidRow) { /* Other rows remain usable. */ }
             }
             g.media.addAll(ml);
-            resolve(key,g);
             // Deliver already-known friends immediately. Unresolved authors remain in the
             // accumulator and are reconsidered on the next page or the completion replay.
             if (g.hasWrappers) StockAccess.set(response, "A0S", delta(NativeFeed.filter(g.wrappers, true, now, true, context.session).items, true, g.sentWrappers, head));
@@ -82,7 +80,7 @@ final class NativeTimelineProgress {
                         synchronized (generation) {
                             if (disk != null && current(key, generation) && generation.snapshot == null) {
                                 // Disk contains posts, not current friendship proof. Merge it
-                                // into the same accumulator and resolve authors in batches.
+                                // into the same accumulator using native relationship proof.
                                 if (disk.wrappers != null) {
                                     for (Object row : disk.wrappers) {
                                         try { if (StockAccess.call(row,"A0A") != null) generation.wrappers.add(row); }
@@ -91,7 +89,6 @@ final class NativeTimelineProgress {
                                     generation.hasWrappers = true;
                                 }
                                 if (disk.media != null) { generation.media.addAll(disk.media); generation.hasMedia = true; }
-                                resolve(key, generation);
                                 generation.replay = true;
                                 NativeTimelinePager.wake(context.session);
                             }
@@ -122,32 +119,6 @@ final class NativeTimelineProgress {
             }
         },30,TimeUnit.MILLISECONDS);
     }
-    private static void resolve(String key, Generation g) {
-        if (g.resolving) return;
-        List<String> missing = NativeFeed.missing(g.wrappers,g.media,g.context.session,g.anchor);
-        if (missing.isEmpty()) return;
-        g.resolving = true;
-        NativeRelationLookup.refresh(g.context.session,missing).whenComplete((unused,failure) -> CACHE.execute(() -> {
-            synchronized (g) {
-                g.resolving = false;
-                if (!current(key,g)) return;
-                CalmaConfig.scope(g.context.mode);
-                try {
-                    // Publish partial successes now, even while later pages are in flight.
-                    if (g.done) complete(g);
-                    g.replay = true; NativeTimelinePager.wake(g.context.session);
-                    if (failure == null || g.retries++ < 2) CACHE.schedule(() -> {
-                        synchronized (g) {
-                            if (!current(key,g)) return;
-                            CalmaConfig.scope(g.context.mode);
-                            try { resolve(key,g); } finally { CalmaConfig.scope(null); }
-                        }
-                    },failure == null ? 0 : 3200,TimeUnit.MILLISECONDS);
-                } catch (ReflectiveOperationException | RuntimeException ignored) {}
-                finally { CalmaConfig.scope(null); }
-            }
-        }));
-    }
     private static boolean current(String key, Generation g) { return GENERATIONS.get(key) == g && g.epoch == CalmaConfig.sessionId(); }
     private static boolean complete(Generation g) throws ReflectiveOperationException {
         if (!NativeFeed.missing(g.wrappers, g.media, g.context.session, g.anchor).isEmpty()) return false;
@@ -169,6 +140,14 @@ final class NativeTimelineProgress {
             } catch (ReflectiveOperationException | RuntimeException invalidRow) { /* Skip one malformed row. */ }
         }
         return result;
+    }
+    static NativeTimeline.Snapshot saved(Object session) {
+        String key = key(session, CalmaConfig.mode());
+        Generation g = GENERATIONS.get(key);
+        if (g == null) return null;
+        synchronized (g) {
+            return current(key,g) && g.snapshot != null && g.snapshot.epoch == CalmaConfig.contentId() ? g.snapshot : null;
+        }
     }
     static String next(Object session) {
         Generation g = GENERATIONS.get(key(session, CalmaConfig.mode()));

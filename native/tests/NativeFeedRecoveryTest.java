@@ -53,7 +53,7 @@ public final class NativeFeedRecoveryTest {
             check(System.nanoTime()-start<TimeUnit.MILLISECONDS.toNanos(300),"cold head delivers without waiting for all pages or friendship HTTP");
             check(first.A0S.size()==2 && first.A0S.get(0)==stories,"stories and first post appear on cold main-thread parse");
             check(first.A0a && "tail".equals(first.A0N),"stock continuation is preserved");
-            check("tail".equals(NativeTimelineProgress.next(account)),"preload uses original controller cursor");
+            check("tail".equals(NativeTimelineProgress.next(account)),"native page collection preserves the original controller cursor");
             request=new Request();request.A0H="tail";request.A0G="tail";
             Response last=deliver(account,request,NativeTimelineTest.page(null,newest,older,oneWay));
             check(last.A0S.size()==(mode==2?1:2),"later pages emit only new permitted rows");
@@ -68,23 +68,10 @@ public final class NativeFeedRecoveryTest {
         CalmaConfig.testMode=2;Session account=new Session("9500");
         NativeTimelineTest.IdentifiedUser unresolved=new NativeTimelineTest.IdentifiedUser("888");
         NativeTimelineTest.Item pending=new NativeTimelineTest.Item("pending",now-15,unresolved);pending.A04.kind="clips";
-        java.lang.reflect.Field activeField=NativeRelationLookup.class.getDeclaredField("ACTIVE");activeField.setAccessible(true);
-        @SuppressWarnings("unchecked") Map<String,CompletableFuture<Void>> active=(Map<String,CompletableFuture<Void>>)activeField.get(null);
-        Session overlapAccount=new Session("9510");
-        CompletableFuture<Void> authorA=new CompletableFuture<>(),authorB=new CompletableFuture<>();
-        active.put("9510:800",authorA);active.put("9510:801",authorB);
-        CompletableFuture<Void> overlap=NativeRelationLookup.refresh(overlapAccount,Arrays.asList("800","801","800"));
-        CompletableFuture<Void> repeated=NativeRelationLookup.refresh(overlapAccount,Collections.singletonList("800"));
-        check(!overlap.isDone() && !repeated.isDone(),"overlapping pages reuse in-flight author lookups instead of starting duplicate native requests");
-        authorA.complete(null);
-        check(repeated.isDone() && !repeated.isCompletedExceptionally() && !overlap.isDone(),"one page can finish while the other author is pending");
-        authorB.complete(null);check(overlap.isDone() && !overlap.isCompletedExceptionally(),"shared author completion releases overlapping pages");
-        active.remove("9510:800");active.remove("9510:801");
-        CompletableFuture<Void> blocked=new CompletableFuture<>();active.put("9500:888",blocked);
         Response first=deliver(account,new Request(),NativeTimelineTest.page("next",newest,pending));
         check(first.A0S.size()==1,"unknown author does not erase a known friend");
-        check(!blocked.isDone() && first.A0a,"blocked metadata does not block parser or truncate feed");
-        NativeTimelineTest.verify(account,"888",true);blocked.complete(null);active.remove("9500:888");
+        check(first.A0a && "next".equals(first.A0N),"unknown relationship does not block parser or truncate the native feed");
+        NativeTimelineTest.verify(account,"888",true);
         long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(2);
         while(!NativeTimelineProgress.replay(account) && System.nanoTime()<deadline)Thread.sleep(5);
         List<?> immediate=NativeTimelineProgress.local(account);
@@ -107,7 +94,6 @@ public final class NativeFeedRecoveryTest {
         NativeFeed.context(null,null,null,partialAccount,partialRequest,null);
         NativeFeed.response(partial,partialParser);
         check(partial.A0S.size()==1 && partial.A0a,"uncorrelated parser must not empty unknown Friends before native delivery");
-        CompletableFuture<Void> stillRunning=new CompletableFuture<>();active.put("9599:777",stillRunning);
         NativeFeed.delivered(new Controller(partialAccount),new Envelope(partialRequest),new Result(partial));
         check(partial.A0S.isEmpty(),"unknown relationship stays hidden at UI delivery");
         check(NativeFeed.localRows(new Controller(partialAccount),new Envelope(partialRequest),Arrays.asList(new Wrapper(newest),new Wrapper(oneWay))).size()==1,"native local/cache delivery cannot bypass the Friends filter");
@@ -116,11 +102,10 @@ public final class NativeFeedRecoveryTest {
         check(NativeRelations.verified(partialAccount,"777"),"batch omitting following does not fabricate a verified unfollow");
         deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(2);
         while(!NativeTimelineProgress.replay(partialAccount) && System.nanoTime()<deadline)Thread.sleep(5);
-        check(!stillRunning.isDone() && NativeTimelineProgress.local(partialAccount).size()==1,"parsed friend becomes displayable before the batch/request finishes");
+        check(NativeTimelineProgress.local(partialAccount).size()==1,"naturally parsed friend becomes displayable without another feed page");
         Status realUnfollow=new Status(false,true);NativeRelations.beginStatus(partialAccount,"777",realUnfollow);
         NativeRelations.statusField(realUnfollow,"following");NativeRelations.endStatus(realUnfollow);
         check(NativeTimelineProgress.local(partialAccount).isEmpty(),"explicit verified unfollow still wins over Following source");
-        stillRunning.complete(null);active.remove("9599:777");
         CalmaConfig.testMode=0;
         Media unknown=new Media("algorithm",now-300000,"clips",new User(false,false));
         for(String source:new String[]{"feed_recs","favorites"}) {

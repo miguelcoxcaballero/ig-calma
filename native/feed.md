@@ -1,3 +1,9 @@
+# Current behavior: passive loading (0.4.19)
+
+Following accumulates and sorts pages supplied by Instagram during ordinary scrolling. Calma no longer starts pagination or friendship requests, retries busy controllers, or downloads the entire timeline automatically. Local replay and completed snapshots remain available. Explore uses already known relationships and stops continuation when its filtered page is empty; typed search remains unrestricted. See [account-security.md](account-security.md) for the review, limitations and regression checks.
+
+The versioned sections below describe historical implementations. Their automatic preload and friendship-request behavior is superseded by 0.4.19.
+
 # Native Following timeline
 
 Calma's original hooks are mapped against the stock Instagram 439.0.0.37.89 APK. No third-party feature patches are used.
