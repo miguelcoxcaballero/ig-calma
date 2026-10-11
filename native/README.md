@@ -20,12 +20,12 @@ La entrada aceptada está fijada en [`stock.lock.json`](stock.lock.json):
 | Android mínimo | Android 9, API 28 |
 | Formato de entrada | APKM con `base.apk` y `split_config.xxhdpi.apk` |
 | Procedencia | [Variante de APKMirror](https://www.apkmirror.com/apk/instagram/instagram-instagram/instagram-439-0-0-37-89-release/instagram-439-0-0-37-89-4-android-apk-download/) |
-| Versión propia de Calma | `0.4.17`, definida en [`CalmaBuild.java`](src/es/calma/instagram/nativeapp/CalmaBuild.java) |
+| Versión propia de Calma | `0.4.18`, definida en [`CalmaBuild.java`](src/es/calma/instagram/nativeapp/CalmaBuild.java) |
 | Paquete resultante | `es.calma.instagram` |
 | versionCode resultante | `384510845` |
 
 El manifiesto del APK conserva `versionName=439.0.0.37.89` para Instagram. La
-comparación de actualizaciones utiliza `CalmaBuild.VERSION`, actualmente `0.4.17`.
+comparación de actualizaciones utiliza `CalmaBuild.VERSION`, actualmente `0.4.18`.
 Son versiones distintas con funciones distintas.
 
 El build verifica el SHA-256 del APKM y de cada split, además de la cadena de firma
@@ -146,13 +146,13 @@ regenera los metadatos del cargador, alinea a **16 KB**, firma y verifica el res
 
 Los resultados quedan en:
 
-- `native/build/dist/IG-Calma-0.4.17.apk`.
+- `native/build/dist/IG-Calma-0.4.18.apk`.
 - `native/build/dist/SHA256SUMS.txt`, `build-info.json` y `verification.json`.
 - `native/build/patch-result.json` y `native/build/extension/build-report.json`.
 - `android-update.json` y `native/android-update.json`, idénticos y generados a partir del APK firmado.
 
 El build genera los archivos locales; no publica una release. El manifiesto de
-actualización apunta al APK de la release `v0.4.17` del repositorio configurado en el
+actualización apunta al APK de la release `v0.4.18` del repositorio configurado en el
 script. La publicación debe adjuntar exactamente ese APK y mantener su versión,
 tamaño y SHA-256 sincronizados con el manifiesto. Los dos manifiestos usan
 `required: true`; con `false`, Inhouse Read no ofrece la actualización. Publicar
@@ -259,10 +259,10 @@ Para verificar otra vez el APK firmado:
 
 ```sh
 python3 native/scripts/verify-apk.py \
-  --apk native/build/dist/IG-Calma-0.4.17.apk \
+  --apk native/build/dist/IG-Calma-0.4.18.apk \
   --stock /ruta/al/base.apk \
   --build-tools "$CALMA_SDK/build-tools/36.0.0"
-python3 native/tests/updater.py --apk native/build/dist/IG-Calma-0.4.17.apk
+python3 native/tests/updater.py --apk native/build/dist/IG-Calma-0.4.18.apk
 ```
 
 La verificación del artefacto comprueba firma, alineación de 16 KB, versiones,
@@ -386,3 +386,7 @@ Supera actualización desde 0.4.14, arranque y pruebas nativas en Android 14, 15
 Las cabeceras de Inicio conservan For you, Favourites y Following a la izquierda. La variante con logotipo coloca la marca original a la derecha del selector en la misma fila nativa. Se vuelve a aplicar al finalizar el enlace de la cabecera y tras las transiciones logo/título y los cambios de texto diferidos de Instagram. Las cabeceras de perfil y búsqueda no se modifican. No utiliza overlays ni sondeo periódico.
 
 La prueba instrumental infla las vistas originales, alterna los tres feeds y las variantes de logo y pestañas, pulsa sus callbacks y comprueba que no haya solapamientos a 180/240/320 dp en claro y oscuro. Supera las pruebas en Android 14, 15 y 16: [evidencia del APK firmado](validation/0.4.17.json) y [ejecución](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38155745248). No incluye una sesión autenticada ni un teléfono físico.
+
+## Integrated update settings (0.4.18 · A)
+
+B is the default. Opting into untested development builds on A requires acknowledgement and a completed slide. Settings use the app name and an understated Inhouse/GitHub footer. The identical shared updater revision is synchronized to all five apps. [Android 14–16 evidence](validation/0.4.18.json).
