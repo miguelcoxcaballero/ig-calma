@@ -30,7 +30,7 @@ BASELINE_URL = ('https://github.com/miguelcoxcaballero/ig-calma/releases/downloa
 BASELINE_SHA = '0c703944a95feb2bc53781344a68738f9737c7b492657c1159b91d4eca0e40d4'
 BASELINE_SIZE = 147911851
 SIGNER_SHA = '7133a4b3e4b9f9c4d2fbbd38b7dd2d44c7b8d0d7d16568bfe3da74a09e7887b6'
-CANDIDATE_VERSION = '0.4.17'
+CANDIDATE_VERSION = '0.4.18'
 
 
 def sha(path: Path) -> str:
@@ -341,13 +341,13 @@ def main() -> int:
         report['baseline'] = launch(baseline, 'baseline-0.4.14', updating=False)
         # Always try the candidate, including when baseline startup or installation fails.
         device('shell', 'am', 'force-stop', PACKAGE)
-        report['candidate'] = launch(candidate, 'candidate-0.4.17',
+        report['candidate'] = launch(candidate, 'candidate-0.4.18',
                                      updating=bool(report['baseline'].get('installed')))
         if not report['candidate'].get('passed'):
             # This is an empty test device. Distinguish a failed upgrade from a
             # failure that also happens on a fresh install, without changing users' data.
             require(device('uninstall', PACKAGE), 'Remove failed test installation')
-            report['candidateClean'] = launch(candidate, 'candidate-clean-0.4.17', updating=False)
+            report['candidateClean'] = launch(candidate, 'candidate-clean-0.4.18', updating=False)
         smoke = ROOT / 'native/runtime-input/Calma-Native-Smoke.apk'
         smoke_metadata = json.loads((ROOT / 'native/runtime-input/transport.json').read_text())
         if smoke_metadata.get('modelSmokeSha256') and not smoke.is_file():
