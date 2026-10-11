@@ -174,6 +174,8 @@ public final class NativeModelSmoke extends Instrumentation {
         context = context.getApplicationContext();
         android.content.res.Resources resources = context.getResources();
         Configuration originalConfiguration = new Configuration(resources.getConfiguration());
+        android.content.res.Resources.Theme originalTheme = resources.newTheme();
+        originalTheme.setTo(context.getTheme());
         try {
         Class<?> header = Class.forName("es.calma.instagram.nativeapp.NativeFeedHeader", true, loader);
         Class<?> config = Class.forName("es.calma.instagram.nativeapp.CalmaConfig", true, loader);
@@ -183,6 +185,8 @@ public final class NativeModelSmoke extends Instrumentation {
             Configuration configuration = new Configuration(context.getResources().getConfiguration());
             configuration.uiMode = (configuration.uiMode & ~Configuration.UI_MODE_NIGHT_MASK) | night;
             resources.updateConfiguration(configuration, resources.getDisplayMetrics());
+            // Home's Activity applies the stock IGDS palette in addition to IgPanorama.
+            context.getTheme().applyStyle(night == Configuration.UI_MODE_NIGHT_YES ? 0x7f1402aa : 0x7f1402ab, true);
             Context themed = context;
             android.widget.ViewAnimator title = (android.widget.ViewAnimator) android.view.LayoutInflater.from(themed).inflate(2131627659, null);
             Class<?> type = title.getClass();
@@ -245,7 +249,10 @@ public final class NativeModelSmoke extends Instrumentation {
         logoContainer.setVisibility(View.VISIBLE);
         topBar.invoke(null, modern);
         check(switcher.performClick() && opened[0] == 3, "Returning to logo variant keeps picker callback");
-        } finally { resources.updateConfiguration(originalConfiguration, resources.getDisplayMetrics()); }
+        } finally {
+            context.getTheme().setTo(originalTheme);
+            resources.updateConfiguration(originalConfiguration, resources.getDisplayMetrics());
+        }
     }
     @Override public void onCreate(Bundle arguments) { super.onCreate(arguments); start(); }
     private void check(boolean ok, String message) { if (!ok) throw new AssertionError(message); }
