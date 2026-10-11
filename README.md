@@ -1,20 +1,26 @@
-# Instagram Calma 0.4.12 — prueba nativa
+# Instagram Calma 0.4.13 — prueba nativa
 
 Esta versión parte del APK original de Instagram **439.0.0.37.89** y aplica parches propios de Calma. Inicio, historias, mensajes y reproducción usan la aplicación nativa. No incluye paquetes de parches de terceros.
 
-**[Descargar APK nativo](https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.12/IG-Calma-0.4.12.apk)** · [Publicación y comprobaciones](https://github.com/miguelcoxcaballero/ig-calma/releases/tag/v0.4.12) · [Código de los parches](native/patches/)
+**[Descargar APK nativo](https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.13/IG-Calma-0.4.13.apk)** · [Publicación y comprobaciones](https://github.com/miguelcoxcaballero/ig-calma/releases/tag/v0.4.13) · [Código de los parches](native/patches/)
 
 Requiere **Android 9 o posterior y ARM64**. No necesita root. Usa el paquete y la firma de Calma; puede coexistir con Instagram oficial. La sesión nativa requiere iniciar sesión de nuevo al venir del cliente web.
+
+## Ajustes Inhouse
+
+**Inhouse Instagram settings** aparece justo debajo del Centro de cuentas de Meta. **Activar cambios** enciende o apaga nuestras modificaciones de feed, anuncios, Reels, Explorar y saldo. Al cambiarlo se guardan las preferencias y se reinicia Instagram; el actualizador sigue disponible. Al pie aparecen el logo original de Inhouse, la versión, la fecha de publicación y el enlace a este repositorio.
+
+La 0.4.13 está compilada y firmada; las pruebas en Android se publicarán después de subir la APK. Los resultados históricos que aparecen debajo corresponden a la 0.4.12.
 
 ## Feed
 
 El selector superior ofrece **For you, Favourites y Following** usando el menú nativo de Instagram. **Following es la opción inicial** y muestra las cuentas que sigues, sin exigir seguimiento mutuo. Guarda las publicaciones de **48 horas**, ordenadas de más nuevo a más antiguo, sin duplicados y con las historias del encabezado. Al final aparece **That's it** con una cara sonriente. Desliza hacia abajo para actualizarlo.
 
-For you conserva el orden del algoritmo, sus publicaciones y Reels, sin anuncios; Favourites conserva el feed de favoritos original, sin aplicar la ventana o el filtro de amistades. **For you comienza bloqueado**: gana 1 minuto al comenzar cada nueva hora, incluso con la app cerrada. Cada crédito caduca 24 horas después de ganarlo. El selector muestra minutos y segundos disponibles; en **Tu feed** se puede configurar de 0 a 60 minutos por hora. Sólo se cobra el uso en primer plano de For you y de sus Reels; los DMs, Explorar y el tiempo fuera de la app no gastan saldo. Al agotarse, vuelve a Following. No abre For you automáticamente ni entrega saldo retroactivo al instalar.
+For you conserva el orden del algoritmo, sus publicaciones y Reels, sin anuncios; Favourites conserva el feed de favoritos original, sin aplicar la ventana o el filtro de amistades. **For you comienza bloqueado**: gana 1 minuto al comenzar cada nueva hora, incluso con la app cerrada. Cada crédito caduca 24 horas después de ganarlo. El selector muestra minutos y segundos disponibles; en **Inhouse Instagram settings** se puede configurar de 0 a 60 minutos por hora. Sólo se cobra el uso en primer plano de For you y de sus Reels; los DMs, Explorar y el tiempo fuera de la app no gastan saldo. Al agotarse, vuelve a Following. No abre For you automáticamente ni entrega saldo retroactivo al instalar.
 
 La 0.4.12 elimina Friends del selector y de los ajustes. Las selecciones guardadas de Friends pasan automáticamente a Following. [Funcionamiento y límites](native/feed.md).
 
-En los ajustes habituales de Instagram aparece **Tu feed**. Permite ajustar los minutos por hora de For you y activar **Bloquear scroll de Reels**. Los Reels siguen apareciendo en el feed y se pueden abrir; el bloqueo impide pasar al siguiente o al anterior. Durante el uso de For you con minutos disponibles, el visor mantiene su navegación normal. Los ajustes adicionales siguen el modo claro u oscuro del dispositivo.
+En los ajustes habituales de Instagram aparece **Inhouse Instagram settings**. Permite ajustar los minutos por hora de For you y activar **Bloquear scroll de Reels**. Los Reels siguen apareciendo en el feed y se pueden abrir; el bloqueo impide pasar al siguiente o al anterior. Durante el uso de For you con minutos disponibles, el visor mantiene su navegación normal. Los ajustes adicionales siguen el modo claro u oscuro del dispositivo.
 
 Explorar muestra contenido de cuentas que sigues, aunque no te sigan de vuelta. Al escribir en Buscar puedes encontrar cualquier cuenta; sin texto no aparecen sugerencias ni historial. Los Reels enviados por mensaje se abren directamente y, con el bloqueo activo, solo permiten ver ese clip. No esperan a comprobar la relación con el remitente. Los modelos de relaciones proceden de la sesión nativa; no se introducen listas manualmente.
 
@@ -22,9 +28,9 @@ La publicidad se bloquea incluso cuando sigues al anunciante. Se filtran los anu
 
 ## Actualizaciones
 
-Se reutilizan el comprobador y popup de **Inhouse Read** y el instalador Kotlin de **Inhouse Photos**, con sus fuentes originales conservadas en `vendor/`. El comprobador se inicia con la primera pantalla nativa real, después de la pantalla provisional de arranque, y conserva el aviso hasta que puede mostrarlo. **Tu feed → Actualizar aplicación** abre el mismo actualizador.
+Se reutilizan el comprobador y popup de **Inhouse Read** y el instalador Kotlin de **Inhouse Photos**, con sus fuentes originales conservadas en `vendor/`. El comprobador se inicia con la primera pantalla nativa real, después de la pantalla provisional de arranque, y conserva el aviso hasta que puede mostrarlo. **Inhouse Instagram settings → Actualizar aplicación** abre el mismo actualizador.
 
-El [manifiesto anterior](android-update.json) y el [nativo](native/android-update.json) anuncian el mismo APK firmado, para que las instalaciones anteriores también reciban el aviso de la 0.4.12. Se publica con `required: true`, como exige el comprobador original de Read para mostrarlo. Los cambios al actualizador se limitan a la conexión con Android y a la configuración de marca, versión y URL; [procedencia y pruebas](native/updater.md).
+El [manifiesto anterior](android-update.json) y el [nativo](native/android-update.json) anuncian el mismo APK firmado, para que las instalaciones anteriores también reciban el aviso de la 0.4.13. Se publica con `required: true`, como exige el comprobador original de Read para mostrarlo. Los cambios al actualizador se limitan a la conexión con Android y a la configuración de marca, versión y URL; [procedencia y pruebas](native/updater.md).
 
 ## Estado de la prueba
 

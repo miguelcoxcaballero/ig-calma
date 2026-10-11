@@ -25,6 +25,7 @@ public final class NativeFeed {
         Request(boolean head, boolean following) { this.head = head; this.following = following; }
     }
     public static void request(Object session, Object request) {
+        if (!CalmaConfig.enabled()) return;
         try {
             String owner = NativeRelations.owner(session);
             String id = (String) StockAccess.get(request, "A0H");
@@ -47,6 +48,7 @@ public final class NativeFeed {
         } catch (ReflectiveOperationException | RuntimeException missingRequestContext) { /* Cached responses still filter. */ }
     }
     public static void context(Object androidContext, Object builder, Object unused, Object session, Object request, Object parameters) {
+        if (!CalmaConfig.enabled()) return;
         if (NativeTimeline.internal()) return;
         request(session, request);
         try {
@@ -59,6 +61,7 @@ public final class NativeFeed {
     }
     /** Last write, after stock experiment/supplier parameters and before HTTP serialization. */
     public static void wire(Object builder) {
+        if (!CalmaConfig.enabled()) return;
         Request request = BUILDERS.get(builder);
         if (request == null) return; // Never change Discover, DMs, profiles or other requests.
         try {
@@ -84,6 +87,7 @@ public final class NativeFeed {
     }
     /** Use the actual stock delivery request: response request_id is not a correlation contract. */
     public static void delivered(Object controller, Object envelope, Object result) {
+        if (!CalmaConfig.enabled()) return;
         boolean followingSource = false;
         try {
             Object session = StockAccess.get(controller,"A0X"), nativeRequest = StockAccess.get(envelope,"A00");
@@ -137,6 +141,7 @@ public final class NativeFeed {
 
     /** Stock disk/local deliveries bypass network parsing; filter at their adapter boundary too. */
     public static List<?> localRows(Object controller,Object envelope,List<?> rows) {
+        if (!CalmaConfig.enabled()) return rows;
         if (CalmaConfig.mode()==0) return rows;
         try {
             Object session=StockAccess.get(controller,"A0X"), nativeRequest=StockAccess.get(envelope,"A00");
@@ -159,6 +164,7 @@ public final class NativeFeed {
 
     /** Called only for the stock main-feed request's parameter map. */
     public static Map<?, ?> parameters(Map<?, ?> original) {
+        if (!CalmaConfig.enabled()) return original;
         if ("BLENDED_FOR_YOU".equals(CalmaConfig.feed()) && !NativeTimeline.internal()) {
             Object source = original == null ? null : original.get("pagination_source");
             if ("following".equals(source) || "favorites".equals(source)) {
@@ -178,6 +184,7 @@ public final class NativeFeed {
 
     /** The parser carries the actual requesting account, including cached response parsing. */
     public static void response(Object response, Object parser) {
+        if (!CalmaConfig.enabled()) return;
         if (response == null || parser == null) return;
         try {
             Object session = StockAccess.get(parser, "A01");

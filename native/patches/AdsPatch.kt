@@ -4,6 +4,7 @@ import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
+import app.morphe.patcher.util.smali.ExternalLabel
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
@@ -25,11 +26,14 @@ val calmaNativeAds = bytecodePatch(
         check(clipsAds.parameterTypes == listOf("Lcom/instagram/common/session/UserSession;") && clipsAds.returnType == "Ljava/util/List;")
         val clipsText = clipsAds.implementation!!.instructions.mapNotNull { ((it as? ReferenceInstruction)?.reference as? StringReference)?.string }.toSet()
         check(clipsText.contains("android_purge_26_q2_ClipsFeedOfAdsResponse_getClipsAdItems"))
-        clipsAds.addInstructions(0,"""
+        clipsAds.addInstructionsWithLabels(0,"""
+            invoke-static {}, Les/calma/instagram/nativeapp/CalmaConfig;->enabled()Z
+            move-result v0
+            if-eqz v0, :inhouse_stock_clip_ads
             invoke-static {}, Ljava/util/Collections;->emptyList()Ljava/util/List;
             move-result-object v0
             return-object v0
-        """.trimIndent())
+        """.trimIndent(), ExternalLabel("inhouse_stock_clip_ads", clipsAds.implementation!!.instructions.first()))
         val reel = mutableClassDefBy("LX/03sn;")
         val sponsored = reel.methods.single { it.name == "EKS" && it.parameterTypes.isEmpty() && it.returnType == "Z" }
         check(sponsored.implementation!!.instructions.any {

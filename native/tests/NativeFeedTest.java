@@ -87,6 +87,16 @@ public final class NativeFeedTest {
 
     public static void main(String[] args) {
         long now = System.currentTimeMillis() / 1000;
+        CalmaConfig.master=false;
+        Media originalAd=post("original-ad",now-999999);originalAd.sponsored=true;
+        Response originalResponse=response(originalAd);List<Object> originalItems=originalResponse.A0U;
+        NativeFeed.response(originalResponse,new Parser());
+        check(originalResponse.A0U==originalItems && originalResponse.A0U.contains(originalAd),"disabled master preserves raw feed, ads and dates");
+        Map<String,String> stockParams=Collections.singletonMap("pagination_source","homecoming_all");
+        check(NativeFeed.parameters(stockParams)==stockParams,"disabled master preserves native feed route");
+        check(!NativeAds.story(new Story(true)),"disabled master permits original sponsored stories");
+        CalmaConfig.master=true;
+
         check(RecentFeedPolicy.withinWindow(now - 172800, now), "inclusive 48-hour boundary");
         check(!RecentFeedPolicy.withinWindow(now - 172801, now), "older than boundary excluded");
         check(!RecentFeedPolicy.withinWindow(null, now), "unknown dates not fabricated");

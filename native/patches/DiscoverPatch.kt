@@ -83,10 +83,13 @@ val calmaNativeDiscover = bytecodePatch(
         """.trimIndent(), ExternalLabel("calma_typed_query", typed.implementation!!.instructions.first()))
         val empty = provider.methods.single { it.name == "GDc" }
         check(empty.parameterTypes.isEmpty() && empty.returnType == "LX/0I2T;" && empty.implementation!!.registerCount >= 2)
-        empty.addInstructions(0, """
+        empty.addInstructionsWithLabels(0, """
+            invoke-static {}, Les/calma/instagram/nativeapp/CalmaConfig;->enabled()Z
+            move-result v0
+            if-eqz v0, :inhouse_stock_discover
             invoke-static {}, LX/0I2T;->A01()LX/0I2T;
             move-result-object v0
             return-object v0
-        """.trimIndent())
+        """.trimIndent(), ExternalLabel("inhouse_stock_discover", empty.implementation!!.instructions.first()))
     }
 }

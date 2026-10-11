@@ -78,6 +78,16 @@ public final class DiscoverDexCheck {
             check(offset+((OffsetInstruction)ins.get(2)).getCodeOffset()==continuation,"typed branch must skip only empty-state return");
             check(ins.get(6).getOpcode()==Opcode.CONST_4 && ((OneRegisterInstruction)ins.get(6)).getRegisterA()==4,"original typed-query body missing");
             first=3;
+        } else {
+            check(ins.get(0) instanceof ReferenceInstruction,"empty-query master guard call");
+            MethodReference guard=(MethodReference)((ReferenceInstruction)ins.get(0)).getReference();
+            check(guard.getDefiningClass().equals("Les/calma/instagram/nativeapp/CalmaConfig;") && guard.getName().equals("enabled"),"empty-query master guard");
+            check(ins.get(1).getOpcode()==Opcode.MOVE_RESULT && ((OneRegisterInstruction)ins.get(1)).getRegisterA()==0,"master result uses local v0");
+            check(ins.get(2).getOpcode()==Opcode.IF_EQZ,"disabled master must continue to stock suggestions");
+            int branch=ins.get(0).getCodeUnits()+ins.get(1).getCodeUnits(),original=0;
+            for(int i=0;i<6;i++)original+=ins.get(i).getCodeUnits();
+            check(branch+((OffsetInstruction)ins.get(2)).getCodeOffset()==original,"disabled master reaches original search body");
+            first=3;
         }
         check(emptyFactory(ins.get(first)),"blank search must use valid stock empty-state factory");
         check(ins.get(first+1).getOpcode()==Opcode.MOVE_RESULT_OBJECT && ((OneRegisterInstruction)ins.get(first+1)).getRegisterA()==0,"empty state register");

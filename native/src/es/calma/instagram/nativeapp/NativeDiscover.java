@@ -26,6 +26,7 @@ public final class NativeDiscover {
     }
 
     private static void filterGrid(Object response, Object parser, String field, boolean followingOnly) {
+        if (!CalmaConfig.enabled()) return;
         if (response == null) return;
         try {
             Object session = StockAccess.get(parser, "A01");
@@ -63,6 +64,7 @@ public final class NativeDiscover {
 
     /** Used only by the main Search provider; blank queries never show history or suggestions. */
     public static boolean hasQuery(String query) {
+        if (!CalmaConfig.enabled()) return true;
         if (query == null) return false;
         for (int i = 0; i < query.length(); i++) {
             char value = query.charAt(i);

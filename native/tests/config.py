@@ -19,7 +19,7 @@ fixtures = {
             public Editor putString(String key,String value){values.put(key,value);return this;}
             public Editor putInt(String key,int value){values.put(key,value);return this;}
             public Editor putBoolean(String key,boolean value){values.put(key,value);return this;}
-            public Editor remove(String key){values.remove(key);return this;}public void apply(){}
+            public Editor remove(String key){values.remove(key);return this;}public void apply(){}public boolean commit(){return true;}
         }
     }''',
     PACKAGE+'/ConfigTest.java': '''package es.calma.instagram.nativeapp;
@@ -59,6 +59,16 @@ fixtures = {
                 CalmaConfig.scope(null);check(CalmaConfig.mode()==0,"Request scope does not leak");
                 CalmaConfig.select("RECENTS");check(CalmaConfig.mode()==1 && "FOLLOWING".equals(CalmaConfig.feed()),"Legacy native selection routes to Following");
                 CalmaConfig.init(app);check(CalmaConfig.mode()==1,"Migration is idempotent");
+                boolean reels=CalmaConfig.savedReels();long oldSession=CalmaConfig.sessionId();
+                java.util.Map<String,?> saved=app.prefs.getAll();
+                check(CalmaConfig.enabled() && CalmaConfig.setEnabled(false),"master enabled by default and disabling persisted");
+                CalmaConfig.scope(1);
+                check(!CalmaConfig.enabled() && CalmaConfig.mode()==0 && !CalmaConfig.reels(),"master bypasses response scopes and Reel lock");
+                check(CalmaConfig.sessionId()>oldSession && CalmaConfig.savedReels()==reels,"disabling cancels stale work and retains Reel choice");
+                CalmaConfig.init(app);check(!CalmaConfig.enabled(),"bootstrap does not re-enable disabled settings");
+                for(java.util.Map.Entry<String,?> value:saved.entrySet())check(java.util.Objects.equals(app.prefs.values.get(value.getKey()),value.getValue()),"master preserves "+value.getKey());
+                check(CalmaConfig.setEnabled(true) && CalmaConfig.mode()==1 && CalmaConfig.reels()==reels,"enabling restores previous controls");
+                CalmaConfig.scope(null);
                 System.out.println("PASS: "+args[0]+" Following default, removed-mode routing and preference migration");
             }
         }'''

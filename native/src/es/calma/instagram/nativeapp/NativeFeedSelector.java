@@ -32,6 +32,7 @@ public final class NativeFeedSelector {
         return Enum.valueOf((Class) type(context, "06yP"), name);
     }
     public static List<?> options(Object session, List<?> original) {
+        if (!CalmaConfig.enabled()) return original;
         try {
             Constructor<?> ctor = type(session, "06yQ").getConstructor(type(session, "06yP"));
             List<Object> rows = new ArrayList<>();
@@ -65,6 +66,7 @@ public final class NativeFeedSelector {
         return CalmaConfig.feed();
     }
     public static boolean openPicker(Object click, View anchor) {
+        if (!CalmaConfig.enabled()) return false;
         try {
             Object controller = StockAccess.get(click, "A02");
             if (controller == null || !controller.getClass().getName().equals("X.06mX")) return false;
@@ -120,6 +122,7 @@ public final class NativeFeedSelector {
         }
     }
     public static boolean select(Object target, Object choice) {
+        if (!CalmaConfig.enabled()) return false;
         String name = choice instanceof Enum ? ((Enum<?>) choice).name() : "";
         if (!supported(name)) return false;
         if (name.equals("BLENDED_FOR_YOU") && NativeFeedBudget.balance() <= 0) return true;
@@ -160,6 +163,7 @@ public final class NativeFeedSelector {
         else CalmaConfig.select("FOLLOWING");
     }
     public static boolean header(Object helper) {
+        if (!CalmaConfig.enabled()) return false;
         try {
             Object bar = StockAccess.get(helper, "A06");
             if (bar == null) {
@@ -175,6 +179,7 @@ public final class NativeFeedSelector {
     }
     /** Reuse the stock title/chevron on the newer two-tab header as the same three-item picker. */
     public static void topBar(Object bar) {
+        if (!CalmaConfig.enabled()) return;
         try {
             TextView title = (TextView) StockAccess.get(bar, "A06");
             View secondary = (View) StockAccess.get(bar, "A05");

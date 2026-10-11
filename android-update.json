@@ -1,9 +1,9 @@
 {
-  "version": "0.4.12",
-  "versionCode": 384510840,
+  "version": "0.4.13",
+  "versionCode": 384510841,
   "required": true,
-  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.12/IG-Calma-0.4.12.apk",
-  "apkSha256": "2c0e883dc892c62c2e3d3e948d6ced68a944852df2390f3fe5e3d68e09befaaf",
-  "apkSizeBytes": 146268845,
-  "releaseNotes": "Elimina Friends. El selector queda con For you, Favourites y Following. Las selecciones antiguas de Friends pasan automáticamente a Following."
+  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.13/IG-Calma-0.4.13.apk",
+  "apkSha256": "91ae97a882551cd2974d0a19cf8333af04d5bc230d323cc7efe8c0f0531b4765",
+  "apkSizeBytes": 146281202,
+  "releaseNotes": "Añade Inhouse Instagram settings debajo del Centro de cuentas de Meta, un interruptor para activar los cambios y el pie de Inhouse con versión, fecha y GitHub. Cambiar el interruptor reinicia la app; el actualizador sigue disponible."
 }

@@ -30,8 +30,19 @@ public final class CalmaConfig {
     }
 
     public static Context context() { return application; }
+    public static boolean enabled() {
+        SharedPreferences p = preferences;
+        return p == null || p.getBoolean("inhouse_enabled", true);
+    }
+    public static boolean setEnabled(boolean value) {
+        SharedPreferences p = preferences;
+        if (p == null || !p.edit().putBoolean("inhouse_enabled", value).commit()) return false;
+        content.incrementAndGet(); newSession();
+        return true;
+    }
     /** Legacy selections also resolve to Following after upgrading. */
     public static int mode() {
+        if (!enabled()) return 0;
         Integer scoped = responseMode.get();
         return scoped != null ? scoped : modeFor(feed);
     }
@@ -46,12 +57,15 @@ public final class CalmaConfig {
     static SharedPreferences preferences() { return preferences; }
 
     public static boolean reels() {
+        return enabled() && savedReels();
+    }
+    public static boolean savedReels() {
         SharedPreferences p = preferences;
         return p == null || p.getBoolean("reels", true);
     }
     public static void setReels(boolean value) {
         SharedPreferences p = preferences;
-        if (p != null && reels() != value) { p.edit().putBoolean("reels", value).apply(); content.incrementAndGet(); newSession(); }
+        if (p != null && savedReels() != value) { p.edit().putBoolean("reels", value).apply(); content.incrementAndGet(); newSession(); }
     }
     public static long sessionId() { return session.get(); }
     public static long contentId() { return content.get(); }

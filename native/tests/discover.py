@@ -33,7 +33,7 @@ fixtures={
  'X/_YCE.java': 'package X; public final class _YCE extends _WDs { public String A00; public java.util.List<Object> A01; }',
  'X/_YCJ.java': 'package X; public final class _YCJ extends _WDs { public java.util.List<Object> A00,A01; }',
  'X/_YCr.java': 'package X; public final class _YCr { public final com.instagram.user.model.User A07; public _YCr(com.instagram.user.model.User user){A07=user;} }',
- PACKAGE+'/CalmaConfig.java': 'package es.calma.instagram.nativeapp; public final class CalmaConfig { static boolean hide=true; public static boolean reels(){return hide;} }',
+ PACKAGE+'/CalmaConfig.java': 'package es.calma.instagram.nativeapp; public final class CalmaConfig { public static boolean master=true; public static boolean enabled(){return master;} static boolean hide=true; public static boolean reels(){return hide;} }',
  PACKAGE+'/NativeRelations.java': '''package es.calma.instagram.nativeapp; import com.instagram.user.model.User;
  public final class NativeRelations {
    static Boolean state(Object session,Object user){if(!(user instanceof User))return null; User u=(User)user; return u.follows!=null?u.follows:((DiscoverTest.Session)session).cache.get(u.id);}
@@ -61,6 +61,10 @@ fixtures={
    static List<?> tiles(Response r){return ((_24Z)r.A06.get(0)).A01.A0D;}
    public static void main(String[] args){
      Session session=new Session(); Parser parser=new Parser(session);
+     CalmaConfig.master=false;Response raw=new Response();raw.A06=new ArrayList<>(Arrays.asList("stock"));List<Object> rawList=raw.A06;
+     NativeDiscover.explore(raw,parser);check(raw.A06==rawList,"disabled Explore passes original model untouched");
+     check(NativeDiscover.hasQuery(""),"disabled master restores native empty-query provider");CalmaConfig.master=true;
+
      User followed=new User("1",true), stranger=new User("2",false), unknown=new User("77",null);
      _32D mixed=tile(new Media("followed",followed,"feed")); mixed.A09=new Media("sneak",stranger,"feed"); mixed.A03=new Object();
      _32D outsider=tile(new Media("stranger",stranger,"feed"));

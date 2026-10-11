@@ -22,7 +22,7 @@ import android.widget.TextView;
 /** Native port of Calma's settings.js controls, reached from Instagram's settings list. */
 public final class CalmaSettingsActivity extends Activity {
     private int foreground, background, muted, line;
-    private Mark reels;
+    private Mark reels, master;
     private TextView hourly;
 
     @Override public void onCreate(Bundle state) {
@@ -51,7 +51,7 @@ public final class CalmaSettingsActivity extends Activity {
         back.setContentDescription("Volver");
         press(back, () -> finish());
         header.addView(back, new LinearLayout.LayoutParams(dp(56), dp(56)));
-        TextView title = text("Tu feed", 21, foreground);
+        TextView title = text("Inhouse Instagram", 20, foreground);
         title.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         header.addView(title, new LinearLayout.LayoutParams(0, dp(56), 1));
         root.addView(header);
@@ -65,6 +65,21 @@ public final class CalmaSettingsActivity extends Activity {
         scroll.addView(content);
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
 
+        LinearLayout masterRow = row();
+        masterRow.addView(text("Activar cambios", 16, foreground), new LinearLayout.LayoutParams(0, dp(54), 1));
+        master = new Mark(true);
+        masterRow.addView(master, new LinearLayout.LayoutParams(dp(46), dp(30)));
+        masterRow.setContentDescription("Activar cambios de Inhouse");
+        masterRow.setAccessibilityDelegate(checkable("android.widget.Switch"));
+        press(masterRow, () -> {
+            if (CalmaConfig.setEnabled(!CalmaConfig.enabled())) {
+                refresh(); masterRow.setEnabled(false);
+                masterRow.postDelayed(() -> InhouseUi.restart(this), 220);
+            } else android.widget.Toast.makeText(this,"No se ha podido guardar",android.widget.Toast.LENGTH_SHORT).show();
+        });
+        content.addView(masterRow);
+        content.addView(text("Se reinicia al cambiar", 13, muted));
+        separator(content);
         heading(content, "Feed");
         content.addView(text("Following · Cuentas que sigues", 16, foreground));
         content.addView(text("Últimas 48 horas · Más recientes primero", 13, muted));
@@ -89,7 +104,7 @@ public final class CalmaSettingsActivity extends Activity {
         reelRow.addView(reels, new LinearLayout.LayoutParams(dp(46), dp(30)));
         reelRow.setContentDescription("Bloquear scroll de Reels");
         reelRow.setAccessibilityDelegate(checkable("android.widget.Switch"));
-        press(reelRow, () -> { CalmaConfig.setReels(!CalmaConfig.reels()); refresh(); });
+        press(reelRow, () -> { CalmaConfig.setReels(!CalmaConfig.savedReels()); refresh(); });
         content.addView(reelRow);
         content.addView(text("Abre los que te envíen tus amigos, sin pasar al siguiente.", 13, muted));
         separator(content);
@@ -104,14 +119,17 @@ public final class CalmaSettingsActivity extends Activity {
         update.addView(text("›", 28, muted), new LinearLayout.LayoutParams(dp(24), dp(58)));
         press(update, () -> startActivity(new Intent().setClassName(getPackageName(), "es.calma.instagram.UpdateActivity")));
         content.addView(update);
+        InhouseUi.footer(this, content, muted, "https://github.com/miguelcoxcaballero/ig-calma");
         refresh();
         setContentView(root);
     }
 
     private void refresh() {
+        master.setChecked(CalmaConfig.enabled());
+        ((View)master.getParent()).setSelected(CalmaConfig.enabled());
         if (hourly != null) hourly.setText(NativeFeedBudget.rate() + " min por hora");
-        reels.setChecked(CalmaConfig.reels());
-        ((View) reels.getParent()).setSelected(CalmaConfig.reels());
+        reels.setChecked(CalmaConfig.savedReels());
+        ((View) reels.getParent()).setSelected(CalmaConfig.savedReels());
     }
     private void press(View view, Runnable action) {
         view.setFocusable(true);

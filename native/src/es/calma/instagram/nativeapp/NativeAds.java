@@ -18,6 +18,7 @@ public final class NativeAds {
 
     /** Called with the native Story reel before its ad-insertion adapter is mutated. */
     public static boolean story(Object reel) {
+        if (!CalmaConfig.enabled()) return false;
         try {
             // X.03sn.EKS compares its native reel type with ADS_REEL.
             return media(reel);

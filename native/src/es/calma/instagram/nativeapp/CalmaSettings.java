@@ -45,22 +45,35 @@ public final class CalmaSettings {
         try {
             List<?> sections = (List<?>) get(original, "A00");
             if (sections.isEmpty()) return original;
-            Object first = sections.get(0);
+            int sectionIndex = 0, insertion = 0;
+            boolean matched = false;
+            for (int i = 0; i < sections.size(); i++) {
+                Object candidate = sections.get(i);
+                if (!"X.0R5u".equals(candidate.getClass().getName())) continue;
+                List<?> rows = (List<?>) get(candidate, "A02");
+                for (int j = 0; j < rows.size(); j++) {
+                    String id = identity(rows.get(j));
+                    if (ID.equals(id)) return original;
+                    if ("ACCOUNTS_CENTER".equals(id) || "ACCOUNTS_CENTER_SEARCHABLE_ROW".equals(id)) {
+                        sectionIndex = i; insertion = j + 1; matched = true;
+                    }
+                }
+                if (!matched && "YOUR_ACCOUNT".equals(String.valueOf(get(candidate, "A00")))) {
+                    sectionIndex = i; insertion = rows.size();
+                }
+            }
+            Object first = sections.get(sectionIndex);
             if (!"X.0R5u".equals(first.getClass().getName())) return original;
             List<?> children = (List<?>) get(first, "A02");
-            for (Object child : children) {
-                if ("X.0E6t".equals(child.getClass().getName()) && ID.equals(String.valueOf(get(child, "A02")))) return original;
-            }
-            ArrayList<Object> nextChildren = new ArrayList<>();
-            nextChildren.add(row());
-            nextChildren.addAll(children);
+            ArrayList<Object> nextChildren = new ArrayList<>(children);
+            nextChildren.add(insertion, row());
             Object section = newSection();
             set(section, "A00", get(first, "A00"));
             set(section, "A01", get(first, "A01"));
             set(section, "A02", immutable(nextChildren));
             set(section, "A03", get(first, "A03"));
             ArrayList<Object> nextSections = new ArrayList<>(sections);
-            nextSections.set(0, section);
+            nextSections.set(sectionIndex, section);
             Object result = type("X.0E72").getConstructor(type("X.03kU"), boolean.class)
                     .newInstance(immutable(nextSections), get(original, "A01"));
             contents.put(original, result);
@@ -101,7 +114,7 @@ public final class CalmaSettings {
             throw new UnsupportedOperationException(method.getName());
         });
         Object literal = type("com.instagram.settings2.core.model.FbtModelSource$Literal")
-                .getConstructor(String.class).newInstance("Tu feed");
+                .getConstructor(String.class).newInstance("Inhouse Instagram settings");
         Object label = type("com.instagram.settings2.core.model.FbtModel")
                 .getConstructor(type("com.instagram.settings2.core.model.FbtModelSource"), type("X.03kU"))
                 .newInstance(literal, null);
@@ -118,6 +131,14 @@ public final class CalmaSettings {
 
     private static Object immutable(Iterable<?> items) throws ReflectiveOperationException {
         return type("X.00nM").getMethod("A00", Iterable.class).invoke(null, items);
+    }
+    private static String identity(Object model) throws ReflectiveOperationException {
+        if (model == null) return "";
+        // Different native row types keep their marker in different fields.
+        for (Field field : model.getClass().getFields()) {
+            if ("X.0vAE".equals(field.getType().getName())) return String.valueOf(field.get(model));
+        }
+        return "";
     }
     private static Class<?> type(String name) throws ClassNotFoundException {
         return Class.forName(name, true, CalmaSettings.class.getClassLoader());

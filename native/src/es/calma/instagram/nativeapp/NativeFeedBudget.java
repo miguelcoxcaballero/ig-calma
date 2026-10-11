@@ -46,7 +46,7 @@ public final class NativeFeedBudget {
     public static synchronized void settle() {
         init(); if (credits == null) return;
         long now = System.currentTimeMillis(), mono = SystemClock.elapsedRealtime();
-        if (active) credits.spend(wall, now, Math.max(0, mono - elapsed)); else credits.balance(now);
+        if (active && CalmaConfig.enabled()) credits.spend(wall, now, Math.max(0, mono - elapsed)); else credits.balance(now);
         wall = now; elapsed = mono;
     }
     public static void homeResumed(Object fragment) { settle(); home = new WeakReference<>(fragment); homeResumed = true; changed(); }
@@ -55,6 +55,7 @@ public final class NativeFeedBudget {
         if (hidden) homePaused(fragment); else homeResumed(fragment);
     }
     static void resumed(Activity current) {
+        if (!CalmaConfig.enabled()) return;
         settle(); activity = new WeakReference<>(current);
         if (!running) { running = true; handler.post(tick); }
         changed();
@@ -101,6 +102,7 @@ public final class NativeFeedBudget {
     }
     /** A DM opened while For you remains selected still follows the single-clip rule. */
     public static boolean reelsAllowed() {
+        if (!CalmaConfig.enabled()) return true;
         Activity current = activity.get();
         return "BLENDED_FOR_YOU".equals(CalmaConfig.feed()) && balance() > 0 && (homeVisible()
                 || (reelChain && ((current != null && clipVisible(current)) || SystemClock.elapsedRealtime() - launchTime < 2000)));
@@ -108,6 +110,7 @@ public final class NativeFeedBudget {
     public static void reelsLaunched() { if (reelsAllowed()) { reelChain = true; launchTime = SystemClock.elapsedRealtime(); } }
     public static void directLaunched() { settle(); reelChain = false; launchTime = 0; changed(); }
     static void changed() {
+        if (!CalmaConfig.enabled()) { active = false; return; }
         Activity current = activity.get();
         boolean forYou = "BLENDED_FOR_YOU".equals(CalmaConfig.feed());
         boolean video = current != null && reelChain && clipVisible(current);
@@ -118,7 +121,7 @@ public final class NativeFeedBudget {
     }
     private static final Runnable tick = new Runnable() {
         @Override public void run() {
-            if (!running) return;
+            if (!running || !CalmaConfig.enabled()) { running=false; active=false; return; }
             settle(); Activity current = activity.get();
             if ("BLENDED_FOR_YOU".equals(CalmaConfig.feed()) && balance() <= 0) {
                 boolean video = current != null && reelChain && clipVisible(current);

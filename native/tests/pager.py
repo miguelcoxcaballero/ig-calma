@@ -22,7 +22,7 @@ files={
 'X/NamedTrigger.java':'package X;public class NamedTrigger implements Trigger {public NamedTrigger(String s){}}',
 'X/Reason.java':'package X;public class Reason {public static final Reason A0R=new Reason();}',
 'X/Envelope.java':'package X;public class Envelope {}',
-PACKAGE+'/CalmaConfig.java':'package es.calma.instagram.nativeapp; class CalmaConfig {static long epoch=1;static int mode=1;static long sessionId(){return epoch;}static int mode(){return mode;}}',
+PACKAGE+'/CalmaConfig.java':'package es.calma.instagram.nativeapp; class CalmaConfig { public static boolean master=true; public static boolean enabled(){return master;}static long epoch=1;static int mode=1;static long sessionId(){return epoch;}static int mode(){return mode;}}',
 PACKAGE+'/NativeRelations.java':'package es.calma.instagram.nativeapp; class NativeRelations {static String owner(Object session){return session.toString();}}',
 PACKAGE+'/NativeFeedBudget.java':'package es.calma.instagram.nativeapp; class NativeFeedBudget {static boolean timelineVisible(){return false;}}',
 PACKAGE+'/NativeTimelineProgress.java':'''package es.calma.instagram.nativeapp; import java.util.*; class NativeTimelineProgress {
@@ -47,6 +47,7 @@ public class NativePagerTest {
  }
  static void check(boolean b,String m){if(!b)throw new AssertionError(m);}
  public static void main(String[] args){
+  Controller disabled=new Controller();CalmaConfig.master=false;NativeTimelinePager.delivery(disabled,new X.Envelope(),true);NativeTimelinePager.completed(disabled);NativeTimelinePager.wake(disabled.A0X);Handler.drain();check(disabled.attempts==0,"disabled master schedules no preload");CalmaConfig.master=true;
   Controller c=new Controller();NativeTimelinePager.delivery(c,new X.Envelope(),true);Handler.drain();
   check(c.loads==2 && c.attempts==3,"Preload retries busy native controller and loads all next pages without any scroll or budget tick");
   check(Handler.delays.contains(250L),"Busy retry is delayed");

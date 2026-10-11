@@ -27,8 +27,12 @@ with tempfile.TemporaryDirectory(prefix='calma-ads-dex-') as temporary:
     body = next(block for block in blocks if block.startswith('METHOD LX/08S0;->E1e('))
     clips = next(block for block in blocks if block.startswith('METHOD LX/0Es9;->Bd0('))
     clip_ops = [match[1] for line in clips.splitlines() if (match := re.match(r'\s*\d+ @[0-9a-f]+ (.*)', line))]
-    assert 'Ljava/util/Collections;->emptyList()Ljava/util/List;' in clip_ops[0]
-    assert clip_ops[1] == 'move-result-object v0' and clip_ops[2] == 'return-object v0', 'Dedicated Reels ad source must be empty'
+    assert 'CalmaConfig;->enabled()Z' in clip_ops[0] and clip_ops[1]=='move-result v0'
+    assert clip_ops[2].startswith('if-eqz v0 -> @'), 'Disabled mode must retain the original Reels ad source'
+    addresses=[int(match[1],16) for line in clips.splitlines() if (match:=re.match(r'\s*\d+ @([0-9a-f]+) ',line))]
+    assert int(clip_ops[2].split('@')[1],16)==addresses[6], 'Disabled branch must reach the original body'
+    assert 'Ljava/util/Collections;->emptyList()Ljava/util/List;' in clip_ops[3]
+    assert clip_ops[4] == 'move-result-object v0' and clip_ops[5] == 'return-object v0', 'Enabled mode empties the dedicated Reels ad source'
     instructions = [(int(match[1], 16), match[2]) for line in body.splitlines()
                     if (match := re.match(r'\s*\d+ @([0-9a-f]+) (.*)', line))]
     hooks = [i for i, (_, instruction) in enumerate(instructions) if 'NativeAds;->story(' in instruction]

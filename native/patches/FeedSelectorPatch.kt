@@ -26,7 +26,10 @@ val calmaFeedSelector = bytecodePatch(
         val constructor = state.methods.single { it.name == "<init>" }
         check(constructor.parameterTypes == listOf("Landroid/content/Context;", "Lcom/instagram/common/session/UserSession;", "LX/06yQ;", "Ljava/util/List;"))
         check(constructor.implementation!!.registerCount <= 16 && constructor.implementation!!.registerCount >= 7)
-        constructor.addInstructions(0, """
+        constructor.addInstructionsWithLabels(0, """
+            invoke-static {}, Les/calma/instagram/nativeapp/CalmaConfig;->enabled()Z
+            move-result v0
+            if-eqz v0, :inhouse_stock_constructor
             move-object v0, p2
             move-object v1, p4
             invoke-static {v0, v1}, $SELECTOR->options(Ljava/lang/Object;Ljava/util/List;)Ljava/util/List;
@@ -35,7 +38,7 @@ val calmaFeedSelector = bytecodePatch(
             invoke-static {v0, v1}, $SELECTOR->initial(Ljava/lang/Object;Ljava/util/List;)Ljava/lang/Object;
             move-result-object p3
             check-cast p3, LX/06yQ;
-        """.trimIndent())
+        """.trimIndent(), ExternalLabel("inhouse_stock_constructor", constructor.implementation!!.instructions.first()))
         val row = mutableClassDefBy("LX/0VTM;")
         check(row.methods.single { it.name == "<init>" }.parameterTypes == listOf(
             "Landroid/graphics/drawable/Drawable;", "Landroid/graphics/drawable/Drawable;", "LX/0nQi;",
@@ -61,11 +64,14 @@ val calmaFeedSelector = bytecodePatch(
         """.trimIndent(), ExternalLabel("calma_original_selection", select.implementation!!.instructions.first()))
         val pref = mutableClassDefBy("LX/05qL;").methods.single { it.name == "A01" && it.parameterTypes.isEmpty() }
         check(pref.returnType == "Ljava/lang/String;")
-        pref.addInstructions(0, """
+        pref.addInstructionsWithLabels(0, """
+            invoke-static {}, Les/calma/instagram/nativeapp/CalmaConfig;->enabled()Z
+            move-result v0
+            if-eqz v0, :inhouse_stock_preference
             invoke-static/range {p0 .. p0}, $SELECTOR->savedType(Ljava/lang/Object;)Ljava/lang/String;
             move-result-object v0
             return-object v0
-        """.trimIndent())
+        """.trimIndent(), ExternalLabel("inhouse_stock_preference", pref.implementation!!.instructions.first()))
         val header = mutableClassDefBy("LX/06nZ;").methods.single { it.name == "A06" }
         check(header.parameterTypes == listOf("Z"))
         header.addInstructionsWithLabels(0, """

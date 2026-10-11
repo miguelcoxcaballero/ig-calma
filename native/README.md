@@ -20,12 +20,12 @@ La entrada aceptada está fijada en [`stock.lock.json`](stock.lock.json):
 | Android mínimo | Android 9, API 28 |
 | Formato de entrada | APKM con `base.apk` y `split_config.xxhdpi.apk` |
 | Procedencia | [Variante de APKMirror](https://www.apkmirror.com/apk/instagram/instagram-instagram/instagram-439-0-0-37-89-release/instagram-439-0-0-37-89-4-android-apk-download/) |
-| Versión propia de Calma | `0.4.12`, definida en [`CalmaBuild.java`](src/es/calma/instagram/nativeapp/CalmaBuild.java) |
+| Versión propia de Calma | `0.4.13`, definida en [`CalmaBuild.java`](src/es/calma/instagram/nativeapp/CalmaBuild.java) |
 | Paquete resultante | `es.calma.instagram` |
-| versionCode resultante | `384510840` |
+| versionCode resultante | `384510841` |
 
 El manifiesto del APK conserva `versionName=439.0.0.37.89` para Instagram. La
-comparación de actualizaciones utiliza `CalmaBuild.VERSION`, actualmente `0.4.12`.
+comparación de actualizaciones utiliza `CalmaBuild.VERSION`, actualmente `0.4.13`.
 Son versiones distintas con funciones distintas.
 
 El build verifica el SHA-256 del APKM y de cada split, además de la cadena de firma
@@ -146,13 +146,13 @@ regenera los metadatos del cargador, alinea a **16 KB**, firma y verifica el res
 
 Los resultados quedan en:
 
-- `native/build/dist/IG-Calma-0.4.12.apk`.
+- `native/build/dist/IG-Calma-0.4.13.apk`.
 - `native/build/dist/SHA256SUMS.txt`, `build-info.json` y `verification.json`.
 - `native/build/patch-result.json` y `native/build/extension/build-report.json`.
 - `android-update.json` y `native/android-update.json`, idénticos y generados a partir del APK firmado.
 
 El build genera los archivos locales; no publica una release. El manifiesto de
-actualización apunta al APK de la release `v0.4.12` del repositorio configurado en el
+actualización apunta al APK de la release `v0.4.13` del repositorio configurado en el
 script. La publicación debe adjuntar exactamente ese APK y mantener su versión,
 tamaño y SHA-256 sincronizados con el manifiesto. Los dos manifiestos usan
 `required: true`; con `false`, Inhouse Read no ofrece la actualización. Publicar
@@ -259,10 +259,10 @@ Para verificar otra vez el APK firmado:
 
 ```sh
 python3 native/scripts/verify-apk.py \
-  --apk native/build/dist/IG-Calma-0.4.12.apk \
+  --apk native/build/dist/IG-Calma-0.4.13.apk \
   --stock /ruta/al/base.apk \
   --build-tools "$CALMA_SDK/build-tools/36.0.0"
-python3 native/tests/updater.py --apk native/build/dist/IG-Calma-0.4.12.apk
+python3 native/tests/updater.py --apk native/build/dist/IG-Calma-0.4.13.apk
 ```
 
 La verificación del artefacto comprueba firma, alineación de 16 KB, versiones,
@@ -362,3 +362,7 @@ Regresión reproducida sobre 0.4.10 con un User positivo antiguo. Las pruebas co
 El selector y los ajustes muestran únicamente For you, Favourites y Following. Following es el valor inicial y el destino al agotarse los minutos de For you. Las preferencias `feed:<cuenta>` guardadas como RECENTS se migran a FOLLOWING; los antiguos valores recibidos al seleccionar o procesar respuestas tampoco pueden activar el filtro mutuo. Se mantienen las preferencias de Reels, el saldo, Favourites y la caché existente de Following.
 
 Pruebas: migración de varias cuentas, valores iniciales, opciones nativas del selector, regreso desde For you y carga de publicaciones de cuentas sin seguimiento mutuo. [APK en Android 14–16](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38029781380). Los detalles de Friends de las secciones anteriores documentan versiones antiguas; esa opción ya no está disponible.
+
+## Ajustes Inhouse (0.4.13)
+
+La entrada nativa se coloca después de Accounts Center. El interruptor principal conserva las preferencias individuales y reinicia el proceso para aplicar los cambios. Desactivado, los hooks dejan continuar el flujo original de Instagram, sin filtrar anuncios, feed o Explorar, ni bloquear Reels o cobrar saldo. El actualizador permanece accesible. El pie usa el [logo original de Inhouse Read](https://github.com/miguelcoxcaballero/inhouse-read/blob/main/public/icons/inhouse-read-logo.png), junto a la versión, fecha de release y GitHub.

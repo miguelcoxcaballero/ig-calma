@@ -56,6 +56,7 @@ public final class NativeFeedEnd {
         StockAccess.set(response, "A0S", rows);
     }
     public static boolean bind(View view, Object content) {
+        if (!CalmaConfig.enabled()) return false;
         if (view == null || content == null) return false;
         boolean own;
         try { own = ID.equals(StockAccess.call(content, "DZg")); }

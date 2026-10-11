@@ -20,6 +20,7 @@ public final class NativeTimelinePager {
     private NativeTimelinePager() {}
     /** Preloading follows the actual feed view, independently of For you credit/menu state. */
     static boolean visible(Object controller) {
+        if (!CalmaConfig.enabled()) return false;
         try {
             Object fragment=StockAccess.get(StockAccess.get(controller,"A0Y"),"A01");
             if (!Boolean.TRUE.equals(StockAccess.call(fragment,"isResumed"))
@@ -30,6 +31,7 @@ public final class NativeTimelinePager {
         } catch (ReflectiveOperationException | RuntimeException unavailable) { return false; }
     }
     public static void delivery(Object controller, Object request, boolean head) {
+        if (!CalmaConfig.enabled()) return;
         try {
             Object session = StockAccess.get(controller,"A0X"); String owner = NativeRelations.owner(session);
             CONTROLLERS.put(owner,new WeakReference<>(controller));
@@ -42,6 +44,7 @@ public final class NativeTimelinePager {
         } catch (ReflectiveOperationException | RuntimeException ignored) {}
     }
     public static void completed(Object controller) {
+        if (!CalmaConfig.enabled()) return;
         try {
             Object session = StockAccess.get(controller, "A0X");
             CONTROLLERS.put(NativeRelations.owner(session), new WeakReference<>(controller));
@@ -49,6 +52,7 @@ public final class NativeTimelinePager {
         } catch (ReflectiveOperationException | RuntimeException ignored) {}
     }
     static void visible() {
+        if (!CalmaConfig.enabled()) return;
         for (WeakReference<Object> ref : CONTROLLERS.values()) {
             Object controller = ref.get();
             if (controller != null) try { wake(StockAccess.get(controller, "A0X")); }
@@ -59,6 +63,7 @@ public final class NativeTimelinePager {
         wake(session,0);
     }
     private static void wake(Object session,long delay) {
+        if (!CalmaConfig.enabled()) return;
         String owner = NativeRelations.owner(session);
         long epoch = CalmaConfig.sessionId();
         if (owner.isEmpty() || !QUEUED.add(owner)) return;

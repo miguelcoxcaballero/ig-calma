@@ -9,8 +9,8 @@ used to derive or implement this integration.
 | `X.0E6Z` | `SettingsScreenFragment`; returns a ComposeView | `onViewCreated` records the existing Activity weakly for navigation. |
 | `X.0E71` | Settings `UiState` constructor | Passes screen ID and content through `CalmaSettings.content`. Only `MAIN_SETTINGS_SCREEN` is changed. |
 | `X.0E72` | `Sections`, immutable list plus loading state | Replaced with a copy preserving the loading state and all original sections. |
-| `X.0R5u` | Section ID, title, children, footers | The first section is copied with a new first row. No section is removed or reordered. |
-| `X.0E6t` | `NavigationRowUiState` | Stock renderer draws `Tu feed`, handles its touch target and uses Instagram's theme. |
+| `X.0R5u` | Section ID, title, children, footers | The Accounts Center section is copied with an Inhouse row immediately after the Meta row. Other sections are preserved. |
+| `X.0E6t` | `NavigationRowUiState` | Stock renderer draws `Inhouse Instagram settings`, handles its touch target and uses Instagram's theme. |
 | `X.0vAE` | Public marker interface used as navigation row identity | Unique `CALMA_FEED_SETTINGS` identity, avoiding reuse of an Instagram enum ID. |
 | `X.0R4P` | Literal abstract destination | Holds the private `calma:settings:feed` destination. |
 | `SettingsScreenViewModel.A03` | Resolves navigation destination, then emits the navigation event | Consumes only Calma's destination and returns stock Kotlin Unit before any stock destination cast. |
@@ -34,3 +34,5 @@ preference keys, custom radio/switch drawing, touch feedback and accessibility
 states. It follows the device's night mode and uses no overlay, floating button,
 default Android settings picker or web feed. The update action launches the
 existing `es.calma.instagram.UpdateActivity`; no updater is reimplemented here.
+
+The master switch persists `inhouse_enabled` and restarts the app; individual settings are retained. The footer includes the original Inhouse logo, CalmaBuild version/release date and the repository link.
