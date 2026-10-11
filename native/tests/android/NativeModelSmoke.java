@@ -149,6 +149,25 @@ public final class NativeModelSmoke extends Instrumentation {
             setStatic(budget,"credits",oldCredits);setStatic(budget,"reelChain",oldChain);setStatic(budget,"launchTime",oldLaunch);select.invoke(null,"RECENTS");
         }
     }
+    private void texts(View view,List<String> found) {
+        if(view instanceof TextView)found.add(((TextView)view).getText().toString());
+        if(view instanceof ViewGroup)for(int i=0;i<((ViewGroup)view).getChildCount();i++)texts(((ViewGroup)view).getChildAt(i),found);
+    }
+    private void masterSwitch(ClassLoader loader)throws Exception {
+        Class<?> config=Class.forName("es.calma.instagram.nativeapp.CalmaConfig",true,loader);
+        String selection=(String)config.getMethod("feed").invoke(null);
+        boolean reels=(Boolean)config.getMethod("savedReels").invoke(null);
+        check((Boolean)config.getMethod("setEnabled",boolean.class).invoke(null,false),"Master switch saved");
+        check(!(Boolean)config.getMethod("enabled").invoke(null) && (Integer)config.getMethod("mode").invoke(null)==0,"Master off restores original mode");
+        check(!(Boolean)config.getMethod("reels").invoke(null),"Master off restores Reel scrolling");
+        Map<String,String> map=Collections.singletonMap("pagination_source","homecoming_all");
+        check(Class.forName("es.calma.instagram.nativeapp.NativeFeed",true,loader).getMethod("parameters",Map.class).invoke(null,map)==map,"Master off preserves original HTTP map");
+        check((Boolean)Class.forName("es.calma.instagram.nativeapp.NativeDiscover",true,loader).getMethod("hasQuery",String.class).invoke(null,""),"Master off restores blank-search provider");
+        List<Object> original=new ArrayList<>();original.add(new Object());
+        check(Class.forName("es.calma.instagram.nativeapp.NativeFeedSelector",true,loader).getMethod("options",Object.class,List.class).invoke(null,null,original)==original,"Master off preserves stock selector");
+        check((Boolean)config.getMethod("setEnabled",boolean.class).invoke(null,true),"Master on saved");
+        check(selection.equals(config.getMethod("feed").invoke(null)) && reels==(Boolean)config.getMethod("savedReels").invoke(null),"Individual preferences survive master cycle");
+    }
     @Override public void onCreate(Bundle arguments) { super.onCreate(arguments); start(); }
     private void check(boolean ok, String message) { if (!ok) throw new AssertionError(message); }
     @Override public void onStart() {
@@ -158,6 +177,7 @@ public final class NativeModelSmoke extends Instrumentation {
             try {
                 Context context = getTargetContext();
                 ClassLoader loader = context.getClassLoader();
+                masterSwitch(loader);
                 feedModels(loader);
                 reelModels(loader,context);
                 Class<?> end = Class.forName("es.calma.instagram.nativeapp.NativeFeedEnd", true, loader);
@@ -231,8 +251,18 @@ public final class NativeModelSmoke extends Instrumentation {
                 }
             } catch (Throwable failure) { error[0] = failure; }
         });
+        if(error[0]==null)try {
+            Context context=getTargetContext();
+            android.content.Intent intent=new android.content.Intent().setClassName(context,"es.calma.instagram.nativeapp.CalmaSettingsActivity").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+            android.app.Activity activity=startActivitySync(intent);waitForIdleSync();
+            List<String> labels=new ArrayList<>();runOnMainSync(()->texts(activity.getWindow().getDecorView(),labels));
+            Class<?> build=Class.forName("es.calma.instagram.nativeapp.CalmaBuild",true,context.getClassLoader());
+            check(labels.contains("Activar cambios") && labels.contains("Inhouse") && labels.contains("GitHub ↗"),"Actual settings activity includes master switch and Inhouse footer");
+            check(labels.contains("v"+build.getField("VERSION").get(null)+" · "+build.getField("RELEASE_DATE").get(null)),"Actual footer shows release version and date");
+            runOnMainSync(()->activity.finish());
+        }catch(Throwable failure){error[0]=failure;}
         if (error[0] == null) {
-            result.putString("stream", "CALMA_NATIVE_MODELS_PASSED: allocation, native row, light/dark drawing, accessibility, recycling, three stock selector models, remaining time, zero-credit lock, real Media/dictionary/user/wrapper/response/parser models; actual HTTP parameter map and delivery envelope with absent/different response IDs, cold head, native continuation, duplicate removal, completed cache; actual ClipsViewerConfig/ViewPager2 single-clip lock and earned-time restore; legacy Friends selection migrated to Following, three options and expired-credit fallback\n");
+            result.putString("stream", "CALMA_NATIVE_MODELS_PASSED: master switch off/on, stock bypass, saved individual preferences, actual settings activity with Inhouse/version/date/GitHub; allocation, native row, light/dark drawing, accessibility, recycling, three stock selector models, remaining time, zero-credit lock, real Media/dictionary/user/wrapper/response/parser models; actual HTTP parameter map and delivery envelope with absent/different response IDs, cold head, native continuation, duplicate removal, completed cache; actual ClipsViewerConfig/ViewPager2 single-clip lock and earned-time restore; legacy Friends selection migrated to Following, three options and expired-credit fallback\n");
             finish(-1,result);
         } else {
             result.putString("stream", "CALMA_NATIVE_MODELS_FAILED: " + android.util.Log.getStackTraceString(error[0]));
