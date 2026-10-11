@@ -10,7 +10,7 @@ Requiere **Android 9 o posterior y ARM64**. No necesita root. Usa el paquete y l
 
 **Inhouse Instagram settings** aparece justo debajo del Centro de cuentas de Meta. **Activar cambios** enciende o apaga nuestras modificaciones de feed, anuncios, Reels, Explorar y saldo. Al cambiarlo se guardan las preferencias y se reinicia Instagram; el actualizador sigue disponible. Al pie aparecen el logo original de Inhouse, la versión, la fecha de publicación y el enlace a este repositorio.
 
-La 0.4.13 está compilada y firmada; las pruebas en Android se publicarán después de subir la APK. Los resultados históricos que aparecen debajo corresponden a la 0.4.12.
+La 0.4.13 está publicada y supera las pruebas de actualización, arranque y ajustes en emuladores Android 14, 15 y 16.
 
 ## Feed
 
@@ -34,7 +34,7 @@ El [manifiesto anterior](android-update.json) y el [nativo](native/android-updat
 
 ## Estado de la prueba
 
-La APK 0.4.12 se valida como actualización sobre la 0.4.11 y en el arranque sin sesión en emuladores oficiales de **Android 14, 15 y 16**. La instrumentación comprueba las tres opciones nativas, la migración a Following y el retorno a Following al agotarse el saldo. Incluye pruebas del feed y Reels. No reproduce respuestas de una cuenta autenticada. [Resultados vinculados al SHA-256](native/validation/0.4.12.json) · [Ejecución de las pruebas](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38029781380).
+La APK 0.4.13 se valida como actualización sobre la 0.4.12 y en el arranque sin sesión en emuladores oficiales de **Android 14, 15 y 16**. La instrumentación abre la actividad real de ajustes, comprueba el pie de Inhouse y el interruptor, la conservación de preferencias individuales, las tres opciones nativas, la migración a Following y el retorno a Following al agotarse el saldo. Incluye pruebas del feed y Reels. No reproduce respuestas de una cuenta autenticada. [Resultados vinculados al SHA-256](native/validation/0.4.13.json) · [Ejecución de las pruebas](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38139464581).
 
 La instrumentación crea los tres modelos del selector y las filas IGDS originales, verifica el saldo y el estado bloqueado, y comprueba el final del timeline en ambos temas. Las pruebas locales cubren caducidad, persistencia, cambios de hora y migración de las preferencias antiguas a Following.
 

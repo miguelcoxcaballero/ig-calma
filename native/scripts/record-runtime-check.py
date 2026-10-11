@@ -106,6 +106,8 @@ def summarize_report(report: dict, manifest: dict, apk_sha: str, apk_size: int) 
             result['nativeModelSmoke']['scope'] += '; actual ClipsViewerConfig and ViewPager2 single-clip lock, patched native next-item guard and real earned-time policy restore; synthetic clip/session, no playback'
         if 'legacy Friends selection migrated to Following, three options and expired-credit fallback' in smoke.get('output', ''):
             result['nativeModelSmoke']['scope'] += '; saved Friends selection migrates to Following, Favourites preserved, three original menu rows and Following fallback after credit expiry; synthetic account, no authenticated HTTP'
+        if 'master switch off/on' in smoke.get('output', ''):
+            result['nativeModelSmoke']['scope'] += '; master switch off/on, original request/selector/search behavior restored, individual preferences retained, actual settings activity and Inhouse/version/date/GitHub footer'
         if smoke['passed'] and 'CALMA_NATIVE_MODELS_PASSED' not in smoke.get('output', ''):
             raise ValueError('Native model success has no instrumentation marker')
     if report.get('environmentError'):
