@@ -52,7 +52,7 @@ def finalize(apk: Path, build_tools: Path, morphe: Path) -> None:
         'version': version, 'versionCode': version_code, 'required': True,
         'apkUrl': f'https://github.com/miguelcoxcaballero/ig-calma/releases/download/v{version}/{apk.name}',
         'apkSha256': digest(apk), 'apkSizeBytes': apk.stat().st_size,
-        'releaseNotes': "Añade Inhouse Instagram settings debajo del Centro de cuentas de Meta, un interruptor para activar los cambios y el pie de Inhouse con versión, fecha y GitHub. Cambiar el interruptor reinicia la app; el actualizador sigue disponible.",
+        'releaseNotes': 'Nuevo icono con el símbolo blanco de Inhouse. Logos interiores en blanco sobre negro, también en el actualizador.',
     }
     payload = json.dumps(manifest, indent=2, ensure_ascii=False) + '\n'
     for destination in (ROOT / 'android-update.json', NATIVE / 'android-update.json'):

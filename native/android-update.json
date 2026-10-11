@@ -1,9 +1,9 @@
 {
-  "version": "0.4.13",
-  "versionCode": 384510841,
+  "version": "0.4.14",
+  "versionCode": 384510842,
   "required": true,
-  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.13/IG-Calma-0.4.13.apk",
-  "apkSha256": "91ae97a882551cd2974d0a19cf8333af04d5bc230d323cc7efe8c0f0531b4765",
-  "apkSizeBytes": 146281202,
-  "releaseNotes": "Añade Inhouse Instagram settings debajo del Centro de cuentas de Meta, un interruptor para activar los cambios y el pie de Inhouse con versión, fecha y GitHub. Cambiar el interruptor reinicia la app; el actualizador sigue disponible."
+  "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.14/IG-Calma-0.4.14.apk",
+  "apkSha256": "0c703944a95feb2bc53781344a68738f9737c7b492657c1159b91d4eca0e40d4",
+  "apkSizeBytes": 147911851,
+  "releaseNotes": "Nuevo icono con el símbolo blanco de Inhouse. Logos interiores en blanco sobre negro, también en el actualizador."
 }

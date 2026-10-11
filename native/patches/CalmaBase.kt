@@ -35,10 +35,24 @@ val calmaPackagePatch = resourcePatch(
             cloneManifestNames(manifest, STOCK, CALMA, providerNames, manifestNames)
             manifest.setAttribute("package", CALMA)
             // Morphe parses this DOM without namespace awareness; update the existing qualified attribute.
-            manifest.setAttribute("android:versionCode", "384510841")
+            manifest.setAttribute("android:versionCode", "384510842")
             // Keep Instagram's original protocol version; CalmaBuild reports our updater version.
             val app = manifest.getElementsByTagName("application").item(0) as Element
             app.setAttribute("android:label", "Instagram Calma")
+            app.setAttribute("android:icon", "@mipmap/inhouse_launcher")
+            app.setAttribute("android:roundIcon", "@mipmap/inhouse_launcher")
+            // Cover every launcher alias, including the alias already enabled on upgrades.
+            for (tag in listOf("activity", "activity-alias")) {
+                val entries = app.getElementsByTagName(tag)
+                for (i in 0 until entries.length) {
+                    val entry = entries.item(i) as Element
+                    val categories = entry.getElementsByTagName("category")
+                    if ((0 until categories.length).any { (categories.item(it) as Element).getAttribute("android:name") == "android.intent.category.LAUNCHER" }) {
+                        entry.setAttribute("android:icon", "@mipmap/inhouse_launcher")
+                        entry.setAttribute("android:roundIcon", "@mipmap/inhouse_launcher")
+                    }
+                }
+            }
             fun add(parent: Element, tag: String, attributes: Map<String, String>): Element {
                 val child = xml.createElement(tag)
                 attributes.forEach { (name, value) -> child.setAttribute("android:$name", value) }
@@ -51,10 +65,10 @@ val calmaPackagePatch = resourcePatch(
             add(app, "activity", mapOf("name" to "$CALMA.nativeapp.CalmaSettingsActivity", "exported" to "false", "theme" to "@style/CalmaSettingsTheme"))
             val provider = add(app, "provider", mapOf("name" to "es.calma.vendor.androidx.core.content.FileProvider", "authorities" to "$CALMA.fileprovider", "exported" to "false", "grantUriPermissions" to "true"))
             add(provider, "meta-data", mapOf("name" to "android.support.FILE_PROVIDER_PATHS", "resource" to "@xml/calma_update_file_paths"))
-            add(app, "meta-data", mapOf("name" to "es.calma.version", "value" to "0.4.13"))
+            add(app, "meta-data", mapOf("name" to "es.calma.version", "value" to "0.4.14"))
         }
         val files = listOf(
-            "assets/inhouse-logo.png", "assets/updates/index.html", "assets/updates/updater.js", "assets/updates/android-update.css",
+            "assets/inhouse-logo.png", "res/drawable-nodpi/inhouse_launcher_art.png", "res/drawable/inhouse_launcher_foreground.xml", "res/drawable/inhouse_launcher_background.xml", "res/mipmap-anydpi/inhouse_launcher.xml", "res/mipmap-anydpi-v26/inhouse_launcher.xml", "assets/updates/index.html", "assets/updates/updater.js", "assets/updates/android-update.css",
             "res/xml/calma_update_file_paths.xml"
         )
         for (path in files) {
@@ -92,6 +106,10 @@ val calmaPackagePatch = resourcePatch(
             ids.createPublicId("style", "CalmaSettingsTheme")
             ids.createPublicId("style", "CalmaUpdatePopupTheme")
             ids.createPublicId("xml", "calma_update_file_paths")
+            ids.createPublicId("drawable", "inhouse_launcher_art")
+            ids.createPublicId("drawable", "inhouse_launcher_foreground")
+            ids.createPublicId("drawable", "inhouse_launcher_background")
+            ids.createPublicId("mipmap", "inhouse_launcher")
         }
     }
 }

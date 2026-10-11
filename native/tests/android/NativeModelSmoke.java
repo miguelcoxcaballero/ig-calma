@@ -170,6 +170,22 @@ public final class NativeModelSmoke extends Instrumentation {
     }
     @Override public void onCreate(Bundle arguments) { super.onCreate(arguments); start(); }
     private void check(boolean ok, String message) { if (!ok) throw new AssertionError(message); }
+    private String brandingIcon(android.content.Context context) throws Exception {
+        android.content.pm.PackageManager pm=context.getPackageManager();
+        android.content.Intent launch=pm.getLaunchIntentForPackage(context.getPackageName());
+        android.graphics.drawable.Drawable icon=pm.getActivityIcon(launch);
+        check(icon instanceof android.graphics.drawable.AdaptiveIconDrawable,"Launcher resolves the adaptive Inhouse icon");
+        android.content.pm.ActivityInfo launcher=pm.getActivityInfo(launch.getComponent(),0);
+        check("inhouse_launcher".equals(context.getResources().getResourceEntryName(launcher.getIconResource())),"Enabled launcher alias uses Inhouse artwork");
+        android.graphics.Bitmap bitmap=android.graphics.Bitmap.createBitmap(192,192,android.graphics.Bitmap.Config.ARGB_8888);
+        icon.setBounds(0,0,192,192);icon.draw(new android.graphics.Canvas(bitmap));
+        java.io.ByteArrayOutputStream output=new java.io.ByteArrayOutputStream();bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,output);bitmap.recycle();
+        android.graphics.Bitmap logo;
+        try(java.io.InputStream input=context.getAssets().open("inhouse-logo.png")){logo=android.graphics.BitmapFactory.decodeStream(input);}
+        check(logo!=null,"Interior logo decodes");
+        int corner=logo.getPixel(0,0);check(android.graphics.Color.red(corner)<12 && android.graphics.Color.green(corner)<12 && android.graphics.Color.blue(corner)<12,"Interior Inhouse logo has a black background");logo.recycle();
+        return android.util.Base64.encodeToString(output.toByteArray(),android.util.Base64.NO_WRAP);
+    }
     @Override public void onStart() {
         Bundle result = new Bundle();
         final Throwable[] error = new Throwable[1];
@@ -178,6 +194,7 @@ public final class NativeModelSmoke extends Instrumentation {
                 Context context = getTargetContext();
                 ClassLoader loader = context.getClassLoader();
                 masterSwitch(loader);
+                result.putString("inhouseIconPng",brandingIcon(context));
                 feedModels(loader);
                 reelModels(loader,context);
                 Class<?> end = Class.forName("es.calma.instagram.nativeapp.NativeFeedEnd", true, loader);
