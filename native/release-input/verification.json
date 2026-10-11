@@ -1,0 +1,38 @@
+{
+  "signature": "7133a4b3e4b9f9c4d2fbbd38b7dd2d44c7b8d0d7d16568bfe3da74a09e7887b6",
+  "calmaVersion": "0.4.21",
+  "versionCode": 384510849,
+  "stockClassesPreserved": 181421,
+  "totalClasses": 183531,
+  "providerAuthorities": 23,
+  "inhouseAssetsPreserved": true,
+  "nativeLibrariesPreserved": true,
+  "originalLazyComponents": [
+    "com.facebook.browser.common.playground.instagram.IGIABPlaygroundActivity",
+    "com.facebook.cameracore.mediapipeline.asyncscripting.AsyncScriptingService",
+    "com.facebook.cloudstreaming.backends.ig.IGHorizon2DActivity",
+    "com.facebook.wearable.mediastream.service.MediaStreamService",
+    "com.instagram.bugreporter.composer.uploadprogress.UploadProgressActivity",
+    "com.instagram.common.analytics.fdidlite.AsyncInstagramFDIDLiteProvider",
+    "com.instagram.gallery.scanner.MediaScannerWorkerService",
+    "com.instagram.gaming.highscorecard.presentation.activity.GameScoreCardHostActivity",
+    "com.instagram.launcherbadges.LauncherBadgesReceiver",
+    "com.instagram.lazyload.download.ModuleDownloadJobService",
+    "com.instagram.lazyload.download.ModuleDownloadWorkerService",
+    "com.instagram.lazyload.instagram.MainProcessCallbackService",
+    "com.instagram.pendingmedia.service.debug.DebugCommandsReceiver",
+    "com.instagram.publisher.CopypastaConnectivityChangeReceiver",
+    "com.instagram.publisher.CopypastaUploadRetryService",
+    "com.instagram.publisher.CopypastaUploadRetryService$RetryAlarmBroadcastReceiver",
+    "com.instagram.publisher.TransactionRevivalJobService",
+    "org.chromium.content.app.SandboxedProcessService0",
+    "org.chromium.content.app.SandboxedProcessService1"
+  ],
+  "alignment": "16 KB",
+  "deviceTested": false,
+  "dexLayout": {
+    "stockDexPartitions": 20,
+    "extensionDexPartitions": 1,
+    "loaderMetadataSynchronized": true
+  }
+}

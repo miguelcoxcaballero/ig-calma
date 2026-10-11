@@ -1,0 +1,5 @@
+Neutral updater colors.
+
+A release: the shared updater now uses a neutral grayscale palette. B remains 0.4.20. Native feed, requests and installer behavior are unchanged.
+
+Verified signed APK, exact shared updater assets and actual bundled browser flow in light/dark mode. The Android 14–16 runtime evidence for 0.4.20 remains specific to that release; the unchanged native flow was not rerun for this CSS-only change.
