@@ -1,0 +1,7 @@
+Removed automatic feed and relationship requests.
+
+Following now loads through normal native scrolling and keeps received posts. Explore uses local relationship data and stops on empty filtered pages; typed search is unchanged.
+
+This reduces unnecessary activity. The cause of the reported account lock is unconfirmed, and a modified client cannot guarantee acceptance by Meta.
+
+Review: https://github.com/miguelcoxcaballero/ig-calma/blob/main/native/account-security.md
