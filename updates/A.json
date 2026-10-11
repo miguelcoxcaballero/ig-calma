@@ -2,15 +2,24 @@
   "schemaVersion": 1,
   "channel": "A",
   "latest": {
-    "version": "0.4.19",
-    "versionCode": 384510847,
-    "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.19/IG-Calma-0.4.19.apk",
-    "apkSha256": "6634291404a1a6c4fd7fe20c78d50e956b921bc566a8e5d03d5c11b1d5c957fa",
-    "apkSizeBytes": 147907957,
-    "changelog": "Removed automatic feed and relationship requests.",
-    "releasedAt": "2026-10-11T18:20:42+00:00"
+    "version": "0.4.20",
+    "versionCode": 384510848,
+    "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.20/IG-Calma-0.4.20.apk",
+    "apkSha256": "233f15bffd416e481ea74d01117471682765121d94f2c4ebf45f094b4df6314c",
+    "apkSizeBytes": 147916149,
+    "changelog": "Updated Inhouse services updater.",
+    "releasedAt": "2026-10-11T21:23:47+00:00"
   },
   "releases": [
+    {
+      "version": "0.4.20",
+      "versionCode": 384510848,
+      "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.20/IG-Calma-0.4.20.apk",
+      "apkSha256": "233f15bffd416e481ea74d01117471682765121d94f2c4ebf45f094b4df6314c",
+      "apkSizeBytes": 147916149,
+      "changelog": "Updated Inhouse services updater.",
+      "releasedAt": "2026-10-11T21:23:47+00:00"
+    },
     {
       "version": "0.4.19",
       "versionCode": 384510847,
