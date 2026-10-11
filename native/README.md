@@ -374,3 +374,9 @@ La APK 0.4.13 supera actualización sobre 0.4.12, arranque y pruebas de modelos 
 [Icono generado con IA y recursos de marca](branding.md). Icono adaptativo en todos los accesos del launcher, símbolo central blanco y punto del flash conservado. Logo interior blanco sobre negro en ajustes y popup.
 
 La 0.4.14 supera actualización desde 0.4.13, arranque y pruebas de icono adaptativo, logo interior, ajustes y modelos nativos en Android 14, 15 y 16. [Evidencia del APK](validation/0.4.14.json) · [Ejecución](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38140316945). Popup blanco sobre negro comprobado en ambos temas. Sin cuenta autenticada ni teléfono físico.
+
+## Enlace a Inhouse Software (0.4.15)
+
+Pulsar el logo o el nombre del pie de ajustes abre https://inhouse.miguelcoxcaballero.com/. La web incluye Inhouse Instagram e Inhouse YouTube con enlaces a sus APK.
+
+Supera actualización desde 0.4.14, arranque y pruebas nativas en Android 14, 15 y 16. Se pulsa el logo en la actividad real y se comprueba el destino del intent. [Evidencia del APK](validation/0.4.15.json) · [Ejecución](https://github.com/miguelcoxcaballero/ig-calma/actions/runs/38141574853). El primer intento de Android 15 falló al preparar el SDK, antes de instalar la app; la repetición pasó. Sin cuenta autenticada ni teléfono físico.
