@@ -63,6 +63,7 @@ val calmaPackagePatch = resourcePatch(
             add(app, "provider", mapOf("name" to "$CALMA.nativeapp.NativeInitProvider", "authorities" to "$CALMA.calma.init", "exported" to "false", "initOrder" to "1000"))
             add(app, "activity", mapOf("name" to "$CALMA.UpdateActivity", "exported" to "false", "theme" to "@style/CalmaUpdatePopupTheme"))
             add(app, "activity", mapOf("name" to "com.inhouse.services.updater.InstallActivity", "exported" to "false", "theme" to "@android:style/Theme.DeviceDefault.NoActionBar"))
+            add(app, "receiver", mapOf("name" to "com.inhouse.services.updater.InstallReceiver", "exported" to "false"))
             add(app, "activity", mapOf("name" to "$CALMA.nativeapp.CalmaSettingsActivity", "exported" to "false", "theme" to "@style/CalmaSettingsTheme"))
             val provider = add(app, "provider", mapOf("name" to "es.calma.vendor.androidx.core.content.FileProvider", "authorities" to "$CALMA.update-provider", "exported" to "false", "grantUriPermissions" to "true"))
             add(provider, "meta-data", mapOf("name" to "android.support.FILE_PROVIDER_PATHS", "resource" to "@xml/calma_update_file_paths"))
