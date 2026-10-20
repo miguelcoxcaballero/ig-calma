@@ -2,15 +2,24 @@
   "schemaVersion": 1,
   "channel": "A",
   "latest": {
-    "version": "0.4.21",
-    "versionCode": 384510849,
-    "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.21/IG-Calma-0.4.21.apk",
-    "apkSha256": "780659b9527b018e402730e8ed436f6ea6327c1d6b71df133181e5ae1a03dc85",
-    "apkSizeBytes": 147916149,
-    "changelog": "Neutral updater colors.",
-    "releasedAt": "2026-10-11T21:59:21+00:00"
+    "version": "0.4.22",
+    "versionCode": 384510850,
+    "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.22/IG-Calma-0.4.22.apk",
+    "apkSha256": "e9c965c512a14261b068c94f61c4fecb03b0573c3c0db4c0b2baab0249b30848",
+    "apkSizeBytes": 146720123,
+    "changelog": "New Inhouse Instagram icon.",
+    "releasedAt": "2026-10-20T17:02:28+00:00"
   },
   "releases": [
+    {
+      "version": "0.4.22",
+      "versionCode": 384510850,
+      "apkUrl": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.22/IG-Calma-0.4.22.apk",
+      "apkSha256": "e9c965c512a14261b068c94f61c4fecb03b0573c3c0db4c0b2baab0249b30848",
+      "apkSizeBytes": 146720123,
+      "changelog": "New Inhouse Instagram icon.",
+      "releasedAt": "2026-10-20T17:02:28+00:00"
+    },
     {
       "version": "0.4.21",
       "versionCode": 384510849,
