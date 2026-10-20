@@ -89,44 +89,29 @@ jobs:
           fi
       - name: Fetch the exact pinned Instagram APKM
         run: |
-          python3 - <<'PY'
-          import hashlib, html, http.cookiejar, json, re, sys, urllib.parse, urllib.request
-          from pathlib import Path
-          lock = json.loads(Path('native/stock.lock.json').read_text())
-          target = Path('native/downloads/instagram-stock.apkm')
-          target.parent.mkdir(parents=True, exist_ok=True)
-          opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
-          opener.addheaders = [('User-Agent', 'Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0'),
-                               ('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'),
-                               ('Accept-Language', 'en-US,en;q=0.5')]
-          def fetch(url, referer):
-              request = urllib.request.Request(url, headers={'Referer': referer} if referer else {})
-              return opener.open(request, timeout=120)
-          def link(url, referer, pattern):
-              with fetch(url, referer) as response:
-                  page = response.read().decode('utf-8', 'replace')
-              found = re.search(pattern, page)
-              if not found:
-                  raise RuntimeError('Download link not found on ' + url)
-              return urllib.parse.urljoin(url, html.unescape(found[1]))
-          try:
-              page = lock['source']
-              step = link(page, None, r'href="([^"]*/download/\?key=[^"]+)"')
-              final = link(step, page, r'href="([^"]*download\.php\?id=[^"]+)"')
-              digest = hashlib.sha256()
-              with fetch(final, step) as response, target.open('wb') as output:
-                  while chunk := response.read(1024 * 1024):
-                      digest.update(chunk)
-                      output.write(chunk)
-          except Exception as error:
-              print(f'::error::Could not download the pinned APKM from APKMirror ({error})')
-              sys.exit(1)
-          if digest.hexdigest() != lock['apkmSha256']:
-              target.unlink()
-              print('::error::Downloaded APKM differs from stock.lock.json')
-              sys.exit(1)
-          print('Pinned APKM verified:', lock['versionName'], lock['apkmSha256'])
-          PY
+          target=native/downloads/instagram-stock.apkm
+          mkdir -p native/downloads
+          jar="$RUNNER_TEMP/apkmirror.cookies"
+          ua='Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0'
+          fetch() {
+            curl -fsSL --compressed --retry 2 -c "$jar" -b "$jar" -A "$ua" \
+              -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
+              -H 'Accept-Language: en-US,en;q=0.5' ${2:+-e "$2"} "$1"
+          }
+          # Prints the first absolute link in stdin matching the pattern.
+          extract() {
+            python3 -c 'import html,re,sys,urllib.parse; m=re.search(sys.argv[2], sys.stdin.read()); print(urllib.parse.urljoin(sys.argv[1], html.unescape(m[1])) if m else "")' "$1" "$2"
+          }
+          page=$(python3 -c "import json; print(json.load(open('native/stock.lock.json'))['source'])")
+          step=$(fetch "$page" | extract "$page" 'href="([^"]*/download/\?key=[^"]+)"') || true
+          final=$([ -n "$step" ] && fetch "$step" "$page" | extract "$step" 'href="([^"]*download\.php\?id=[^"]+)"') || true
+          if [ -z "$final" ] || ! fetch "$final" "$step" > "$target"; then
+            echo "::error::Could not download the pinned APKM from APKMirror"; exit 1
+          fi
+          expected=$(python3 -c "import json; print(json.load(open('native/stock.lock.json'))['apkmSha256'])")
+          if ! echo "$expected  $target" | sha256sum -c -; then
+            rm -f "$target"; echo "::error::Downloaded APKM differs from stock.lock.json"; exit 1
+          fi
       - name: Prepare SDK, compilers and the pinned Morphe tool
         run: |
           sdk="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
