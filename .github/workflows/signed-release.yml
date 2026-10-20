@@ -87,7 +87,7 @@ jobs:
             echo "::error::Release v$version already exists; bump CalmaBuild.java instead of replacing it"
             exit 1
           fi
-      - name: Fetch the exact pinned Instagram APKM
+      - name: Fetch the exact pinned Instagram input
         run: |
           target=native/downloads/instagram-stock.apkm
           mkdir -p native/downloads
@@ -113,14 +113,48 @@ jobs:
             page=$(python3 -c "import json; print(json.load(open('native/stock.lock.json'))['source'])")
             step=$(fetch "$page" | extract "$page" 'href="([^"]*/download/\?key=[^"]+)"') || true
             final=$([ -n "$step" ] && fetch "$step" "$page" | extract "$step" 'href="([^"]*download\.php\?id=[^"]+)"') || true
-            if [ -z "$final" ] || ! fetch "$final" "$step" > "$target"; then
-              echo "::error::Could not download the pinned APKM (Drive mirror or APKMirror)"; exit 1
-            fi
+            if [ -z "$final" ] || ! fetch "$final" "$step" > "$target"; then rm -f "$target"; fi
           fi
           expected=$(python3 -c "import json; print(json.load(open('native/stock.lock.json'))['apkmSha256'])")
-          if ! echo "$expected  $target" | sha256sum -c -; then
-            rm -f "$target"; echo "::error::Downloaded APKM differs from stock.lock.json"; exit 1
+          if [ -s "$target" ] && echo "$expected  $target" | sha256sum -c -; then
+            echo "STOCK_INPUT=--stock-apkm $target" >> "$GITHUB_ENV"
+            exit 0
           fi
+          rm -f "$target"
+          # Otherwise take the same original splits from APKPure's XAPK. Only
+          # entries whose SHA-256 equals a pinned split are kept; build.py then
+          # checks the hashes and Instagram's signers again.
+          code=$(python3 -c "import json; print(json.load(open('native/stock.lock.json'))['versionCode'])")
+          xapk="$RUNNER_TEMP/instagram-stock.xapk"
+          if ! curl -fsSL --retry 2 -A "$ua" -o "$xapk" \
+              "https://d.apkpure.com/b/XAPK/com.instagram.android?versionCode=$code"; then
+            echo "::error::Could not download the pinned Instagram input (Drive mirror, APKMirror or APKPure)"; exit 1
+          fi
+          python3 - "$xapk" native/downloads/stock-splits <<'PY'
+          import hashlib, json, sys, zipfile
+          from pathlib import Path
+          splits = json.loads(Path('native/stock.lock.json').read_text())['splits']
+          wanted = {sha: name for name, sha in splits.items()}
+          output = Path(sys.argv[2])
+          output.mkdir(parents=True, exist_ok=True)
+          seen = []
+          with zipfile.ZipFile(sys.argv[1]) as archive:
+              for info in archive.infolist():
+                  if not info.filename.endswith('.apk'):
+                      continue
+                  data = archive.read(info)
+                  digest = hashlib.sha256(data).hexdigest()
+                  seen.append(f'{info.filename} {digest}')
+                  if digest in wanted:
+                      (output / wanted[digest]).write_bytes(data)
+          missing = [name for name in splits if not (output / name).is_file()]
+          if missing:
+              print('XAPK entries:', *seen, sep='\n  ')
+              print('::error::APKPure does not carry the pinned splits: ' + ', '.join(missing))
+              sys.exit(1)
+          print('Pinned splits found in the XAPK:', ', '.join(splits))
+          PY
+          echo "STOCK_INPUT=--stock-splits native/downloads/stock-splits" >> "$GITHUB_ENV"
       - name: Prepare SDK, compilers and the pinned Morphe tool
         run: |
           sdk="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
@@ -151,7 +185,7 @@ jobs:
       - name: Build, sign with the permanent key and verify
         run: |
           python3 native/scripts/build.py \
-            --stock-apkm native/downloads/instagram-stock.apkm \
+            $STOCK_INPUT \
             --morphe native/downloads/morphe-desktop-1.18.1-all.jar \
             --build-tools "${ANDROID_SDK_ROOT:-$ANDROID_HOME}/build-tools/36.0.0" \
             --keystore "$RUNNER_TEMP/calma.p12"

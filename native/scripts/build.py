@@ -70,7 +70,11 @@ def finalize(apk: Path, build_tools: Path, morphe: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--stock-apkm', type=Path, required=True)
+    stock_input = parser.add_mutually_exclusive_group(required=True)
+    stock_input.add_argument('--stock-apkm', type=Path)
+    # The same original splits taken from another container (for example an
+    # XAPK). Each split must still match its pinned hash and Instagram signers.
+    stock_input.add_argument('--stock-splits', type=Path, help='Directory holding the exact pinned splits')
     parser.add_argument('--morphe', type=Path, required=True)
     parser.add_argument('--build-tools', type=Path, required=True, help='Android SDK build-tools 36.0.0 or newer')
     parser.add_argument('--merged', type=Path, help='Optional already-verified merged input matching stock.lock.json')
@@ -81,7 +85,7 @@ def main() -> None:
             setattr(args, key, value.resolve())
     stock = json.loads((NATIVE / 'stock.lock.json').read_text())
     tool = json.loads((NATIVE / 'tools.lock.json').read_text())['morphe']
-    if digest(args.stock_apkm) != stock['apkmSha256']:
+    if args.stock_apkm and digest(args.stock_apkm) != stock['apkmSha256']:
         raise SystemExit('Stock APKM hash does not match the verified source')
     if digest(args.morphe) != tool['sha256']:
         raise SystemExit('Generic Morphe tool hash does not match the pinned tool')
@@ -93,16 +97,22 @@ def main() -> None:
     build = NATIVE / 'build'
     split_dir = build / 'verified-splits'
     split_dir.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(args.stock_apkm) as archive:
-        for filename, expected in stock['splits'].items():
-            data = archive.read(filename)
-            if hashlib.sha256(data).hexdigest() != expected:
-                raise SystemExit(f'Unrecognized stock split: {filename}')
-            target = split_dir / filename
-            target.write_bytes(data)
-            verification = run(args.build_tools / 'apksigner', 'verify', '--verbose', '--print-certs', target, capture=True)
-            if not all(cert in verification for cert in stock['signerSha256'].values()):
-                raise SystemExit(f'Stock signer lineage mismatch: {filename}')
+
+    def read_split(filename: str) -> bytes:
+        if args.stock_splits:
+            return (args.stock_splits / filename).read_bytes()
+        with zipfile.ZipFile(args.stock_apkm) as archive:
+            return archive.read(filename)
+
+    for filename, expected in stock['splits'].items():
+        data = read_split(filename)
+        if hashlib.sha256(data).hexdigest() != expected:
+            raise SystemExit(f'Unrecognized stock split: {filename}')
+        target = split_dir / filename
+        target.write_bytes(data)
+        verification = run(args.build_tools / 'apksigner', 'verify', '--verbose', '--print-certs', target, capture=True)
+        if not all(cert in verification for cert in stock['signerSha256'].values()):
+            raise SystemExit(f'Stock signer lineage mismatch: {filename}')
     if args.merged:
         if digest(args.merged) != stock['verifiedMergedSha256']:
             raise SystemExit('Merged stock input differs from the verified input')

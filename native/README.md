@@ -138,6 +138,12 @@ python3 native/scripts/build.py \
 solo si su hash coincide con `verifiedMergedSha256`. El APKM original sigue siendo
 obligatorio para comprobar sus splits y firmas.
 
+`--stock-splits /ruta/a/splits` sustituye a `--stock-apkm` cuando los splits
+originales llegan en otro contenedor (por ejemplo, un XAPK): la carpeta debe tener
+`base.apk` y `split_config.xxhdpi.apk` con los SHA-256 de `stock.lock.json`, y se
+comprueban igual sus firmas de Instagram. El workflow `signed-release.yml` lo usa
+cuando APKMirror rechaza al runner.
+
 [`scripts/build.py`](scripts/build.py) verifica la entrada, une los splits, compila
 la extensión y el bundle propio y aplica los parches con Morphe en modo `FULL`.
 Después restaura las 20 particiones DEX originales, añade Calma en `classes21.dex`,
