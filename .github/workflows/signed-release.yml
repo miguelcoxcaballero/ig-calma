@@ -102,11 +102,20 @@ jobs:
           extract() {
             python3 -c 'import html,re,sys,urllib.parse; m=re.search(sys.argv[2], sys.stdin.read()); print(urllib.parse.urljoin(sys.argv[1], html.unescape(m[1])) if m else "")' "$1" "$2"
           }
-          page=$(python3 -c "import json; print(json.load(open('native/stock.lock.json'))['source'])")
-          step=$(fetch "$page" | extract "$page" 'href="([^"]*/download/\?key=[^"]+)"') || true
-          final=$([ -n "$step" ] && fetch "$step" "$page" | extract "$step" 'href="([^"]*download\.php\?id=[^"]+)"') || true
-          if [ -z "$final" ] || ! fetch "$final" "$step" > "$target"; then
-            echo "::error::Could not download the pinned APKM from APKMirror"; exit 1
+          # APKMirror rejects CI runners, so a hash-pinned public Drive copy
+          # (stock.lock.json "mirrorUrl") is tried first.
+          mirror=$(python3 -c "import json; print(json.load(open('native/stock.lock.json')).get('mirrorUrl', ''))")
+          if [ -n "$mirror" ]; then
+            id=$(python3 -c "import re,sys; print(next(g for g in re.search(r'/d/([\w-]+)|[?&]id=([\w-]+)', sys.argv[1]).groups() if g))" "$mirror")
+            fetch "https://drive.usercontent.google.com/download?id=$id&export=download&confirm=t" > "$target" || rm -f "$target"
+          fi
+          if [ ! -s "$target" ]; then
+            page=$(python3 -c "import json; print(json.load(open('native/stock.lock.json'))['source'])")
+            step=$(fetch "$page" | extract "$page" 'href="([^"]*/download/\?key=[^"]+)"') || true
+            final=$([ -n "$step" ] && fetch "$step" "$page" | extract "$step" 'href="([^"]*download\.php\?id=[^"]+)"') || true
+            if [ -z "$final" ] || ! fetch "$final" "$step" > "$target"; then
+              echo "::error::Could not download the pinned APKM (Drive mirror or APKMirror)"; exit 1
+            fi
           fi
           expected=$(python3 -c "import json; print(json.load(open('native/stock.lock.json'))['apkmSha256'])")
           if ! echo "$expected  $target" | sha256sum -c -; then
