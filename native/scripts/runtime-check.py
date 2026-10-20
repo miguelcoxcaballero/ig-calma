@@ -30,7 +30,8 @@ BASELINE_URL = ('https://github.com/miguelcoxcaballero/ig-calma/releases/downloa
 BASELINE_SHA = '6634291404a1a6c4fd7fe20c78d50e956b921bc566a8e5d03d5c11b1d5c957fa'
 BASELINE_SIZE = 147907957
 SIGNER_SHA = '7133a4b3e4b9f9c4d2fbbd38b7dd2d44c7b8d0d7d16568bfe3da74a09e7887b6'
-CANDIDATE_VERSION = '0.4.20'
+# The candidate is always the release named by CalmaBuild.java.
+CANDIDATE_VERSION = re.search(r'VERSION = "([^"]+)"', (ROOT / 'native/src/es/calma/instagram/nativeapp/CalmaBuild.java').read_text())[1]
 
 
 def sha(path: Path) -> str:

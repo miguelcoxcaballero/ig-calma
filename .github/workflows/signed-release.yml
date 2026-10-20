@@ -1,0 +1,309 @@
+name: Signed Instagram release (A)
+# Builds the release named by native CalmaBuild.java with the permanent Calma key
+# from the repository secret EJEMPLO (base64 of the .p12/.jks keystore), starts
+# the real signed APK as an upgrade of the published 0.4.19 on Android 14-16,
+# then publishes a new A prerelease. It never replaces an existing release.
+# Catalogs are committed only after the public download is verified below.
+on:
+  push:
+    branches: ['release-instagram-*']
+permissions:
+  contents: read
+concurrency:
+  group: signed-release-instagram-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Select Java 21
+        run: |
+          test -d "$JAVA_HOME_21_X64"
+          printf 'JAVA_HOME=%s\n' "$JAVA_HOME_21_X64" >> "$GITHUB_ENV"
+          printf '%s/bin\n' "$JAVA_HOME_21_X64" >> "$GITHUB_PATH"
+      - name: Prepare the permanent Calma key from secret EJEMPLO
+        env:
+          KEYSTORE_SECRET: ${{ secrets.EJEMPLO }}
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, os, re, subprocess, sys
+          from pathlib import Path
+          def fail(message):
+              print('::error::' + message)
+              sys.exit(1)
+          EXPECTED = re.search(r"CALMA_SIGNER = '([0-9a-f]{64})'", Path('native/scripts/verify-apk.py').read_text())[1]
+          temp = Path(os.environ['RUNNER_TEMP'])
+          text = os.environ.get('KEYSTORE_SECRET', '')
+          # Plain or line-wrapped base64 of the keystore file; armour lines are ignored.
+          body = ''.join(line.strip() for line in text.splitlines() if not line.strip().startswith('-----'))
+          if not body:
+              fail('Repository secret EJEMPLO is missing or empty')
+          try:
+              raw = base64.b64decode(body, validate=True)
+          except ValueError:
+              fail('Secret EJEMPLO must hold the signing keystore (.p12/.jks) as base64 text')
+          source = temp / 'calma-source.keystore'
+          source.touch(mode=0o600)
+          source.write_bytes(raw)
+          env = dict(os.environ, KS_PASS=os.environ.get('CALMA_KEYSTORE_PASSWORD') or 'localbuild')
+          def keytool(*args, check=False, text=True):
+              return subprocess.run(['keytool', '-J-Duser.language=en', *map(str, args)], env=env,
+                                    capture_output=True, text=text, check=check)
+          listing = keytool('-list', '-v', '-keystore', source, '-storepass:env', 'KS_PASS')
+          if listing.returncode:
+              fail("keytool could not open the keystore in EJEMPLO with the build password 'localbuild'")
+          aliases = re.findall(r'^Alias name: (.+)$', listing.stdout, re.M)
+          match = None
+          for alias in aliases:
+              certificate = keytool('-exportcert', '-keystore', source, '-storepass:env', 'KS_PASS', '-alias', alias, text=False)
+              if certificate.returncode == 0 and hashlib.sha256(certificate.stdout).hexdigest() == EXPECTED:
+                  match = alias
+                  break
+          if match is None:
+              fail(f'None of the {len(aliases)} entries in EJEMPLO has the permanent Calma certificate {EXPECTED}')
+          # build.py signs with alias "calma"; normalise to that PKCS#12 entry.
+          target = temp / 'calma.p12'
+          target.unlink(missing_ok=True)
+          keytool('-importkeystore', '-noprompt', '-srckeystore', source, '-srcstorepass:env', 'KS_PASS', '-srcalias', match,
+                  '-destkeystore', target, '-deststoretype', 'PKCS12', '-destalias', 'calma',
+                  '-deststorepass:env', 'KS_PASS', '-destkeypass:env', 'KS_PASS', check=True)
+          source.unlink()
+          certificate = keytool('-exportcert', '-keystore', target, '-storepass:env', 'KS_PASS', '-alias', 'calma',
+                                check=True, text=False)
+          assert hashlib.sha256(certificate.stdout).hexdigest() == EXPECTED
+          print('Permanent Calma key ready; certificate SHA-256', EXPECTED)
+          PY
+      - name: Refuse to replace an existing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          version=$(sed -n 's/.*VERSION = "\([0-9.]*\)".*/\1/p' native/src/es/calma/instagram/nativeapp/CalmaBuild.java)
+          if gh release view "v$version" >/dev/null 2>&1; then
+            echo "::error::Release v$version already exists; bump CalmaBuild.java instead of replacing it"
+            exit 1
+          fi
+      - name: Fetch the exact pinned Instagram APKM
+        run: |
+          python3 - <<'PY'
+          import hashlib, html, http.cookiejar, json, re, sys, urllib.parse, urllib.request
+          from pathlib import Path
+          lock = json.loads(Path('native/stock.lock.json').read_text())
+          target = Path('native/downloads/instagram-stock.apkm')
+          target.parent.mkdir(parents=True, exist_ok=True)
+          opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+          opener.addheaders = [('User-Agent', 'Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0'),
+                               ('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'),
+                               ('Accept-Language', 'en-US,en;q=0.5')]
+          def fetch(url, referer):
+              request = urllib.request.Request(url, headers={'Referer': referer} if referer else {})
+              return opener.open(request, timeout=120)
+          def link(url, referer, pattern):
+              with fetch(url, referer) as response:
+                  page = response.read().decode('utf-8', 'replace')
+              found = re.search(pattern, page)
+              if not found:
+                  raise RuntimeError('Download link not found on ' + url)
+              return urllib.parse.urljoin(url, html.unescape(found[1]))
+          try:
+              page = lock['source']
+              step = link(page, None, r'href="([^"]*/download/\?key=[^"]+)"')
+              final = link(step, page, r'href="([^"]*download\.php\?id=[^"]+)"')
+              digest = hashlib.sha256()
+              with fetch(final, step) as response, target.open('wb') as output:
+                  while chunk := response.read(1024 * 1024):
+                      digest.update(chunk)
+                      output.write(chunk)
+          except Exception as error:
+              print(f'::error::Could not download the pinned APKM from APKMirror ({error})')
+              sys.exit(1)
+          if digest.hexdigest() != lock['apkmSha256']:
+              target.unlink()
+              print('::error::Downloaded APKM differs from stock.lock.json')
+              sys.exit(1)
+          print('Pinned APKM verified:', lock['versionName'], lock['apkmSha256'])
+          PY
+      - name: Prepare SDK, compilers and the pinned Morphe tool
+        run: |
+          sdk="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          "$sdk/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-35' 'build-tools;35.0.0' 'build-tools;36.0.0'
+          mkdir -p tools
+          ln -s "$sdk/platforms/android-35" tools/android-35
+          ln -s "$sdk/build-tools/35.0.0" tools/android-15
+          python3 - <<'PY'
+          import hashlib, json
+          from io import BytesIO
+          from pathlib import Path
+          from urllib.request import urlopen
+          from zipfile import ZipFile
+          root = Path('tools')
+          ecj = 'https://repo.maven.apache.org/maven2/org/eclipse/jdt/ecj/3.39.0/ecj-3.39.0.jar'
+          core = 'https://dl.google.com/dl/android/maven2/androidx/core/core/1.13.1/core-1.13.1.aar'
+          (root / 'ecj.jar').write_bytes(urlopen(ecj).read())
+          with ZipFile(BytesIO(urlopen(core).read())) as archive:
+              (root / 'androidx-core.jar').write_bytes(archive.read('classes.jar'))
+          tool = json.loads(Path('native/tools.lock.json').read_text())['morphe']
+          target = Path('native/downloads') / tool['url'].rsplit('/', 1)[-1]
+          target.parent.mkdir(parents=True, exist_ok=True)
+          data = urlopen(tool['url']).read()
+          assert hashlib.sha256(data).hexdigest() == tool['sha256'], 'Pinned Morphe hash differs'
+          target.write_bytes(data)
+          PY
+          python3 scripts/setup-kotlin.py
+      - name: Build, sign with the permanent key and verify
+        run: |
+          python3 native/scripts/build.py \
+            --stock-apkm native/downloads/instagram-stock.apkm \
+            --morphe native/downloads/morphe-desktop-1.18.1-all.jar \
+            --build-tools "${ANDROID_SDK_ROOT:-$ANDROID_HOME}/build-tools/36.0.0" \
+            --keystore "$RUNNER_TEMP/calma.p12"
+      - name: Delete the key from the runner
+        if: always()
+        run: rm -f "$RUNNER_TEMP/calma.p12" "$RUNNER_TEMP/calma-source.keystore"
+      - name: Stage release files
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, re, shutil
+          from pathlib import Path
+          manifest = json.loads(Path('native/android-update.json').read_text())
+          assert manifest == json.loads(Path('android-update.json').read_text())
+          config = Path('native/src/es/calma/instagram/nativeapp/CalmaBuild.java').read_text()
+          assert manifest['version'] == re.search(r'VERSION = "([^"]+)"', config)[1]
+          assert manifest['versionCode'] == int(re.search(r'VERSION_CODE = (\d+)', config)[1])
+          dist = Path('native/build/dist')
+          apk = dist / f"IG-Calma-{manifest['version']}.apk"
+          with apk.open('rb') as stream:
+              assert hashlib.file_digest(stream, 'sha256').hexdigest() == manifest['apkSha256']
+          assert apk.stat().st_size == manifest['apkSizeBytes']
+          shutil.copyfile('native/android-update.json', dist / 'android-update.json')
+          (dist / 'release-notes.txt').write_text(manifest['releaseNotes'] + '\n')
+          print('Signed', apk.name, manifest['apkSha256'], manifest['apkSizeBytes'])
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: signed-release
+          path: |
+            native/build/dist/*.apk
+            native/build/dist/android-update.json
+            native/build/dist/build-info.json
+            native/build/dist/verification.json
+            native/build/dist/SHA256SUMS.txt
+            native/build/dist/release-notes.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+  android:
+    needs: build
+    name: Android API ${{ matrix.api }} startup
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [34, 35, 36]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: signed-release
+          path: native/build/release
+      - name: Hand the signed candidate to the startup check
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, shutil
+          from pathlib import Path
+          manifest = json.loads(Path('native/build/release/android-update.json').read_text())
+          name = f"IG-Calma-{manifest['version']}.apk"
+          source = Path('native/runtime-input')
+          source.mkdir(parents=True, exist_ok=True)
+          part = source / (name + '.part000')
+          shutil.copyfile(Path('native/build/release') / name, part)
+          with part.open('rb') as stream:
+              digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+          assert digest == manifest['apkSha256']
+          (source / 'transport.json').write_text(json.dumps({
+              'sourceCommit': os.environ['GITHUB_SHA'], 'version': manifest['version'],
+              'apkSizeBytes': manifest['apkSizeBytes'], 'apkSha256': digest,
+              'parts': [{'name': part.name, 'bytes': part.stat().st_size, 'sha256': digest}],
+          }, indent=2) + '\n')
+          PY
+      - name: Enable the runner's KVM device
+        run: |
+          test -c /dev/kvm
+          sudo chmod 666 /dev/kvm
+      - name: Upgrade the published 0.4.19 to the signed candidate
+        run: python3 native/scripts/runtime-check.py --api '${{ matrix.api }}'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: startup-api-${{ matrix.api }}
+          path: native/build/runtime-evidence/
+          if-no-files-found: warn
+          retention-days: 7
+  publish:
+    needs: android
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: signed-release
+          path: build/release
+      - name: Publish a new A prerelease (never replaces one)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          cd build/release
+          version=$(python3 -c "import json; print(json.load(open('android-update.json'))['version'])")
+          sha256sum -c SHA256SUMS.txt
+          if gh release view "v$version" >/dev/null 2>&1; then
+            echo "::error::Release v$version already exists"; exit 1
+          fi
+          gh release create "v$version" --target "$GITHUB_SHA" --title "Instagram Calma $version — A" \
+            --notes-file release-notes.txt --draft
+          gh release upload "v$version" "IG-Calma-$version.apk" SHA256SUMS.txt build-info.json verification.json android-update.json
+          gh release edit "v$version" --draft=false --prerelease --latest=false
+  public:
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: signed-release
+          path: build/release
+      - name: Verify the public download before any catalog points to it
+        run: |
+          tools="${ANDROID_SDK_ROOT:-$ANDROID_HOME}/build-tools/36.0.0"
+          "${ANDROID_SDK_ROOT:-$ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" 'build-tools;36.0.0'
+          url=$(python3 -c "import json; print(json.load(open('build/release/android-update.json'))['apkUrl'])")
+          curl -fsSL --retry 5 --retry-delay 10 -o build/public.apk "$url"
+          python3 - "$tools" <<'PY'
+          import hashlib, json, re, subprocess, sys
+          from pathlib import Path
+          tools = Path(sys.argv[1])
+          manifest = json.loads(Path('build/release/android-update.json').read_text())
+          signer = re.search(r"CALMA_SIGNER = '([0-9a-f]{64})'", Path('native/scripts/verify-apk.py').read_text())[1]
+          apk = Path('build/public.apk')
+          with apk.open('rb') as stream:
+              assert hashlib.file_digest(stream, 'sha256').hexdigest() == manifest['apkSha256']
+          assert apk.stat().st_size == manifest['apkSizeBytes']
+          certificates = subprocess.check_output([str(tools / 'apksigner'), 'verify', '--print-certs', str(apk)], text=True)
+          assert re.findall(r'Signer #\d+ certificate SHA-256 digest: ([0-9a-f]+)', certificates) == [signer]
+          badging = subprocess.check_output([str(tools / 'aapt2'), 'dump', 'badging', str(apk)], text=True)
+          package = re.search(r"package: name='([^']+)' versionCode='(\d+)'", badging)
+          assert package[1] == 'es.calma.instagram' and int(package[2]) == manifest['versionCode'], badging.splitlines()[0]
+          print('Public APK verified:', json.dumps(manifest))
+          PY
