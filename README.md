@@ -8,7 +8,7 @@ Requiere **Android 9 o posterior y ARM64**. No necesita root. Usa el paquete y l
 
 ## Iconos Inhouse (0.4.14)
 
-El círculo central del icono de Instagram se sustituye por el símbolo blanco de Inhouse, editado con IA. Se conservan el degradado, el marco de cámara y el punto del flash. Los logos interiores, incluido el popup de actualización, usan blanco sobre negro. [Recursos y adaptación al launcher](native/branding.md).
+El tejado blanco de Inhouse sustituye al objetivo del icono de Instagram. Se conservan el degradado y el marco de la cámara. El pie de ajustes usa el mismo icono. [Recursos y adaptación al launcher](native/branding.md).
 
 En la 0.4.15, pulsar el logo de los ajustes abre [Inhouse Software](https://inhouse.miguelcoxcaballero.com/), donde están los dos proyectos.
 

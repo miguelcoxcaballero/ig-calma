@@ -4,4 +4,4 @@ Familia de iconos Inhouse: YouTube, Instagram, Notes, Read y Photos comparten el
 
 `native/resources/res/drawable-nodpi/inhouse_launcher_art.png` es el área visible de 72 dp renderizada a 1254 px desde el SVG maestro y se empaqueta sin redibujarla. El fondo adaptativo repite el degradado para los launchers que muestran el margen. El icono adaptativo deja un margen de 18/108 para las máscaras del launcher. Todos los aliases de inicio usan el mismo recurso, también al actualizar una instalación existente.
 
-Los logos interiores usan blanco sobre negro, independientemente del tema. La personalización del popup se limita al color de su icono en el HTML anfitrión; los archivos originales de Inhouse Read y Photos no se modifican.
+El logo del pie de ajustes es el mismo icono de la app (`native/resources/assets/inhouse-logo.png`, 384 px), con independencia del tema. La personalización del popup se limita al color de su icono en el HTML anfitrión; los archivos originales de Inhouse Read y Photos no se modifican.

@@ -279,7 +279,7 @@ public final class NativeModelSmoke extends Instrumentation {
         android.graphics.Bitmap logo;
         try(java.io.InputStream input=context.getAssets().open("inhouse-logo.png")){logo=android.graphics.BitmapFactory.decodeStream(input);}
         check(logo!=null,"Interior logo decodes");
-        int corner=logo.getPixel(0,0);check(android.graphics.Color.red(corner)<12 && android.graphics.Color.green(corner)<12 && android.graphics.Color.blue(corner)<12,"Interior Inhouse logo has a black background");logo.recycle();
+        int top=logo.getPixel(0,0),bottom=logo.getPixel(0,logo.getHeight()-1);check(android.graphics.Color.blue(top)>220 && android.graphics.Color.green(top)<90 && android.graphics.Color.red(top)<160 && android.graphics.Color.red(bottom)>240 && android.graphics.Color.blue(bottom)<40,"Interior Inhouse logo is the app icon: Instagram gradient from violet to orange");logo.recycle();
         return android.util.Base64.encodeToString(output.toByteArray(),android.util.Base64.NO_WRAP);
     }
     @Override public void onStart() {
