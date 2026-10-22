@@ -124,6 +124,7 @@ def stock_apks(work: Path) -> tuple[list[Path], dict] | None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--api', type=int, choices=[30, 33, 34, 35, 36], required=True)
+    parser.add_argument('--fresh-install', action='store_true', help='Require a clean single-APK install before the upgrade check')
     args = parser.parse_args()
     evidence = ROOT / 'native/build/runtime-evidence'
     evidence.mkdir(parents=True, exist_ok=True)
@@ -177,6 +178,8 @@ def main() -> int:
             save_result(directory / 'install.txt', installation)
             result['installed'] = installation.returncode == 0 and 'Success' in installation.stdout
             if not result['installed']:
+                error = re.search(r'INSTALL_[A-Z_]+', installation.stdout + installation.stderr)
+                result['installerErrorCode'] = error[0] if error else 'UNKNOWN_INSTALL_FAILURE'
                 return result
             resolved = device('shell', 'cmd', 'package', 'resolve-activity', '--brief',
                               '-a', 'android.intent.action.MAIN', '-c', 'android.intent.category.LAUNCHER', package)
@@ -339,6 +342,10 @@ def main() -> int:
             report['stock'] = launch(stock[0], 'stock-original', updating=False,
                                      package=stock[1]['package'])
             device('shell', 'am', 'force-stop', stock[1]['package'])
+        if args.fresh_install:
+            report['candidateFresh'] = launch(candidate, 'candidate-fresh-' + CANDIDATE_VERSION, updating=False)
+            if report['candidateFresh'].get('installed'):
+                require(device('uninstall', PACKAGE), 'Remove disposable fresh-install test')
         report['baseline'] = launch(baseline, 'baseline-0.4.19', updating=False)
         # Always try the candidate, including when baseline startup or installation fails.
         device('shell', 'am', 'force-stop', PACKAGE)
@@ -365,7 +372,8 @@ def main() -> int:
             print('Native model smoke: ' + test.stdout + test.stderr, flush=True)
             if not report['nativeModelSmoke']['passed']:
                 return 1
-        return 0 if report['candidate'].get('passed') else 1
+        fresh_ok = not args.fresh_install or report.get('candidateFresh', {}).get('passed', False)
+        return 0 if report['candidate'].get('passed') and fresh_ok else 1
     except Exception as error:
         report['environmentError'] = str(error)
         (evidence / 'error.txt').write_text(traceback.format_exc())

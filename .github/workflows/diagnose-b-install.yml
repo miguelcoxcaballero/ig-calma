@@ -1,0 +1,44 @@
+name: Diagnose Instagram B fresh installation
+on:
+  push:
+    branches: [fix/standalone-apk-install]
+permissions:
+  contents: read
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [34, 35, 36]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - run: sudo chmod 666 /dev/kvm
+      - name: Fetch exact B APK and test clean installation and upgrade
+        run: |
+          python3 - '${{ matrix.api }}' <<'PY'
+          import hashlib, importlib.util, json, os, sys, urllib.request
+          from pathlib import Path
+          version='0.4.20'
+          sha='233f15bffd416e481ea74d01117471682765121d94f2c4ebf45f094b4df6314c'
+          source=Path('native/runtime-input');source.mkdir(parents=True,exist_ok=True)
+          name=f'IG-Calma-{version}.apk.part000'
+          data=urllib.request.urlopen('https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.20/IG-Calma-0.4.20.apk',timeout=90).read()
+          assert len(data)==147916149 and hashlib.sha256(data).hexdigest()==sha
+          (source/name).write_bytes(data)
+          (source/'transport.json').write_text(json.dumps({'sourceCommit':os.environ['GITHUB_SHA'],'version':version,'apkSizeBytes':len(data),'apkSha256':sha,'parts':[{'name':name,'bytes':len(data),'sha256':sha}]}))
+          spec=importlib.util.spec_from_file_location('runtime_check','native/scripts/runtime-check.py')
+          module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+          module.CANDIDATE_VERSION=version
+          sys.argv=['runtime-check.py','--api',sys.argv[1],'--fresh-install']
+          raise SystemExit(module.main())
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: b-install-api-${{ matrix.api }}
+          path: native/build/runtime-evidence/
+          retention-days: 7
