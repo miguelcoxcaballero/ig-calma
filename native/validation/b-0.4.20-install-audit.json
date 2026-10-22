@@ -1,0 +1,224 @@
+{
+  "version": "0.4.20",
+  "channel": "B",
+  "url": "https://github.com/miguelcoxcaballero/ig-calma/releases/download/v0.4.20/IG-Calma-0.4.20.apk",
+  "sizeBytes": 147916149,
+  "sha256": "233f15bffd416e481ea74d01117471682765121d94f2c4ebf45f094b4df6314c",
+  "matchesPublishedHash": true,
+  "requiredAndroidApi": 28,
+  "nativeAbis": [
+    "arm64-v8a"
+  ],
+  "requiredSplits": [],
+  "causeOfUserReportedFailureConfirmed": false,
+  "signingSchemeChecks": {
+    "v1": "verified (signature check only; does not lower required Android version)",
+    "v2": "verified (signature check only; does not lower required Android version)",
+    "v3": "verified (signature check only; does not lower required Android version)"
+  },
+  "zipCrcPassed": true,
+  "zipEntryCount": 16728,
+  "duplicateZipEntries": 0,
+  "resourcesArscStored": true,
+  "ciRun": "https://github.com/miguelcoxcaballero/ig-calma/actions/runs/39748699525",
+  "androidResults": [
+    {
+      "api": 34,
+      "candidateFresh": {
+        "attempted": true,
+        "updatingExistingInstall": false,
+        "installed": true,
+        "launchExitCode": 0,
+        "launchAccepted": false,
+        "visibleText": [
+          "English (US)",
+          "Instagram from Meta",
+          "Username, email or mobile number",
+          "Username, email or mobile number,",
+          "Password",
+          "Password,",
+          "Log in",
+          "Forgot password?",
+          "Create new account",
+          "Meta logo"
+        ],
+        "survived": true,
+        "appCrashLogged": false,
+        "passed": false,
+        "fatalLines": []
+      },
+      "baseline": {
+        "attempted": true,
+        "updatingExistingInstall": false,
+        "installed": true,
+        "launchExitCode": 0,
+        "launchAccepted": true,
+        "visibleText": [
+          "Instagram Calma"
+        ],
+        "survived": true,
+        "appCrashLogged": false,
+        "passed": true,
+        "fatalLines": []
+      },
+      "candidate": {
+        "attempted": true,
+        "updatingExistingInstall": true,
+        "installed": true,
+        "launchExitCode": 0,
+        "launchAccepted": true,
+        "visibleText": [
+          "English (US)",
+          "Join Instagram",
+          "Share what you're into with the people who get you.",
+          "Get started",
+          "I already have a profile",
+          "Meta logo"
+        ],
+        "survived": true,
+        "appCrashLogged": false,
+        "passed": true,
+        "fatalLines": []
+      },
+      "environmentError": null
+    },
+    {
+      "api": 35,
+      "candidateFresh": {
+        "attempted": true,
+        "updatingExistingInstall": false,
+        "installed": true,
+        "launchExitCode": 0,
+        "launchAccepted": true,
+        "visibleText": [
+          "English (US)",
+          "Instagram from Meta",
+          "Username, email or mobile number",
+          "Username, email or mobile number,",
+          "Password",
+          "Password,",
+          "Log in",
+          "Forgot password?",
+          "Create new account",
+          "Meta logo"
+        ],
+        "survived": true,
+        "appCrashLogged": false,
+        "passed": true,
+        "fatalLines": []
+      },
+      "baseline": {
+        "attempted": true,
+        "updatingExistingInstall": false,
+        "installed": true,
+        "launchExitCode": 0,
+        "launchAccepted": true,
+        "visibleText": [
+          "English (US)",
+          "Instagram from Meta",
+          "Username, email or mobile number",
+          "Username, email or mobile number,",
+          "Password",
+          "Password,",
+          "Log in",
+          "Forgot password?",
+          "Create new account",
+          "Meta logo"
+        ],
+        "survived": true,
+        "appCrashLogged": false,
+        "passed": true,
+        "fatalLines": []
+      },
+      "candidate": {
+        "attempted": true,
+        "updatingExistingInstall": true,
+        "installed": true,
+        "launchExitCode": 0,
+        "launchAccepted": true,
+        "visibleText": [
+          "English (US)",
+          "Join Instagram",
+          "Share what you're into with the people who get you.",
+          "Get started",
+          "I already have a profile",
+          "Meta logo"
+        ],
+        "survived": true,
+        "appCrashLogged": false,
+        "passed": true,
+        "fatalLines": []
+      },
+      "environmentError": null
+    },
+    {
+      "api": 36,
+      "candidateFresh": {
+        "attempted": true,
+        "updatingExistingInstall": false,
+        "installed": true,
+        "launchExitCode": 0,
+        "launchAccepted": true,
+        "visibleText": [
+          "English (United States)",
+          "Mobile number or email",
+          "Password",
+          "Log in",
+          "Forgot password?",
+          "Create new account",
+          "Meta logo"
+        ],
+        "survived": true,
+        "appCrashLogged": false,
+        "passed": true,
+        "fatalLines": []
+      },
+      "baseline": {
+        "attempted": true,
+        "updatingExistingInstall": false,
+        "installed": true,
+        "launchExitCode": 0,
+        "launchAccepted": true,
+        "visibleText": [
+          "English (US)",
+          "Instagram from Meta",
+          "Username, email or mobile number",
+          "Username, email or mobile number,",
+          "Password",
+          "Password,",
+          "Log in",
+          "Forgot password?",
+          "Create new account",
+          "Meta logo"
+        ],
+        "survived": true,
+        "appCrashLogged": false,
+        "passed": true,
+        "fatalLines": []
+      },
+      "candidate": {
+        "attempted": true,
+        "updatingExistingInstall": true,
+        "installed": true,
+        "launchExitCode": 0,
+        "launchAccepted": true,
+        "visibleText": [
+          "English (US)",
+          "Join Instagram",
+          "Share what you're into with the people who get you.",
+          "Get started",
+          "I already have a profile",
+          "Meta logo"
+        ],
+        "survived": true,
+        "appCrashLogged": false,
+        "passed": true,
+        "fatalLines": []
+      },
+      "environmentError": null
+    }
+  ],
+  "runtimeLimitation": "API 34 fresh install succeeded and login UI rendered with no crash, but strict am-start acceptance check failed. Overall API 34 job is not a pass.",
+  "affectedUserDeviceIdentified": false,
+  "publishedApkChanged": false
+}
